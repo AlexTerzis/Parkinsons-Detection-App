@@ -1,0 +1,33 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+build/
+
+# Android related
+android/.gradle/
+android/app/build/
+
+# iOS related
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/DerivedData/
+
+# VS Code settings folder
+.vscode/
+
+# IntelliJ/Android Studio settings folder
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs and lock files
+*.log
+*.lock

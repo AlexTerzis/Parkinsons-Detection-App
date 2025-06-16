@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "559294794835",
+    "project_id": "parkinsondetection-4803f",
+    "storage_bucket": "parkinsondetection-4803f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559294794835:android:4cea9b2a2a41a586148aa6",
+        "android_client_info": {
+          "package_name": "com.parkinson.detector"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPsgKPxDKQkHPUUsmhW4JfjU7v2poGP1w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
