@@ -18,9 +18,8 @@ dependencies:
   firebase_storage: ^12.4.5
   cloud_functions: ^5.4.0
   responsive_builder: ^0.7.0
-  scidart: ^0.0.2-dev.12
   sensors_plus: ^3.0.3
-
+  fftea: ^1.5.0+1
   
 
 dev_dependencies:
