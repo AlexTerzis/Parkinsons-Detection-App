@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:stacked/stacked.dart';
 
 import 'patience_viewmodel.dart';
@@ -106,6 +107,11 @@ class PatienceView extends StackedView<PatienceViewModel> {
         'type': TestType.cameraDetection,
       },
       {
+        'title': 'Tremor Test',
+        'icon': Icons.vibration,  // or any icon you like
+        'type': TestType.tremor,  
+      },
+      {
         'title': 'Drawing Test',
         'icon': Icons.edit,
         'type': TestType.drawing,
@@ -145,12 +151,15 @@ class PatienceView extends StackedView<PatienceViewModel> {
                             const SnackBar(content: Text('No hands detected. Try again.')),
                           );
                         }
-                      } else {
-                        await viewModel.recordDemoResult(type);
-                        ScaffoldMessenger.of(rootContext).showSnackBar(
-                          SnackBar(content: Text('${test['title']} completed')),
-                        );
-                      }
+                        } else if (type == TestType.tremor) {
+                          // Navigate to TremorTestView
+                          await locator<NavigationService>().navigateToView(const TremorTestView());
+                        } else {
+                          await viewModel.recordDemoResult(type);
+                          ScaffoldMessenger.of(rootContext).showSnackBar(
+                            SnackBar(content: Text('${test['title']} completed')),
+                          );
+                        }
                     },
                   ),
                 );
