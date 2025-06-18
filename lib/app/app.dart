@@ -11,6 +11,8 @@ import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
 import 'package:parkinsondetetion/services/test_service.dart';
 import 'package:parkinsondetetion/services/reports_service.dart';
 import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart';
+import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
+import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 // @stacked-import
 
 @StackedApp(
@@ -21,6 +23,8 @@ import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart';
     MaterialRoute(page: DoctorView),
     MaterialRoute(page: PatienceView),
     MaterialRoute(page: CameraTestView),
+    MaterialRoute(page: TremorTestView),
+    MaterialRoute(page: TapTestView),
 // @stacked-route
   ],
   dependencies: [
