@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
+import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:stacked/stacked.dart';
 
 import 'patience_viewmodel.dart';
@@ -108,8 +109,13 @@ class PatienceView extends StackedView<PatienceViewModel> {
       },
       {
         'title': 'Tremor Test',
-        'icon': Icons.vibration,  // or any icon you like
-        'type': TestType.tremor,  
+        'icon': Icons.vibration,  
+        'type': TestType.tremor,
+      },
+      {
+        'title': 'Tap Test',
+        'icon': Icons.touch_app,
+        'type': TestType.tap,  
       },
       {
         'title': 'Drawing Test',
@@ -145,21 +151,27 @@ class PatienceView extends StackedView<PatienceViewModel> {
                     onTap: () async {
                       final type = test['type'] as TestType;
                       if (type == TestType.cameraDetection) {
-                        final success = await locator<NavigationService>().navigateToView(const CameraTestView());
+                        final success = await locator<NavigationService>()
+                            .navigateToView(const CameraTestView());
                         if (rootContext.mounted && success == false) {
                           ScaffoldMessenger.of(rootContext).showSnackBar(
-                            const SnackBar(content: Text('No hands detected. Try again.')),
+                            const SnackBar(
+                                content: Text('No hands detected. Try again.')),
                           );
                         }
-                        } else if (type == TestType.tremor) {
-                          // Navigate to TremorTestView
-                          await locator<NavigationService>().navigateToView(const TremorTestView());
-                        } else {
-                          await viewModel.recordDemoResult(type);
-                          ScaffoldMessenger.of(rootContext).showSnackBar(
-                            SnackBar(content: Text('${test['title']} completed')),
-                          );
-                        }
+                      } else if (type == TestType.tremor) {
+                        await locator<NavigationService>()
+                            .navigateToView(const TremorTestView());
+                      } else if (type == TestType.tap) {
+                        await locator<NavigationService>()
+                            .navigateToView(const TapTestView());
+                      } else {
+                        await viewModel.recordDemoResult(type);
+                        ScaffoldMessenger.of(rootContext).showSnackBar(
+                          SnackBar(
+                              content: Text('${test['title']} completed')),
+                        );
+                      }
                     },
                   ),
                 );
