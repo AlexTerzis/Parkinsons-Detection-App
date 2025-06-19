@@ -31,3 +31,6 @@ Thumbs.db
 # Logs and lock files
 *.log
 *.lock
+
+# Ignore Python venv
+Parkinsons_ML/venv/
