@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:stacked/stacked.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -23,7 +25,7 @@ class TapTestViewModel extends BaseViewModel {
 
   Future<void> initModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('tapping_model.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/tapping_model.tflite');
       _modelLoaded = true;
       print('✅ Model loaded');
     } catch (e) {
@@ -31,13 +33,18 @@ class TapTestViewModel extends BaseViewModel {
     }
   }
 
+  Future<void> loadModel() => initModel();
+
   void recordTap() {
     if (isTesting && (_phase == 0 || _phase == 2)) {
       _tapTimes.add(DateTime.now());
     }
   }
 
-  void startTest() {
+  Future<void> startTest() async {
+    if (!_modelLoaded) {
+      await initModel();
+    }
     _reset();
     _startHand1();
   }
@@ -97,31 +104,54 @@ class TapTestViewModel extends BaseViewModel {
   }
 
   Future<String> _predictFromTaps(List<DateTime> taps) async {
-    if (!_modelLoaded || taps.length < 2) return 'Prediction not available';
+  if (!_modelLoaded || taps.length < 2) return 'Prediction not available';
 
-    final durationSec = testDuration.toDouble();
-    final freq = taps.length / durationSec;
+  final durationSec = testDuration.toDouble();
+  final freq = taps.length / durationSec;
 
-    final intervals = <double>[];
-    for (int i = 1; i < taps.length; i++) {
-      intervals.add(taps[i].difference(taps[i - 1]).inMilliseconds / 1000);
-    }
-
-    final avg = intervals.reduce((a, b) => a + b) / intervals.length;
-    final varSum = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b);
-    final variance = varSum / intervals.length;
-
-    final input = [[avg, variance, freq]];
-    final output = List.filled(1 * 1, 0).reshape([1, 1]);
-
-    _interpreter.run(input, output);
-    final prediction = output[0][0];
-    final percent = (prediction * 100).toStringAsFixed(1);
-
-    return prediction >= 0.5
-        ? '🧠 Parkinson-like pattern ($percent%)'
-        : '✅ Normal tapping ($percent%)';
+  final intervals = <double>[];
+  for (int i = 1; i < taps.length; i++) {
+    intervals.add(taps[i].difference(taps[i - 1]).inMilliseconds / 1000);
   }
+
+  final avg = intervals.reduce((a, b) => a + b) / intervals.length;
+  final variance = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b) / intervals.length;
+
+  final max = intervals.reduce((a, b) => a > b ? a : b);
+  final min = intervals.reduce((a, b) => a < b ? a : b);
+  final range = max - min;
+  final stdDev = variance == 0.0 ? 0.0 : sqrt(variance);
+
+  final input = Float32List.fromList([
+    avg.toDouble(),
+    variance.toDouble(),
+    freq.toDouble(),
+    max.toDouble(),
+    min.toDouble(),
+    range.toDouble(),
+    stdDev.toDouble()
+  ]).reshape([1, 7]);
+
+  final output = Float32List(1).reshape([1, 1]);
+
+  print('Predicting with:\n'
+      'avg=$avg var=$variance freq=$freq\n'
+      'max=$max min=$min range=$range stdDev=$stdDev');
+
+  try {
+    _interpreter.run(input, output);
+  } catch (e) {
+    print('❌ Interpreter run failed: $e');
+    return 'Prediction failed';
+  }
+
+  final prediction = output[0][0];
+  final percent = (prediction * 100).toStringAsFixed(1);
+
+  return prediction >= 0.5
+      ? '🧠 Parkinson-like pattern ($percent%)'
+      : '✅ Normal tapping ($percent%)';
+}
 
   void stopTest() {
     _timer?.cancel();
