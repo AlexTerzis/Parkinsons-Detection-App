@@ -89,4 +89,9 @@ class TapTestView extends StackedView<TapTestViewModel> {
 
   @override
   TapTestViewModel viewModelBuilder(BuildContext context) => TapTestViewModel();
+  /*@override
+  void onViewModelReady(TapTestViewModel viewModel) {
+    viewModel.loadModel();
+    super.onViewModelReady(viewModel);
+  }*/
 }

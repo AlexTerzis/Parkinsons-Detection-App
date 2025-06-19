@@ -47,8 +47,13 @@ class TestResult {
         return TestType.drawing;
       case 'questionnaire':
         return TestType.questionnaire;
+      case 'tremor':
+        return TestType.tremor;
+      case 'tap':
+        return TestType.tap;
       default:
         return TestType.cameraDetection;
+        
     }
   }
 }

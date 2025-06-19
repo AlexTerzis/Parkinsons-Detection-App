@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:stacked/stacked.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class TapTestViewModel extends BaseViewModel {
   final int testDuration = 10; // seconds per hand
@@ -16,7 +16,20 @@ class TapTestViewModel extends BaseViewModel {
   Timer? _timer;
   final List<DateTime> _tapTimes = [];
 
+  late final Interpreter _interpreter;
+  bool _modelLoaded = false;
+
   double get progress => secondsLeft / testDuration;
+
+  Future<void> initModel() async {
+    try {
+      _interpreter = await Interpreter.fromAsset('tapping_model.tflite');
+      _modelLoaded = true;
+      print('✅ Model loaded');
+    } catch (e) {
+      print('❌ Failed to load model: $e');
+    }
+  }
 
   void recordTap() {
     if (isTesting && (_phase == 0 || _phase == 2)) {
@@ -43,8 +56,8 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Tap with right hand';
     secondsLeft = testDuration;
     _tapTimes.clear();
-    _startTimer(() {
-      resultHand1 = _analyzeTaps('Right Hand', List.of(_tapTimes));
+    _startTimer(() async {
+      resultHand1 = await _predictFromTaps(List.of(_tapTimes));
       _startPause();
     });
   }
@@ -62,8 +75,8 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Tap with left hand';
     secondsLeft = testDuration;
     _tapTimes.clear();
-    _startTimer(() {
-      resultHand2 = _analyzeTaps('Left Hand', List.of(_tapTimes));
+    _startTimer(() async {
+      resultHand2 = await _predictFromTaps(List.of(_tapTimes));
       status = 'Test completed';
       isTesting = false;
       _phase = 3;
@@ -83,21 +96,31 @@ class TapTestViewModel extends BaseViewModel {
     });
   }
 
-  String _analyzeTaps(String label, List<DateTime> taps) {
-    if (taps.length < 2) return '$label: not enough taps';
-    final durationSec = testDuration;
+  Future<String> _predictFromTaps(List<DateTime> taps) async {
+    if (!_modelLoaded || taps.length < 2) return 'Prediction not available';
+
+    final durationSec = testDuration.toDouble();
     final freq = taps.length / durationSec;
+
     final intervals = <double>[];
     for (int i = 1; i < taps.length; i++) {
       intervals.add(taps[i].difference(taps[i - 1]).inMilliseconds / 1000);
     }
+
     final avg = intervals.reduce((a, b) => a + b) / intervals.length;
-    final varSum = intervals
-        .map((d) => (d - avg) * (d - avg))
-        .reduce((a, b) => a + b);
+    final varSum = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b);
     final variance = varSum / intervals.length;
 
-    return '$label: taps=${taps.length}, freq=${freq.toStringAsFixed(1)}/s, var=${variance.toStringAsFixed(3)}';
+    final input = [[avg, variance, freq]];
+    final output = List.filled(1 * 1, 0).reshape([1, 1]);
+
+    _interpreter.run(input, output);
+    final prediction = output[0][0];
+    final percent = (prediction * 100).toStringAsFixed(1);
+
+    return prediction >= 0.5
+        ? '🧠 Parkinson-like pattern ($percent%)'
+        : '✅ Normal tapping ($percent%)';
   }
 
   void stopTest() {
