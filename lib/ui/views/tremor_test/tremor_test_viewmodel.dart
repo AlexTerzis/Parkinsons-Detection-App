@@ -5,7 +5,7 @@ import 'package:stacked/stacked.dart';
 import 'package:fftea/fftea.dart';
 
 class TremorTestViewModel extends BaseViewModel {
-  final int testDuration = 11; // seconds per hand
+  final int testDuration = 10; // seconds per hand
   final int pauseDuration = 5; // seconds between hands
 
   List<double> accX = [];
@@ -173,7 +173,7 @@ class TremorTestViewModel extends BaseViewModel {
     }
 
     return '$label Results (Accelerometer):\n'
-        'X Peak Frequency: ${peakFreq(magsX).toStringAsFixed(2)} Hz\n'
+        'X Y Z Peak Frequency: ${peakFreq(magsX).toStringAsFixed(2)} Hz\n'
         'Y Peak Frequency: ${peakFreq(magsY).toStringAsFixed(2)} Hz\n'
         'Z Peak Frequency: ${peakFreq(magsZ).toStringAsFixed(2)} Hz';
   }

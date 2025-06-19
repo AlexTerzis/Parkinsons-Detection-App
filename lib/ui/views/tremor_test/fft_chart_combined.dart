@@ -16,20 +16,26 @@ class FFTChartCombined extends StatelessWidget {
   });
 
   List<FlSpot> _toSpots(List<double> data) {
-    final int limit = data.length > 20 ? 20 : data.length;
-    return List.generate(limit - 1, (i) => FlSpot((i + 1).toDouble(), data[i + 1]));
+    // Only include values from 2.5 Hz onwards (index 2+)
+    final List<FlSpot> spots = [];
+    for (int i = 2; i < data.length && (i - 2) * 2.5 + 2.5 <= 12.5; i++) {
+      final x = (i - 2) * 2.5 + 2.5;
+      spots.add(FlSpot(x, data[i]));
+    }
+    return spots;
   }
 
   FlSpot _getPeak(List<double> data) {
-    double maxVal = data.length > 1 ? data[1] : 0.0;
-    int maxIndex = 1;
-    for (int i = 2; i < data.length && i < 20; i++) {
+    double maxVal = data[2];
+    int maxIndex = 2;
+    for (int i = 3; i < data.length && (i - 2) * 2.5 + 2.5 <= 12.5; i++) {
       if (data[i] > maxVal) {
         maxVal = data[i];
         maxIndex = i;
       }
     }
-    return FlSpot(maxIndex.toDouble(), maxVal);
+    final x = (maxIndex - 2) * 2.5 + 2.5;
+    return FlSpot(x, maxVal);
   }
 
   @override
@@ -63,23 +69,23 @@ class FFTChartCombined extends StatelessWidget {
           height: 260,
           child: LineChart(
             LineChartData(
-              minX: 0,
-              maxX: 20,
+              minX: 2.5,
+              maxX: 12.5,
               minY: 0,
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 22,
-                    interval: 5,
-                    getTitlesWidget: (value, meta) => Text('${value.toInt()} Hz', style: const TextStyle(fontSize: 10)),
+                    interval: 2.5,
+                    getTitlesWidget: (value, meta) => Text('${value.toStringAsFixed(1)} Hz', style: const TextStyle(fontSize: 10)),
                   ),
                 ),
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    interval: 1,
-                    reservedSize: 30,
+                    interval: 100,
+                    reservedSize: 40,
                     getTitlesWidget: (value, meta) => Text(value.toStringAsFixed(0), style: const TextStyle(fontSize: 10)),
                   ),
                 ),
@@ -93,7 +99,7 @@ class FFTChartCombined extends StatelessWidget {
                   spots: _toSpots(spectrumX),
                   isCurved: false,
                   color: Colors.blue,
-                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot == peakX),
+                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot.x == peakX.x),
                   belowBarData: BarAreaData(show: false),
                   barWidth: 2,
                 ),
@@ -101,7 +107,7 @@ class FFTChartCombined extends StatelessWidget {
                   spots: _toSpots(spectrumY),
                   isCurved: false,
                   color: Colors.green,
-                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot == peakY),
+                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot.x == peakY.x),
                   belowBarData: BarAreaData(show: false),
                   barWidth: 2,
                 ),
@@ -109,7 +115,7 @@ class FFTChartCombined extends StatelessWidget {
                   spots: _toSpots(spectrumZ),
                   isCurved: false,
                   color: Colors.red,
-                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot == peakZ),
+                  dotData: FlDotData(show: true, checkToShowDot: (spot, _) => spot.x == peakZ.x),
                   belowBarData: BarAreaData(show: false),
                   barWidth: 2,
                 ),
