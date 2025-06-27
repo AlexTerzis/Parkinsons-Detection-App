@@ -38,7 +38,8 @@ class TapTestView extends StackedView<TapTestViewModel> {
               ),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: viewModel.recordTap,
+              onTapDown: (_) => viewModel.onTapDown(),
+              onTapUp: (_) => viewModel.onTapUp(),
               child: Container(
                 width: 150,
                 height: 150,
@@ -62,8 +63,7 @@ class TapTestView extends StackedView<TapTestViewModel> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed:
-                  viewModel.isTesting ? null : () => viewModel.startTest(),
+              onPressed: viewModel.isTesting ? null : viewModel.startTest,
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Test'),
             ),
@@ -89,9 +89,10 @@ class TapTestView extends StackedView<TapTestViewModel> {
 
   @override
   TapTestViewModel viewModelBuilder(BuildContext context) => TapTestViewModel();
-  /*@override
+
+  @override
   void onViewModelReady(TapTestViewModel viewModel) {
     viewModel.loadModel();
     super.onViewModelReady(viewModel);
-  }*/
+  }
 }

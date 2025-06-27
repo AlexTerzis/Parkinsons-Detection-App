@@ -41,7 +41,7 @@ class TestResult {
     };
   }
 
-  static TestType _typeFromString(String value) {
+   static TestType _typeFromString(String value) {
     switch (value) {
       case 'drawing':
         return TestType.drawing;

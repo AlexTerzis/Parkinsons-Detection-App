@@ -4,7 +4,7 @@ class TappingPredictor {
   late final Interpreter _interpreter;
 
   Future<void> loadModel() async {
-    _interpreter = await Interpreter.fromAsset('tapping_model.tflite');
+    _interpreter = await Interpreter.fromAsset('assets/tapping_model.tflite');
   }
 
   Future<double> predict(List<double> features) async {

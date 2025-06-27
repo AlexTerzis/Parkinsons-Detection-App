@@ -25,7 +25,7 @@ class LoginView extends StackedView<LoginViewModel> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xff4e54c8), Color(0xff8f94fb)],
+              colors: [Color.fromARGB(255, 7, 24, 51), Color.fromARGB(255, 1, 2, 23)],
             ),
           ),
           child: Center(

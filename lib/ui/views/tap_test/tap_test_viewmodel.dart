@@ -17,6 +17,7 @@ class TapTestViewModel extends BaseViewModel {
   int _phase = 0; // 0=hand1,1=pause,2=hand2,3=done
   Timer? _timer;
   final List<DateTime> _tapTimes = [];
+  final List<Map<String, DateTime>> _tapPairs = [];
 
   late final Interpreter _interpreter;
   bool _modelLoaded = false;
@@ -35,9 +36,17 @@ class TapTestViewModel extends BaseViewModel {
 
   Future<void> loadModel() => initModel();
 
-  void recordTap() {
+  void onTapDown() {
     if (isTesting && (_phase == 0 || _phase == 2)) {
-      _tapTimes.add(DateTime.now());
+      _tapPairs.add({'down': DateTime.now()});
+    }
+  }
+
+  void onTapUp() {
+    if (isTesting && (_phase == 0 || _phase == 2)) {
+      if (_tapPairs.isNotEmpty && !_tapPairs.last.containsKey('up')) {
+        _tapPairs.last['up'] = DateTime.now();
+      }
     }
   }
 
@@ -63,8 +72,10 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Tap with right hand';
     secondsLeft = testDuration;
     _tapTimes.clear();
+    _tapPairs.clear();
+
     _startTimer(() async {
-      resultHand1 = await _predictFromTaps(List.of(_tapTimes));
+      resultHand1 = await _predictFromTaps("Right hand", List.of(_tapPairs));
       _startPause();
     });
   }
@@ -74,6 +85,8 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Switch hands';
     secondsLeft = pauseDuration;
     _tapTimes.clear();
+    _tapPairs.clear();
+
     _startTimer(_startHand2);
   }
 
@@ -82,8 +95,10 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Tap with left hand';
     secondsLeft = testDuration;
     _tapTimes.clear();
+    _tapPairs.clear();
+
     _startTimer(() async {
-      resultHand2 = await _predictFromTaps(List.of(_tapTimes));
+      resultHand2 = await _predictFromTaps("Left hand", List.of(_tapPairs));
       status = 'Test completed';
       isTesting = false;
       _phase = 3;
@@ -96,6 +111,7 @@ class TapTestViewModel extends BaseViewModel {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       secondsLeft--;
       notifyListeners();
+
       if (secondsLeft <= 0) {
         timer.cancel();
         onFinish();
@@ -103,55 +119,67 @@ class TapTestViewModel extends BaseViewModel {
     });
   }
 
-  Future<String> _predictFromTaps(List<DateTime> taps) async {
-  if (!_modelLoaded || taps.length < 2) return 'Prediction not available';
+  Future<String> _predictFromTaps(String label, List<Map<String, DateTime>> tapPairs) async {
+    if (!_modelLoaded || tapPairs.length < 2) return 'Prediction not available';
 
-  final durationSec = testDuration.toDouble();
-  final freq = taps.length / durationSec;
+    final intervals = <double>[];
+    final holdTimes = <double>[];
 
-  final intervals = <double>[];
-  for (int i = 1; i < taps.length; i++) {
-    intervals.add(taps[i].difference(taps[i - 1]).inMilliseconds / 1000);
+    for (int i = 1; i < tapPairs.length; i++) {
+      final currentDown = tapPairs[i]['down']!;
+      final prevDown = tapPairs[i - 1]['down']!;
+      final interval = currentDown.difference(prevDown).inMilliseconds / 1000;
+      intervals.add(interval);
+    }
+
+    for (final pair in tapPairs) {
+      if (pair.containsKey('down') && pair.containsKey('up')) {
+        final hold = pair['up']!.difference(pair['down']!).inMilliseconds / 1000;
+        holdTimes.add(hold);
+      }
+    }
+
+    final durationSec = testDuration.toDouble();
+    final freq = tapPairs.length / durationSec;
+
+    final avg = intervals.reduce((a, b) => a + b) / intervals.length;
+    final variance = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b) / intervals.length;
+    final maxVal = intervals.reduce(max);
+    final minVal = intervals.reduce(min);
+    final range = maxVal - minVal;
+    final stdDev = sqrt(variance);
+    final avgHold = holdTimes.isNotEmpty ? holdTimes.reduce((a, b) => a + b) / holdTimes.length : 0.0;
+
+    final input = Float32List.fromList([
+      avg,
+      variance,
+      freq,
+      maxVal,
+      minVal,
+      range,
+      stdDev
+    ]).reshape([1, 7]);
+
+    final output = Float32List(1).reshape([1, 1]);
+
+    print('Predicting with:\n'
+        'avg=$avg var=$variance freq=$freq\n'
+        'max=$maxVal min=$minVal range=$range stdDev=$stdDev hold=$avgHold');
+
+    try {
+      _interpreter.run(input, output);
+    } catch (e) {
+      print('❌ Interpreter run failed: $e');
+      return 'Prediction failed';
+    }
+
+    final prediction = output[0][0];
+    final percent = (prediction * 100).toStringAsFixed(1);
+
+    return prediction >= 0.5
+        ? '$label: ⚠️ Parkinson-like pattern ($percent%)'
+        : '$label: ✅ Normal tapping ($percent%)';
   }
-
-  final avg = intervals.reduce((a, b) => a + b) / intervals.length;
-  final variance = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b) / intervals.length;
-
-  final max = intervals.reduce((a, b) => a > b ? a : b);
-  final min = intervals.reduce((a, b) => a < b ? a : b);
-  final range = max - min;
-  final stdDev = variance == 0.0 ? 0.0 : sqrt(variance);
-
-  final input = Float32List.fromList([
-    avg.toDouble(),
-    variance.toDouble(),
-    freq.toDouble(),
-    max.toDouble(),
-    min.toDouble(),
-    range.toDouble(),
-    stdDev.toDouble()
-  ]).reshape([1, 7]);
-
-  final output = Float32List(1).reshape([1, 1]);
-
-  print('Predicting with:\n'
-      'avg=$avg var=$variance freq=$freq\n'
-      'max=$max min=$min range=$range stdDev=$stdDev');
-
-  try {
-    _interpreter.run(input, output);
-  } catch (e) {
-    print('❌ Interpreter run failed: $e');
-    return 'Prediction failed';
-  }
-
-  final prediction = output[0][0];
-  final percent = (prediction * 100).toStringAsFixed(1);
-
-  return prediction >= 0.5
-      ? '🧠 Parkinson-like pattern ($percent%)'
-      : '✅ Normal tapping ($percent%)';
-}
 
   void stopTest() {
     _timer?.cancel();
