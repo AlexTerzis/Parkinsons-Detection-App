@@ -1,10 +1,19 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:stacked/stacked.dart';
 import 'package:fftea/fftea.dart';
+import '../../../app/app.locator.dart';
+import '../../../services/test_service.dart';
+import '../../../services/authentication_service.dart';
+import '../../../models/test_result.dart';
+import '../../../models/test_type.dart';
 
 class TremorTestViewModel extends BaseViewModel {
+  // Services used for storing results
+  final TestService _tests = locator<TestService>();
+  final AuthenticationService _auth = locator<AuthenticationService>();
   final int testDuration = 10; // seconds per hand
   final int pauseDuration = 5; // seconds between hands
 
@@ -34,6 +43,9 @@ class TremorTestViewModel extends BaseViewModel {
 
   String resultHand1 = '';
   String resultHand2 = '';
+
+  double _score1 = 0.0;
+  double _score2 = 0.0;
   String tremorStatus = 'Press start to begin';
   int secondsLeft = 0;
   bool isTesting = false;
@@ -56,6 +68,8 @@ class TremorTestViewModel extends BaseViewModel {
     spectrumX2.clear(); spectrumY2.clear(); spectrumZ2.clear();
     resultHand1 = '';
     resultHand2 = '';
+    _score1 = 0.0;
+    _score2 = 0.0;
     tremorStatus = 'Starting test...';
     _phase = 0;
     isTesting = true;
@@ -89,13 +103,14 @@ class TremorTestViewModel extends BaseViewModel {
     tremorStatus = 'Testing Hand 2...';
     secondsLeft = testDuration;
     _startSensors();
-    _startTimer(() {
+    _startTimer(() async {
       _stopSensors();
       resultHand2 = _analyzeData('Hand 2', storeInHand1: false);
       tremorStatus = 'Test completed';
       isTesting = false;
       _phase = 3;
       notifyListeners();
+      await _saveResult(math.max(_score1, _score2));
     });
   }
 
@@ -137,6 +152,8 @@ class TremorTestViewModel extends BaseViewModel {
     _gyroSub?.cancel();
   }
 
+  // Analyzes the captured sensor values and calculates a simple tremor score.
+  // The frequency with the highest magnitude is used as an indicator.
   String _analyzeData(String label, {required bool storeInHand1}) {
     List<double> analyzeAxis(List<double> data) {
       if (data.length < 32) return [];
@@ -172,10 +189,20 @@ class TremorTestViewModel extends BaseViewModel {
       return peakIndex * (mags.length / testDuration) / mags.length;
     }
 
+    final fx = peakFreq(magsX);
+    final fy = peakFreq(magsY);
+    final fz = peakFreq(magsZ);
+    final score = (math.max(fx, math.max(fy, fz)) / 20).clamp(0.0, 1.0);
+    if (storeInHand1) {
+      _score1 = score;
+    } else {
+      _score2 = score;
+    }
+
     return '$label Results (Accelerometer):\n'
-        'X Y Z Peak Frequency: ${peakFreq(magsX).toStringAsFixed(2)} Hz\n'
-        'Y Peak Frequency: ${peakFreq(magsY).toStringAsFixed(2)} Hz\n'
-        'Z Peak Frequency: ${peakFreq(magsZ).toStringAsFixed(2)} Hz';
+        'X Peak Frequency: ${fx.toStringAsFixed(2)} Hz\n'
+        'Y Peak Frequency: ${fy.toStringAsFixed(2)} Hz\n'
+        'Z Peak Frequency: ${fz.toStringAsFixed(2)} Hz';
   }
 
   int _nextPowerOfTwo(int n) {
@@ -192,5 +219,19 @@ class TremorTestViewModel extends BaseViewModel {
     isTesting = false;
     tremorStatus = 'Test stopped';
     notifyListeners();
+  }
+
+  // Saves the greater of the two hand scores to Firestore
+  Future<void> _saveResult(double score) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    final result = TestResult(
+      id: '',
+      patientId: uid,
+      type: TestType.tremor,
+      performedAt: DateTime.now(),
+      score: score.clamp(0, 1),
+    );
+    await _tests.addResult(result);
   }
 }

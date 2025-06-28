@@ -3,8 +3,16 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:stacked/stacked.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+import '../../../app/app.locator.dart';
+import '../../../services/test_service.dart';
+import '../../../services/authentication_service.dart';
+import '../../../models/test_result.dart';
+import '../../../models/test_type.dart';
 
 class TapTestViewModel extends BaseViewModel {
+  // Services used to persist results and fetch the current user
+  final TestService _tests = locator<TestService>();
+  final AuthenticationService _auth = locator<AuthenticationService>();
   final int testDuration = 10; // seconds per hand
   final int pauseDuration = 5;
 
@@ -13,6 +21,9 @@ class TapTestViewModel extends BaseViewModel {
   String status = 'Press start to begin';
   String resultHand1 = '';
   String resultHand2 = '';
+
+  double _score1 = 0.0;
+  double _score2 = 0.0;
 
   int _phase = 0; // 0=hand1,1=pause,2=hand2,3=done
   Timer? _timer;
@@ -61,6 +72,8 @@ class TapTestViewModel extends BaseViewModel {
   void _reset() {
     resultHand1 = '';
     resultHand2 = '';
+    _score1 = 0.0;
+    _score2 = 0.0;
     status = 'Starting test...';
     isTesting = true;
     _phase = 0;
@@ -75,7 +88,11 @@ class TapTestViewModel extends BaseViewModel {
     _tapPairs.clear();
 
     _startTimer(() async {
-      resultHand1 = await _predictFromTaps("Right hand", List.of(_tapPairs));
+      resultHand1 = await _predictFromTaps(
+        "Right hand",
+        List.of(_tapPairs),
+        storeInHand1: true,
+      );
       _startPause();
     });
   }
@@ -98,11 +115,16 @@ class TapTestViewModel extends BaseViewModel {
     _tapPairs.clear();
 
     _startTimer(() async {
-      resultHand2 = await _predictFromTaps("Left hand", List.of(_tapPairs));
+      resultHand2 = await _predictFromTaps(
+        "Left hand",
+        List.of(_tapPairs),
+        storeInHand1: false,
+      );
       status = 'Test completed';
       isTesting = false;
       _phase = 3;
       notifyListeners();
+      await _saveResult(max(_score1, _score2));
     });
   }
 
@@ -119,7 +141,14 @@ class TapTestViewModel extends BaseViewModel {
     });
   }
 
-  Future<String> _predictFromTaps(String label, List<Map<String, DateTime>> tapPairs) async {
+  // Runs the ML model on the collected tap data. The score is stored so
+  // we can later upload it to Firestore. The method still returns a
+  // human readable string for display.
+  Future<String> _predictFromTaps(
+    String label,
+    List<Map<String, DateTime>> tapPairs, {
+    required bool storeInHand1,
+  }) async {
     if (!_modelLoaded || tapPairs.length < 2) return 'Prediction not available';
 
     final intervals = <double>[];
@@ -174,11 +203,30 @@ class TapTestViewModel extends BaseViewModel {
     }
 
     final prediction = output[0][0];
+    if (storeInHand1) {
+      _score1 = prediction;
+    } else {
+      _score2 = prediction;
+    }
     final percent = (prediction * 100).toStringAsFixed(1);
 
     return prediction >= 0.5
         ? '$label: ⚠️ Parkinson-like pattern ($percent%)'
         : '$label: ✅ Normal tapping ($percent%)';
+  }
+
+  // Persists the normalized score to Firestore
+  Future<void> _saveResult(double score) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    final result = TestResult(
+      id: '',
+      patientId: uid,
+      type: TestType.tap,
+      performedAt: DateTime.now(),
+      score: score.clamp(0, 1),
+    );
+    await _tests.addResult(result);
   }
 
   void stopTest() {

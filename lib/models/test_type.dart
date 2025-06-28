@@ -2,5 +2,7 @@ enum TestType {
   cameraDetection,
   drawing,
   questionnaire,
-  tremor, tap,
+  tremor,
+  tap,
+  voice,
 }

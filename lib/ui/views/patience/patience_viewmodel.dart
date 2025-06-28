@@ -207,6 +207,8 @@ class PatienceViewModel extends BaseViewModel {
         return 'Tremor';
       case TestType.tap:
         return 'Tap';
+      case TestType.voice:
+        return 'Voice';
       case TestType.cameraDetection:
       default:
         return 'Camera Detection';

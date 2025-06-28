@@ -30,7 +30,8 @@ class PatienceView extends StackedView<PatienceViewModel> {
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Patient Dashboard'),
+          // Hides the title bar so only the tabs are visible
+          toolbarHeight: 0,
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
@@ -193,6 +194,11 @@ class PatienceView extends StackedView<PatienceViewModel> {
         'title': 'Questionnaire',
         'icon': Icons.question_answer,
         'type': TestType.questionnaire,
+      },
+      {
+        'title': 'Voice Test',
+        'icon': Icons.mic,
+        'type': TestType.voice,
       },
     ];
 
@@ -394,52 +400,30 @@ class PatienceView extends StackedView<PatienceViewModel> {
           const SizedBox(height: 24),
           Text('Overall Summary', style: theme.textTheme.titleLarge),
           SizedBox(
-            height: 200,
-            child: BarChart(
-              BarChartData(
-                barGroups: viewModel.resultsSummary.entries
-                    .toList()
-                    .asMap()
-                    .entries
-                    .map(
-                      (e) => BarChartGroupData(
-                        x: e.key,
-                        barRods: [
-                          BarChartRodData(
-                            toY: e.value.value,
-                            color: theme.colorScheme.primary,
-                            width: 12,
-                          ),
-                        ],
-                      ),
-                    )
-                    .toList(),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        final keys = viewModel.resultsSummary.keys.toList();
-                        if (index < 0 || index >= keys.length) return const SizedBox.shrink();
-                        return Text(keys[index], style: const TextStyle(fontSize: 10));
-                      },
-                    ),
+            height: 220,
+            child: RadarChart(
+              RadarChartData(
+                dataSets: [
+                  RadarDataSet(
+                    fillColor: theme.colorScheme.primary.withOpacity(0.25),
+                    borderColor: theme.colorScheme.primary,
+                    entryRadius: 3,
+                    dataEntries: viewModel.resultsSummary.values
+                        .map((v) => RadarEntry(value: v))
+                        .toList(),
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 0.25,
-                      reservedSize: 28,
-                      getTitlesWidget: (value, meta) => Text('${(value * 100).round()}%', style: const TextStyle(fontSize: 10)),
-                    ),
-                  ),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                gridData: FlGridData(show: true),
-                borderData: FlBorderData(show: true),
-                maxY: 1,
+                ],
+                radarBackgroundColor: Colors.transparent,
+                radarBorderData: const BorderSide(color: Colors.transparent),
+                tickCount: 4,
+                ticksTextStyle: const TextStyle(fontSize: 10),
+                tickBorderData: BorderSide(color: theme.dividerColor),
+                titleTextStyle: const TextStyle(fontSize: 12),
+                getTitle: (index, angle) {
+                  final keys = viewModel.resultsSummary.keys.toList();
+                  if (index < 0 || index >= keys.length) return const RadarChartTitle(text: '');
+                  return RadarChartTitle(text: keys[index], angle: angle);
+                },
               ),
             ),
           ),

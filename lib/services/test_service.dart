@@ -64,6 +64,8 @@ class TestService {
         return 'Tremor';
       case TestType.tap:
         return 'Tap';
+      case TestType.voice:
+        return 'Voice';
       case TestType.cameraDetection:
         return 'Camera';
     }

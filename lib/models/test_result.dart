@@ -51,6 +51,8 @@ class TestResult {
         return TestType.tremor;
       case 'tap':
         return TestType.tap;
+      case 'voice':
+        return TestType.voice;  
       default:
         return TestType.cameraDetection;
         
