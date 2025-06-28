@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:stacked/stacked.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'patience_viewmodel.dart';
 import '../../../models/test_type.dart';
@@ -305,42 +306,153 @@ class PatienceView extends StackedView<PatienceViewModel> {
   }
 
   Widget _buildResultsTab(PatienceViewModel viewModel, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Overall Scores', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 24),
-          ...viewModel.resultsSummary.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
+    final grouped = viewModel.groupedResults;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Test Results', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
+        ...grouped.entries.map((entry) {
+          final label = viewModel.labelForType(entry.key);
+          final latest = entry.value.first.score;
+          final data = entry.value
+              .map((e) => _ScorePoint(e.performedAt, e.score))
+              .toList();
+          final spots = data
+              .asMap()
+              .entries
+              .map((e) => FlSpot(e.key.toDouble(), data[data.length - 1 - e.key].score))
+              .toList();
+          return Card(
+            child: ExpansionTile(
+              title: Row(
                 children: [
-                  Expanded(child: Text(entry.key)),
+                  Expanded(child: Text(label)),
                   SizedBox(
                     width: 150,
                     child: LinearProgressIndicator(
-                      value: entry.value,
+                      value: latest,
                       minHeight: 8,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text('${(entry.value * 100).round()}%'),
+                  Text('${(latest * 100).round()}%'),
                 ],
               ),
-            );
-          }).toList(),
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: LineChart(
+                    LineChartData(
+                      minX: 0,
+                      maxX: (spots.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: 1,
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              final index = value.toInt();
+                              if (index < 0 || index >= data.length) return const SizedBox.shrink();
+                              final dt = data[data.length - 1 - index].time;
+                              return Text('${dt.month}/${dt.day}', style: const TextStyle(fontSize: 10));
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 0.25,
+                            reservedSize: 28,
+                            getTitlesWidget: (value, meta) => Text('${(value * 100).round()}%', style: const TextStyle(fontSize: 10)),
+                          ),
+                        ),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      gridData: FlGridData(show: true),
+                      borderData: FlBorderData(show: true),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: spots,
+                          isCurved: false,
+                          color: theme.colorScheme.primary,
+                          dotData: FlDotData(show: true),
+                          belowBarData: BarAreaData(show: false),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        if (grouped.isNotEmpty) ...[
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Export or share results
-            },
-            icon: const Icon(Icons.download),
-            label: const Text('Export Results'),
+          Text('Overall Summary', style: theme.textTheme.titleLarge),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              BarChartData(
+                barGroups: viewModel.resultsSummary.entries
+                    .toList()
+                    .asMap()
+                    .entries
+                    .map(
+                      (e) => BarChartGroupData(
+                        x: e.key,
+                        barRods: [
+                          BarChartRodData(
+                            toY: e.value.value,
+                            color: theme.colorScheme.primary,
+                            width: 12,
+                          ),
+                        ],
+                      ),
+                    )
+                    .toList(),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        final keys = viewModel.resultsSummary.keys.toList();
+                        if (index < 0 || index >= keys.length) return const SizedBox.shrink();
+                        return Text(keys[index], style: const TextStyle(fontSize: 10));
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 0.25,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) => Text('${(value * 100).round()}%', style: const TextStyle(fontSize: 10)),
+                    ),
+                  ),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                maxY: 1,
+              ),
+            ),
           ),
         ],
-      ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          onPressed: () {
+            // TODO: Export or share results
+          },
+          icon: const Icon(Icons.download),
+          label: const Text('Export Results'),
+        ),
+      ],
     );
   }
 
@@ -464,3 +576,10 @@ class PatienceView extends StackedView<PatienceViewModel> {
     );
   }
 }
+
+class _ScorePoint {
+  final DateTime time;
+  final double score;
+  _ScorePoint(this.time, this.score);
+}
+
