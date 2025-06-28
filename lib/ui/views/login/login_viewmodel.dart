@@ -4,6 +4,7 @@ import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../app/app.router.dart';
@@ -18,24 +19,27 @@ class LoginViewModel extends BaseViewModel {
   bool _isLoginMode = true;
   UserRole _selectedRole = UserRole.patient;
   String? _errorMessage;
+  bool _keepMeLoggedIn = false;
 
   // Form controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
 
-  // --- UI Toggles ---
+  // UI Toggles
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
 
+  // --- Getters ---
   bool get isLoginMode => _isLoginMode;
   UserRole get selectedRole => _selectedRole;
   String? get errorMessage => _errorMessage;
   bool get passwordVisible => _passwordVisible;
   bool get confirmPasswordVisible => _confirmPasswordVisible;
+  bool get keepMeLoggedIn => _keepMeLoggedIn;
 
+  // --- Setters / Actions ---
   void toggleMode() {
     _isLoginMode = !_isLoginMode;
     _errorMessage = null;
@@ -57,28 +61,29 @@ class LoginViewModel extends BaseViewModel {
     notifyListeners();
   }
 
+  void setKeepMeLoggedIn(bool value) {
+    _keepMeLoggedIn = value;
+    notifyListeners();
+  }
+
+  // --- Authentication Logic ---
   Future<void> authenticate({
     required String email,
     required String password,
     String? confirmPassword,
   }) async {
-    // Basic client-side validation
     if (!_isLoginMode && password != confirmPassword) {
       _setError('Passwords do not match.');
       return;
     }
 
-    // Clear previous error and start busy indicator
     _setError(null);
     setBusy(true);
 
     try {
       if (_isLoginMode) {
         await _authService.signIn(email: email, password: password);
-        if (kDebugMode) {
-          print('Login successful');
-        }
-        await _navigateBasedOnRole();
+        if (kDebugMode) print('Login successful');
       } else {
         await _authService.signUp(
           email: email,
@@ -86,11 +91,15 @@ class LoginViewModel extends BaseViewModel {
           userRole: _selectedRole,
           name: nameController.text.trim(),
         );
-        if (kDebugMode) {
-          print('Sign-up successful');
-        }
-        await _navigateBasedOnRole();
+        if (kDebugMode) print('Sign-up successful');
       }
+
+      if (_keepMeLoggedIn) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('keepMeLoggedIn', true);
+      }
+
+      await _navigateBasedOnRole();
     } on FirebaseAuthException catch (e) {
       _setError(e.message ?? 'Authentication error');
     } catch (e) {
@@ -111,9 +120,7 @@ class LoginViewModel extends BaseViewModel {
 
     try {
       await _authService.sendPasswordReset(email: email);
-      if (kDebugMode) {
-        print('Password reset email sent.');
-      }
+      if (kDebugMode) print('Password reset email sent.');
     } on FirebaseAuthException catch (e) {
       _setError(e.message ?? 'Failed to send reset email.');
     } catch (_) {
@@ -128,54 +135,55 @@ class LoginViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  // --- Validation Methods ---
+  // --- Validators ---
   String? validateEmail(String? email) {
-    if (email == null || email.isEmpty) {
-      return 'Email is required';
-    }
-
-    final RegExp emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-
-    if (!emailRegex.hasMatch(email)) {
-      return 'Please enter a valid email address';
-    }
-
+    if (email == null || email.isEmpty) return 'Email is required';
+    final RegExp emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) return 'Please enter a valid email address';
     return null;
   }
 
   String? validatePassword(String? password) {
-    if (password == null || password.isEmpty) {
-      return 'Password is required';
-    }
-
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-
+    if (password == null || password.isEmpty) return 'Password is required';
+    if (password.length < 6) return 'Password must be at least 6 characters';
     return null;
   }
 
   String? validateConfirmPassword(String? confirmPassword) {
     if (!_isLoginMode) {
-      if (confirmPassword == null || confirmPassword.isEmpty) {
-        return 'Please confirm your password';
-      }
-
-      if (confirmPassword != passwordController.text) {
-        return 'Passwords do not match';
-      }
+      if (confirmPassword == null || confirmPassword.isEmpty) return 'Please confirm your password';
+      if (confirmPassword != passwordController.text) return 'Passwords do not match';
     }
-
     return null;
   }
 
   String? validateName(String? name) {
-    if (name == null || name.trim().isEmpty) {
-      return 'Name is required';
-    }
+    if (name == null || name.trim().isEmpty) return 'Name is required';
     return null;
+  }
+
+  // --- Navigation ---
+  Future<void> _navigateBasedOnRole() async {
+    final User? currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      final doc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final role = doc.data()?['role'] ?? 'patient';
+
+      if (role == 'doctor') {
+        await _navigationService.navigateToDoctorView();
+      } else {
+        await _navigationService.navigateToPatienceView();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error determining role: $e');
+      if (_selectedRole == UserRole.doctor) {
+        await _navigationService.navigateToDoctorView();
+      } else {
+        await _navigationService.navigateToPatienceView();
+      }
+    }
   }
 
   @override
@@ -185,44 +193,5 @@ class LoginViewModel extends BaseViewModel {
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _navigateBasedOnRole() async {
-    final User? currentUser = _authService.currentUser;
-    if (currentUser == null) return;
-
-    try {
-      final DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(currentUser.uid).get();
-
-      if (userDoc.exists) {
-        final Map<String, dynamic> userData =
-            userDoc.data() as Map<String, dynamic>;
-        final String role = userData['role'] as String? ?? 'patient';
-
-        if (role == 'doctor') {
-          await _navigationService.navigateToDoctorView();
-        } else {
-          await _navigationService.navigateToPatienceView();
-        }
-      } else {
-        // Fallback if user document doesn't exist
-        if (_selectedRole == UserRole.doctor) {
-          await _navigationService.navigateToDoctorView();
-        } else {
-          await _navigationService.navigateToPatienceView();
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error retrieving user role: $e');
-      }
-      // Fallback navigation based on selected role during sign-up
-      if (_selectedRole == UserRole.doctor) {
-        await _navigationService.navigateToDoctorView();
-      } else {
-        await _navigationService.navigateToPatienceView();
-      }
-    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../services/authentication_service.dart';
 import 'login_viewmodel.dart';
@@ -55,7 +56,6 @@ class LoginView extends StackedView<LoginViewModel> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Name (sign-up only)
                           if (!viewModel.isLoginMode) ...[
                             TextFormField(
                               controller: viewModel.nameController,
@@ -69,7 +69,6 @@ class LoginView extends StackedView<LoginViewModel> {
                             const SizedBox(height: 16),
                           ],
 
-                          // Email
                           TextFormField(
                             controller: viewModel.emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -82,7 +81,6 @@ class LoginView extends StackedView<LoginViewModel> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password
                           TextFormField(
                             controller: viewModel.passwordController,
                             obscureText: !viewModel.passwordVisible,
@@ -101,7 +99,6 @@ class LoginView extends StackedView<LoginViewModel> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Confirm password for sign-up
                           if (!viewModel.isLoginMode) ...[
                             TextFormField(
                               controller: viewModel.confirmPasswordController,
@@ -122,7 +119,6 @@ class LoginView extends StackedView<LoginViewModel> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Role selection modern chips
                             Text('I am a', style: theme.textTheme.bodyLarge),
                             const SizedBox(height: 8),
                             Wrap(
@@ -140,6 +136,13 @@ class LoginView extends StackedView<LoginViewModel> {
                             const SizedBox(height: 16),
                           ],
 
+                          CheckboxListTile(
+                            title: const Text('Keep me logged in'),
+                            value: viewModel.keepMeLoggedIn,
+                            onChanged: (value) => viewModel.setKeepMeLoggedIn(value ?? false),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          ),
+
                           if (viewModel.errorMessage != null) ...[
                             Text(
                               viewModel.errorMessage!,
@@ -150,7 +153,6 @@ class LoginView extends StackedView<LoginViewModel> {
                             const SizedBox(height: 12),
                           ],
 
-                          // Primary action button
                           SizedBox(
                             height: 48,
                             child: ElevatedButton(

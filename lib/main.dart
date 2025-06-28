@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/app/app.bottomsheets.dart';
@@ -7,8 +9,14 @@ import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
 import 'package:parkinsondetetion/firebase_options.dart';
 import 'package:parkinsondetetion/ui/views/login/login_view.dart';
+import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
+import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart';
 import 'package:responsive_builder/responsive_builder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked_services/stacked_services.dart';
+
+late final bool _startAtLogin;
+late final Widget _startView;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +28,34 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  final prefs = await SharedPreferences.getInstance();
+  final bool keepLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+
+  if (keepLoggedIn && currentUser != null) {
+    // fetch role to decide view
+    final role = await _getUserRole(currentUser.uid);
+    if (role == 'doctor') {
+      _startView = const DoctorView();
+    } else {
+      _startView = const PatienceView();
+    }
+    _startAtLogin = false;
+  } else {
+    _startView = LoginView();
+    _startAtLogin = true;
+  }
+
   runApp(const MainApp());
+}
+
+Future<String> _getUserRole(String uid) async {
+  try {
+    final snapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return snapshot.data()?['role'] ?? 'patient';
+  } catch (_) {
+    return 'patient';
+  }
 }
 
 class MainApp extends StatelessWidget {
@@ -36,13 +71,14 @@ class MainApp extends StatelessWidget {
           useMaterial3: true,
         ),
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(), // Start with splash
+        home: _startAtLogin ? const SplashScreen() : _startView,
         onGenerateRoute: StackedRouter().onGenerateRoute,
         navigatorKey: StackedService.navigatorKey,
       ),
     );
   }
 }
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -58,25 +94,19 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    // Animate dots
     _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       setState(() {
         _currentDot = (_currentDot + 1) % 3;
       });
     });
 
-    // Navigate after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       _timer.cancel();
-
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => LoginView(),
+          pageBuilder: (context, animation, secondaryAnimation) => _startView,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 600),
         ),
@@ -104,18 +134,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 7, 24, 51), // matches your image
+      backgroundColor: const Color.fromARGB(255, 7, 24, 51),
       body: Stack(
         children: [
-          // Full screen background image
           Positioned.fill(
             child: Image.asset(
               'assets/images/loading_screen.png',
               fit: BoxFit.fill,
             ),
           ),
-
-          // Animated dots over image
           Positioned(
             bottom: 100,
             left: 0,
