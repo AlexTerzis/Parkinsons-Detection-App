@@ -218,7 +218,6 @@ class PatienceViewModel extends BaseViewModel {
       case TestType.voice:
         return 'Voice';
       case TestType.cameraDetection:
-      default:
         return 'Camera Detection';
     }
   }

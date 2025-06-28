@@ -234,4 +234,12 @@ class TremorTestViewModel extends BaseViewModel {
     );
     await _tests.addResult(result);
   }
+  
+  @override
+  void dispose() {
+    // Ensure countdown timer and sensor streams are cleaned up
+    _countdownTimer?.cancel();
+    _stopSensors();
+    super.dispose();
+  }
 }

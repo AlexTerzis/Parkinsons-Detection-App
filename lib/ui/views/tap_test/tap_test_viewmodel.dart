@@ -235,4 +235,14 @@ class TapTestViewModel extends BaseViewModel {
     status = 'Test stopped';
     notifyListeners();
   }
+  @override
+  void dispose() {
+    // Cancel any running timer so it doesn't trigger after dispose
+    _timer?.cancel();
+    // Close the interpreter only if the model was loaded to free resources
+    if (_modelLoaded) {
+      _interpreter.close();
+    }
+    super.dispose();
+  }
 }
