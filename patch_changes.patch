@@ -1,0 +1,200 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
+index f0a504694c0466b3ec5399e3d9aa2b605f402483..0abf5ae280f368aa503b381d194e5808a8b9d1b0 100644
+--- a/lib/ui/views/patience/patience_viewmodel.dart
++++ b/lib/ui/views/patience/patience_viewmodel.dart
+@@ -1,31 +1,32 @@
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:flutter/material.dart';
++import 'dart:async';
+ 
+ import '../../../app/app.locator.dart';
+ import '../../../services/authentication_service.dart';
+ import '../../../services/test_service.dart';
+ import '../../../services/reports_service.dart';
+ import '../../../models/test_result.dart';
+ import '../../../models/patient_report.dart';
+ import '../../../models/app_user.dart';
+ import '../../../models/test_type.dart';
+ 
+ class PatienceViewModel extends BaseViewModel {
+   final AuthenticationService _authService = locator<AuthenticationService>();
+   final TestService _testService = locator<TestService>();
+   final ReportsService _reportsService = locator<ReportsService>();
+ 
+   String get email => _authService.currentUser?.email ?? '--';
+ 
+   // --- Profile fields ---
+   String _name = '--';
+   String get name => _name.isEmpty ? '--' : _name;
+ 
+   String _dob = ''; // Date of birth
+   String get dob => _dob;
+ 
+   String _medication = ''; // Medication info
+diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
+index f0a504694c0466b3ec5399e3d9aa2b605f402483..0abf5ae280f368aa503b381d194e5808a8b9d1b0 100644
+--- a/lib/ui/views/patience/patience_viewmodel.dart
++++ b/lib/ui/views/patience/patience_viewmodel.dart
+@@ -41,88 +42,92 @@ class PatienceViewModel extends BaseViewModel {
+   List<TestResult> get results => _results;
+ 
+   Map<String, double> get resultsSummary =>
+       _testService.computeSummary(_results);
+ 
+   Map<TestType, List<TestResult>> get groupedResults {
+     final Map<TestType, List<TestResult>> map = {};
+     for (var r in _results) {
+       map.putIfAbsent(r.type, () => []).add(r);
+     }
+     return map;
+   }
+ 
+   double latestScoreForType(TestType type) =>
+       groupedResults[type]?.first.score ?? 0.0;
+ 
+   List<PatientReport> _reports = [];
+   List<PatientReport> get reports => _reports;
+ 
+   final Map<String, AppUser> _doctorLookup = {};
+   String doctorName(String id) => _doctorLookup[id]?.name ?? id;
+ 
+   List<AppUser> _doctors = [];
+   List<AppUser> get doctors => _doctors;
+ 
++  // Subscriptions for realtime updates
++  StreamSubscription<List<TestResult>>? _resultsSub;
++  StreamSubscription<List<PatientReport>>? _reportsSub;
++
+   // Summary items for display
+   List<Map<String, String>> get historyItems => _results
+       .map((r) => {
+             'date': '${r.performedAt.month}/${r.performedAt.day}  ${r.performedAt.hour.toString().padLeft(2, '0')}:${r.performedAt.minute.toString().padLeft(2, '0')}',
+             'test': _labelForType(r),
+             'result': '${(r.score * 100).round()}%',
+           })
+       .toList();
+ 
+   // Logout and clear preference
+   Future<void> logout(BuildContext context) async {
+     final prefs = await SharedPreferences.getInstance();
+     await prefs.remove('keepMeLoggedIn');
+     await FirebaseAuth.instance.signOut();
+ 
+     Navigator.of(context).pushAndRemoveUntil(
+       MaterialPageRoute(builder: (_) => LoginView()),
+       (route) => false,
+     );
+   }
+ 
+   // Initialization: Load user info, subscribe to result/report streams, preload doctors
+   Future<void> init() async {
+     setBusy(true);
+ 
+     _name = await _authService.fetchDisplayName() ?? '--';
+     nameController.text = _name == '--' ? '' : _name;
+ 
+     final String? uid = _authService.currentUser?.uid;
+     if (uid != null) {
+-      // Subscribe to test results
+-      _testService.watchResultsForPatient(uid).listen((list) {
++      // Subscribe to test results and keep the subscription
++      _resultsSub = _testService.watchResultsForPatient(uid).listen((list) {
+         _results = list;
+         notifyListeners();
+       });
+ 
+-      // Subscribe to reports
+-      _reportsService.watchReportsForPatient(uid).listen((data) {
++      // Subscribe to reports and keep the subscription
++      _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
+         _reports = data;
+         notifyListeners();
+       });
+ 
+       // Fetch extra profile data (DOB + medication) from Firestore
+       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+ 
+       final data = doc.data();
+       if (data != null) {
+         _dob = data['dob'] ?? '';
+         _medication = data['medication'] ?? '';
+         dobController.text = _dob;
+         medicationController.text = _medication;
+       }
+ 
+       // Preload doctor lookup map
+       _doctors = await _reportsService.fetchAllDoctors();
+       for (var d in _doctors) {
+         _doctorLookup[d.uid] = d;
+       }
+     }
+ 
+     setBusy(false);
+   }
+ 
+diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
+index f0a504694c0466b3ec5399e3d9aa2b605f402483..0abf5ae280f368aa503b381d194e5808a8b9d1b0 100644
+--- a/lib/ui/views/patience/patience_viewmodel.dart
++++ b/lib/ui/views/patience/patience_viewmodel.dart
+@@ -133,50 +138,53 @@ class PatienceViewModel extends BaseViewModel {
+     notifyListeners();
+     await _authService.updateDisplayName(_name);
+   }
+ 
+   Future<void> saveName() async {
+     await updateName(nameController.text);
+   }
+ 
+   // Save extra profile fields (DOB and medication) to Firestore
+   Future<void> saveExtraProfileFields() async {
+     final String? uid = _authService.currentUser?.uid;
+     if (uid == null) return;
+ 
+     _dob = dobController.text.trim();
+     _medication = medicationController.text.trim();
+     notifyListeners();
+ 
+     await FirebaseFirestore.instance.collection('users').doc(uid).update({
+       'dob': _dob,
+       'medication': _medication,
+     });
+   }
+ 
+   @override
+   void dispose() {
++    // Cancel subscriptions to avoid memory leaks
++    _resultsSub?.cancel();
++    _reportsSub?.cancel();
+     nameController.dispose();
+     dobController.dispose();
+     medicationController.dispose();
+     super.dispose();
+   }
+ 
+   // Send results to selected doctor
+   Future<void> sendResultsToDoctor(String doctorId) async {
+     if (_results.isEmpty) return;
+     final String? uid = _authService.currentUser?.uid;
+     if (uid == null) return;
+ 
+     setBusy(true);
+     await _reportsService.sendResultsToDoctor(
+       patientId: uid,
+       doctorId: doctorId,
+       results: _results,
+     );
+     setBusy(false);
+   }
+ 
+   // Demo generator
+   Future<void> recordDemoResult(TestType type) async {
+     final String? uid = _authService.currentUser?.uid;
+     if (uid == null) return;
+ 
+EOF
+)

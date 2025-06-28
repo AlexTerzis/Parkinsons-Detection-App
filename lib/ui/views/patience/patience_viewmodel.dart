@@ -4,6 +4,7 @@ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import '../../../app/app.locator.dart';
 import '../../../services/authentication_service.dart';
@@ -63,6 +64,10 @@ class PatienceViewModel extends BaseViewModel {
   List<AppUser> _doctors = [];
   List<AppUser> get doctors => _doctors;
 
+  // Subscriptions for realtime updates
+  StreamSubscription<List<TestResult>>? _resultsSub;
+  StreamSubscription<List<PatientReport>>? _reportsSub;
+
   // Summary items for display
   List<Map<String, String>> get historyItems => _results
       .map((r) => {
@@ -93,14 +98,14 @@ class PatienceViewModel extends BaseViewModel {
 
     final String? uid = _authService.currentUser?.uid;
     if (uid != null) {
-      // Subscribe to test results
-      _testService.watchResultsForPatient(uid).listen((list) {
+      // Subscribe to test results and keep the subscription
+      _resultsSub = _testService.watchResultsForPatient(uid).listen((list) {
         _results = list;
         notifyListeners();
       });
 
-      // Subscribe to reports
-      _reportsService.watchReportsForPatient(uid).listen((data) {
+      // Subscribe to reports and keep the subscription
+      _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
         _reports = data;
         notifyListeners();
       });
@@ -155,6 +160,9 @@ class PatienceViewModel extends BaseViewModel {
 
   @override
   void dispose() {
+    // Cancel subscriptions to avoid memory leaks
+    _resultsSub?.cancel();
+    _reportsSub?.cancel();
     nameController.dispose();
     dobController.dispose();
     medicationController.dispose();
