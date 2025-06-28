@@ -9,6 +9,10 @@ import 'package:flutter/material.dart' as _i8;
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart'
     as _i7;
+import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart'
+    as _i10;
+import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart'
+    as _i11;
 import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart' as _i5;
 import 'package:parkinsondetetion/ui/views/home/home_view.dart' as _i2;
 import 'package:parkinsondetetion/ui/views/login/login_view.dart' as _i4;
@@ -30,6 +34,10 @@ class Routes {
 
   static const cameraTestView = '/camera-test-view';
 
+  static const tremorTestView = '/tremor-test-view';
+
+  static const tapTestView = '/tap-test-view';
+
   static const all = <String>{
     homeView,
     startupView,
@@ -37,6 +45,8 @@ class Routes {
     doctorView,
     patienceView,
     cameraTestView,
+    tremorTestView,
+    tapTestView,
   };
 }
 
@@ -65,6 +75,14 @@ class StackedRouter extends _i1.RouterBase {
     _i1.RouteDef(
       Routes.cameraTestView,
       page: _i7.CameraTestView,
+    ),
+    _i1.RouteDef(
+      Routes.tremorTestView,
+      page: _i11.TremorTestView,
+    ),
+    _i1.RouteDef(
+      Routes.tapTestView,
+      page: _i10.TapTestView,
     ),
   ];
 
@@ -105,6 +123,18 @@ class StackedRouter extends _i1.RouterBase {
     _i7.CameraTestView: (data) {
       return _i8.MaterialPageRoute<dynamic>(
         builder: (context) => const _i7.CameraTestView(),
+        settings: data,
+      );
+    },
+    _i11.TremorTestView: (data) {
+      return _i8.MaterialPageRoute<dynamic>(
+        builder: (context) => const _i11.TremorTestView(),
+        settings: data,
+      );
+    },
+    _i10.TapTestView: (data) {
+      return _i8.MaterialPageRoute<dynamic>(
+        builder: (context) => const _i10.TapTestView(),
         settings: data,
       );
     },
@@ -226,6 +256,34 @@ extension NavigatorStateExtension on _i9.NavigationService {
         transition: transition);
   }
 
+  Future<dynamic> navigateToTremorTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return navigateTo<dynamic>(Routes.tremorTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> navigateToTapTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return navigateTo<dynamic>(Routes.tapTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
   Future<dynamic> replaceWithHomeView([
     int? routerId,
     bool preventDuplicates = true,
@@ -306,6 +364,34 @@ extension NavigatorStateExtension on _i9.NavigationService {
         transition,
   ]) async {
     return replaceWith<dynamic>(Routes.cameraTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithTremorTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return replaceWith<dynamic>(Routes.tremorTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithTapTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return replaceWith<dynamic>(Routes.tapTestView,
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,

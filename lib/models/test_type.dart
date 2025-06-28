@@ -3,4 +3,5 @@ enum TestType {
   drawing,
   questionnaire,
   tremor,
+  tap,
 }

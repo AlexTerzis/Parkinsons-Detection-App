@@ -60,6 +60,10 @@ class TestService {
         return 'Drawing';
       case TestType.questionnaire:
         return 'Questionnaire';
+      case TestType.tremor:
+        return 'Tremor';
+      case TestType.tap:
+        return 'Tap';
       case TestType.cameraDetection:
       default:
         return 'Camera';
