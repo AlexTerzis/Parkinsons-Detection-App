@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum UserRole {
   patient,
@@ -84,7 +85,12 @@ class AuthenticationService {
   }
 
   // Signs the current user out of the application.
-  Future<void> signOut() => _firebaseAuth.signOut();
+  Future<void> signOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('keepMeLoggedIn'); // Clear the "keep me logged in" flag
+    await _firebaseAuth.signOut();        // Firebase logout
+  }
+
 
   /// Retrieves the saved display name of the **current** user from Firestore.
   /// Returns null if the user is not logged in or if the name hasn't been set.

@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/app/app.bottomsheets.dart';
@@ -12,50 +10,21 @@ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
 import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
 import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart';
 import 'package:responsive_builder/responsive_builder.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked_services/stacked_services.dart';
-
-late final bool _startAtLogin;
-late final Widget _startView;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await setupLocator();
   setupDialogUi();
   setupBottomSheetUi();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  final prefs = await SharedPreferences.getInstance();
-  final bool keepLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
-  final User? currentUser = FirebaseAuth.instance.currentUser;
-
-  if (keepLoggedIn && currentUser != null) {
-    // fetch role to decide view
-    final role = await _getUserRole(currentUser.uid);
-    if (role == 'doctor') {
-      _startView = const DoctorView();
-    } else {
-      _startView = const PatienceView();
-    }
-    _startAtLogin = false;
-  } else {
-    _startView = LoginView();
-    _startAtLogin = true;
-  }
-
   runApp(const MainApp());
-}
-
-Future<String> _getUserRole(String uid) async {
-  try {
-    final snapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    return snapshot.data()?['role'] ?? 'patient';
-  } catch (_) {
-    return 'patient';
-  }
 }
 
 class MainApp extends StatelessWidget {
@@ -67,11 +36,13 @@ class MainApp extends StatelessWidget {
       builder: (_) => MaterialApp(
         title: "Parkinson AI Detector",
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 7, 24, 51)),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color.fromARGB(255, 7, 24, 51),
+          ),
           useMaterial3: true,
         ),
         debugShowCheckedModeBanner: false,
-        home: _startAtLogin ? const SplashScreen() : _startView,
+        home: const SplashScreen(),
         onGenerateRoute: StackedRouter().onGenerateRoute,
         navigatorKey: StackedService.navigatorKey,
       ),
@@ -93,25 +64,60 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _startSplashLogic();
+  }
 
+  void _startSplashLogic() {
+    // Start the dot animation
     _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       setState(() {
         _currentDot = (_currentDot + 1) % 3;
       });
     });
 
-    Future.delayed(const Duration(seconds: 3), () {
-      _timer.cancel();
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => _startView,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 600),
-        ),
-      );
-    });
+    // Start login logic in parallel
+    _checkLoginAndNavigate();
+  }
+
+  Future<void> _checkLoginAndNavigate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepMeLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+
+    Widget target = LoginView();
+
+    if (keepMeLoggedIn && user != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final role = userDoc.data()?['role'] ?? 'patient';
+
+        if (role == 'doctor') {
+          target = const DoctorView();
+        } else {
+          target = const PatienceView();
+        }
+      } catch (_) {
+        // Default fallback remains LoginView
+      }
+    }
+
+    // Wait exactly 3 seconds total (including checks)
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    _timer.cancel();
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => target,
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
   }
 
   @override
@@ -137,12 +143,15 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: const Color.fromARGB(255, 7, 24, 51),
       body: Stack(
         children: [
+          // Background image
           Positioned.fill(
             child: Image.asset(
               'assets/images/loading_screen.png',
               fit: BoxFit.fill,
             ),
           ),
+
+          // Dots animation
           Positioned(
             bottom: 100,
             left: 0,

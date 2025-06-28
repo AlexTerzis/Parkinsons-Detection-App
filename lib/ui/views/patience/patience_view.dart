@@ -55,49 +55,115 @@ class PatienceView extends StackedView<PatienceViewModel> {
   }
 
   Widget _buildProfileTab(
-      BuildContext context, PatienceViewModel viewModel, ThemeData theme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: const Icon(Icons.person, size: 48),
+    BuildContext context, PatienceViewModel viewModel, ThemeData theme) {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Avatar
+        CircleAvatar(
+          radius: 48,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: const Icon(Icons.person, size: 48),
+        ),
+        const SizedBox(height: 16),
+
+        // Name & Email
+        Text(viewModel.name, style: theme.textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        Text(viewModel.email, style: theme.textTheme.bodyMedium),
+        const SizedBox(height: 24),
+
+        // Edit Name
+        TextField(
+          controller: viewModel.nameController,
+          decoration: const InputDecoration(
+            labelText: 'Edit Name',
+            border: OutlineInputBorder(),
           ),
-          const SizedBox(height: 16),
-          Text(viewModel.name, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(viewModel.email, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 24),
-          TextField(
-            controller: viewModel.nameController,
-            decoration: const InputDecoration(
-              labelText: 'Edit Name',
-              border: OutlineInputBorder(),
+        ),
+        const SizedBox(height: 16),
+
+        //Add Date of Birth
+        TextField(
+          controller: viewModel.dobController,
+          decoration: const InputDecoration(
+            labelText: 'Date of Birth',
+            border: OutlineInputBorder(),
+            hintText: 'yyyy-mm-dd',
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        //Add Medication
+        TextField(
+          controller: viewModel.medicationController,
+          decoration: InputDecoration(
+            labelText: 'Add Medication',
+            border: OutlineInputBorder(
             ),
           ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: viewModel.isBusy
-                ? null
-                : () async {
-                    await viewModel.saveName();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Name saved successfully')),
-                      );
-                    }
-                  },
-            icon: const Icon(Icons.save),
-            label: const Text('Save Name'),
+        ),
+        const SizedBox(height: 16),
+
+        // Save Profile Button
+        ElevatedButton.icon(
+          onPressed: viewModel.isBusy
+              ? null
+              : () async {
+                  await viewModel.saveExtraProfileFields();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile saved')),
+                    );
+                  }
+                },
+          icon: const Icon(Icons.save_alt),
+          label: const Text('Save Profile'),
+        ),
+
+        const SizedBox(height: 30),
+
+        // Save Name Button
+        ElevatedButton.icon(
+          onPressed: viewModel.isBusy
+              ? null
+              : () async {
+                  await viewModel.saveName();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Saved successfully')),
+                    );
+                  }
+                },
+          icon: const Icon(Icons.save),
+          label: const Text('Save Changes'),
+        ),
+        const SizedBox(height: 24),
+
+        //Log Out Button
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: Colors.red, width: 2),
+            padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-        ],
-      ),
-    );
-  }
+          onPressed: () => viewModel.logout(context),
+          child: const Text(
+            'LOG OUT',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildTestsTab(
       BuildContext rootContext, PatienceViewModel viewModel, ThemeData theme) {
