@@ -43,6 +43,17 @@ class PatienceViewModel extends BaseViewModel {
   Map<String, double> get resultsSummary =>
       _testService.computeSummary(_results);
 
+  Map<TestType, List<TestResult>> get groupedResults {
+    final Map<TestType, List<TestResult>> map = {};
+    for (var r in _results) {
+      map.putIfAbsent(r.type, () => []).add(r);
+    }
+    return map;
+  }
+
+  double latestScoreForType(TestType type) =>
+      groupedResults[type]?.first.score ?? 0.0;
+
   List<PatientReport> _reports = [];
   List<PatientReport> get reports => _reports;
 
@@ -183,7 +194,11 @@ class PatienceViewModel extends BaseViewModel {
 
   // Type to label mapping
   String _labelForType(TestResult r) {
-    switch (r.type) {
+    return labelForType(r.type);
+  }
+
+  String labelForType(TestType type) {
+    switch (type) {
       case TestType.drawing:
         return 'Drawing';
       case TestType.questionnaire:
