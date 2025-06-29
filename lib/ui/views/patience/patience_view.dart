@@ -27,28 +27,33 @@ class PatienceView extends StackedView<PatienceViewModel> {
     }
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
-        appBar: AppBar(
-          // Hides the title bar so only the tabs are visible
-          toolbarHeight: 0,
-          bottom: const TabBar(
+        appBar: AppBar(     
+          toolbarHeight: 0,   
+          bottom: TabBar(
             isScrollable: true,
             tabs: [
               Tab(text: 'Profile', icon: Icon(Icons.person)),
               Tab(text: 'Tests', icon: Icon(Icons.science)),
-              Tab(text: 'History', icon: Icon(Icons.history)),
+              //Tab(text: 'History', icon: Icon(Icons.history)),
               Tab(text: 'Results', icon: Icon(Icons.assessment)),
+              Tab(text: 'Insights', icon: Icon(Icons.insights)),
               Tab(text: 'Doctor', icon: Icon(Icons.medical_information)),
+              Tab(text: 'Community', icon: Icon(Icons.diversity_1)),
             ],
+            indicatorColor: const Color.fromARGB(255, 8, 5, 60),
+            labelPadding: EdgeInsets.symmetric(horizontal:07),
           ),
         ),
+        
         body: TabBarView(
           children: [
             _buildProfileTab(context, viewModel, theme),
             _buildTestsTab(context, viewModel, theme),
-            _buildHistoryTab(viewModel, theme),
+            //_buildHistoryTab(viewModel, theme),
             _buildResultsTab(viewModel, theme),
+            _buildInsightsTab(theme),
             _buildDoctorTab(viewModel, theme),
           ],
         ),
@@ -475,6 +480,53 @@ class PatienceView extends StackedView<PatienceViewModel> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildInsightsTab(ThemeData theme) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: ListTile(
+            leading: const Text('🧠', style: TextStyle(fontSize: 28)),
+            title: const Text('Overall AI Summary'),
+            subtitle: const Text(
+                'Low risk – more advanced analytics will appear here.'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            title: const Text('Test-by-Test Breakdown'),
+            subtitle: const Text(
+                'Charts of tapping, tremor and other tests will be added.'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            title: const Text('Risk Alerts or Anomalies'),
+            subtitle: const Text('No alerts detected recently.'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            title: const Text('Argumentation (Coming Soon)'),
+            subtitle: const Text(
+                'Future versions will explain the reasoning behind alerts.'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            title: const Text('AI Test Suggestions'),
+            subtitle: const Text(
+                'Please retake the Tremor Test – last result was inconclusive.'),
+          ),
+        ),
+      ],
     );
   }
 

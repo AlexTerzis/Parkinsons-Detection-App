@@ -1,0 +1,197 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index c80d94b5f158e77a515d9e1390b7fb7555170963..12ed12261e16bf45467f160fc9f79631e2524bc6 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -5,73 +5,74 @@ import 'package:stacked/stacked.dart';
+ import 'package:fl_chart/fl_chart.dart';
+ 
+ import 'patience_viewmodel.dart';
+ import '../../../models/test_type.dart';
+ import '../../../models/test_result.dart';
+ import '../camera_test/camera_test_view.dart';
+ import '../../../app/app.locator.dart';
+ import 'package:stacked_services/stacked_services.dart';
+ 
+ class PatienceView extends StackedView<PatienceViewModel> {
+   const PatienceView({Key? key}) : super(key: key);
+ 
+   @override
+   Widget builder(
+     BuildContext context,
+     PatienceViewModel viewModel,
+     Widget? child,
+   ) {
+     final ThemeData theme = Theme.of(context);
+ 
+     if (viewModel.isBusy) {
+       return const Center(child: CircularProgressIndicator());
+     }
+ 
+     return DefaultTabController(
+-      length: 5,
++      length: 6,
+       child: Scaffold(
+         appBar: AppBar(
+-          // Hides the title bar so only the tabs are visible
+           toolbarHeight: 0,
+-          bottom: const TabBar(
+-            isScrollable: true,
+-            tabs: [
+-              Tab(text: 'Profile', icon: Icon(Icons.person)),
+-              Tab(text: 'Tests', icon: Icon(Icons.science)),
+-              Tab(text: 'History', icon: Icon(Icons.history)),
+-              Tab(text: 'Results', icon: Icon(Icons.assessment)),
+-              Tab(text: 'Doctor', icon: Icon(Icons.medical_information)),
+-            ],
+-          ),
++        ),
++        bottomNavigationBar: const TabBar(
++          isScrollable: true,
++          tabs: [
++            Tab(text: 'Profile', icon: Icon(Icons.person)),
++            Tab(text: 'Tests', icon: Icon(Icons.science)),
++            Tab(text: 'History', icon: Icon(Icons.history)),
++            Tab(text: 'Results', icon: Icon(Icons.assessment)),
++            Tab(text: 'Doctor', icon: Icon(Icons.medical_information)),
++            Tab(text: 'Insights', icon: Text('🧠', style: TextStyle(fontSize: 20))),
++          ],
+         ),
+         body: TabBarView(
+           children: [
+             _buildProfileTab(context, viewModel, theme),
+             _buildTestsTab(context, viewModel, theme),
+             _buildHistoryTab(viewModel, theme),
+             _buildResultsTab(viewModel, theme),
+             _buildDoctorTab(viewModel, theme),
++            _buildInsightsTab(theme),
+           ],
+         ),
+       ),
+     );
+   }
+ 
+   Widget _buildProfileTab(
+     BuildContext context, PatienceViewModel viewModel, ThemeData theme) {
+   return SingleChildScrollView(
+     padding: const EdgeInsets.all(16.0),
+     child: Column(
+       crossAxisAlignment: CrossAxisAlignment.center,
+       children: [
+         // Avatar
+         CircleAvatar(
+           radius: 48,
+           backgroundColor: theme.colorScheme.primaryContainer,
+           child: const Icon(Icons.person, size: 48),
+         ),
+         const SizedBox(height: 16),
+ 
+         // Name & Email
+         Text(viewModel.name, style: theme.textTheme.headlineSmall),
+         const SizedBox(height: 8),
+         Text(viewModel.email, style: theme.textTheme.bodyMedium),
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index c80d94b5f158e77a515d9e1390b7fb7555170963..12ed12261e16bf45467f160fc9f79631e2524bc6 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -456,50 +457,97 @@ class PatienceView extends StackedView<PatienceViewModel> {
+               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+           child: ExpansionTile(
+             leading: const Icon(Icons.person_outline),
+             title: Text(viewModel.doctorName(report.doctorId)),
+             subtitle: Text(report.status.name.toUpperCase()),
+             children: [
+               if (report.notes.isEmpty)
+                 const Padding(
+                   padding: EdgeInsets.all(16.0),
+                   child: Text('No notes yet.'),
+                 )
+               else
+                 ...report.notes.map((n) => ListTile(
+                       leading: const Icon(Icons.note),
+                       title: Text(n.note),
+                       subtitle:
+                           Text(n.createdAt.toIso8601String().substring(0, 10)),
+                     )),
+             ],
+           ),
+         );
+       },
+     );
+   }
+ 
++  Widget _buildInsightsTab(ThemeData theme) {
++    return ListView(
++      padding: const EdgeInsets.all(16),
++      children: [
++        Card(
++          child: ListTile(
++            leading: const Text('🧠', style: TextStyle(fontSize: 28)),
++            title: const Text('Overall AI Summary'),
++            subtitle: const Text(
++                'Low risk – more advanced analytics will appear here.'),
++          ),
++        ),
++        const SizedBox(height: 16),
++        Card(
++          child: ListTile(
++            title: const Text('Test-by-Test Breakdown'),
++            subtitle: const Text(
++                'Charts of tapping, tremor and other tests will be added.'),
++          ),
++        ),
++        const SizedBox(height: 16),
++        Card(
++          child: ListTile(
++            title: const Text('Risk Alerts or Anomalies'),
++            subtitle: const Text('No alerts detected recently.'),
++          ),
++        ),
++        const SizedBox(height: 16),
++        Card(
++          child: ListTile(
++            title: const Text('Argumentation (Coming Soon)'),
++            subtitle: const Text(
++                'Future versions will explain the reasoning behind alerts.'),
++          ),
++        ),
++        const SizedBox(height: 16),
++        Card(
++          child: ListTile(
++            title: const Text('AI Test Suggestions'),
++            subtitle: const Text(
++                'Please retake the Tremor Test – last result was inconclusive.'),
++          ),
++        ),
++      ],
++    );
++  }
++
+   @override
+   PatienceViewModel viewModelBuilder(BuildContext context) =>
+       PatienceViewModel();
+ 
+   @override
+   void onViewModelReady(PatienceViewModel viewModel) {
+     viewModel.init();
+     super.onViewModelReady(viewModel);
+   }
+ 
+   void _onSendResultsPressed(BuildContext rootContext, PatienceViewModel vm) {
+     if (vm.results.isEmpty) {
+       ScaffoldMessenger.of(rootContext).showSnackBar(
+         const SnackBar(
+             content: Text('Please complete at least one test first.')),
+       );
+       return;
+     }
+ 
+     showDialog<void>(
+       context: rootContext,
+       builder: (ctx) {
+         String query = '';
+         return StatefulBuilder(builder: (ctx, setState) {
+           final String q = query.toLowerCase();
+ 
+EOF
+)
