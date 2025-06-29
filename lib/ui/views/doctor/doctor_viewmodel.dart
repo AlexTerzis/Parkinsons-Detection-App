@@ -1,5 +1,6 @@
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../services/reports_service.dart';
@@ -11,6 +12,22 @@ import '../../../models/doctor_note.dart';
 class DoctorViewModel extends BaseViewModel {
   final ReportsService _reportsService = locator<ReportsService>();
   final AuthenticationService _auth = locator<AuthenticationService>();
+
+  // --- Profile fields ---
+  String get email => _auth.currentUser?.email ?? '--';
+
+  String _name = '--';
+  String get name => _name.isEmpty ? '--' : _name;
+
+  String _specialty = '';
+  String get specialty => _specialty;
+
+  String _location = '';
+  String get location => _location;
+
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController specialtyController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
 
   List<PatientReport> _reports = [];
   List<PatientReport> get reports => _reports;
@@ -26,11 +43,38 @@ class DoctorViewModel extends BaseViewModel {
 
   final TextEditingController noteController = TextEditingController();
 
+  /// Sample community posts; in the future these would come from Firestore.
+  List<Map<String, String>> posts = [];
+
   Future<void> init() async {
     final String? doctorId = _auth.currentUser?.uid;
     if (doctorId == null) return;
 
     setBusy(true);
+
+    // Load profile info
+    _name = await _auth.fetchDisplayName() ?? '--';
+    nameController.text = _name == '--' ? '' : _name;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(doctorId).get();
+    final data = doc.data();
+    if (data != null) {
+      _specialty = data['specialty'] ?? '';
+      _location = data['location'] ?? '';
+      specialtyController.text = _specialty;
+      locationController.text = _location;
+    }
+
+    // Demo community posts
+    posts = [
+      {
+        'author': _name,
+        'date': DateTime.now().toIso8601String().substring(0, 10),
+        'content': 'Excited to join the community!'
+      }
+    ];
+
     _reportsService.watchReportsForDoctor(doctorId).listen((data) async {
       _reports = data;
 
@@ -56,21 +100,7 @@ class DoctorViewModel extends BaseViewModel {
   }
 
   Future<void> addNoteToSelectedReport(String noteText) async {
-    if (noteText.trim().isEmpty) return;
-    if (selectedReports.isEmpty) return;
-
-    final DoctorNote note = DoctorNote(
-      doctorId: _auth.currentUser!.uid,
-      note: noteText.trim(),
-      createdAt: DateTime.now(),
-    );
-
-    // For simplicity add note to the most recent report
-    await _reportsService.addNoteToReport(
-      reportId: selectedReports.first.id,
-      note: note,
-    );
-  }
+  
 
   Future<void> addNoteToReportForPatient(String patientId) async {
     final noteText = noteController.text.trim();
@@ -95,9 +125,39 @@ class DoctorViewModel extends BaseViewModel {
     noteController.clear();
   }
 
+  /// Persist profile changes to Firestore and update display name.
+  Future<void> saveProfile() async {
+    final String? uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    _name = nameController.text.trim();
+    _specialty = specialtyController.text.trim();
+    _location = locationController.text.trim();
+    notifyListeners();
+
+    await _auth.updateDisplayName(_name);
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).set(
+      {
+        'name': _name,
+        'specialty': _specialty,
+        'location': _location,
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   @override
   void dispose() {
     noteController.dispose();
+    nameController.dispose();
+    specialtyController.dispose();
+    locationController.dispose();
     super.dispose();
   }
+}
+
+  Future<void> addNoteToReportForPatient(String pid) async {}
+
+  Future<void> saveProfile() async {}
 }
