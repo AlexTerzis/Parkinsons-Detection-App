@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _startSplashLogic() {
     // Start the dot animation
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
       setState(() {
         _currentDot = (_currentDot + 1) % 3;
       });

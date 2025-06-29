@@ -48,7 +48,7 @@ class LoginView extends StackedView<LoginViewModel> {
                         children: [
                           Text(
                             viewModel.isLoginMode
-                                ? 'Welcome Back'
+                                ? 'Welcome '
                                 : 'Create Account',
                             style: theme.textTheme.headlineMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
