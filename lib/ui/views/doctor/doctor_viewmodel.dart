@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import '../login/login_view.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/reports_service.dart';
 import '../../../services/authentication_service.dart';
@@ -100,30 +102,32 @@ class DoctorViewModel extends BaseViewModel {
   }
 
   Future<void> addNoteToSelectedReport(String noteText) async {
-  
-
-  Future<void> addNoteToReportForPatient(String patientId) async {
-    final noteText = noteController.text.trim();
-    if (noteText.isEmpty) return;
-
-    PatientReport? report;
-    for (var r in _reports) {
-      if (r.patientId == patientId) {
-        report = r;
-        break;
-      }
-    }
-    if (report == null) return;
-
-    final DoctorNote note = DoctorNote(
-      doctorId: _auth.currentUser!.uid,
-      note: noteText,
-      createdAt: DateTime.now(),
-    );
-
-    await _reportsService.addNoteToReport(reportId: report.id, note: note);
-    noteController.clear();
+    final pid = _selectedPatientId;
+    if (pid == null) return;
+    await addNoteToReportForPatient(pid, noteText: noteText);
   }
+
+  Future<void> addNoteToReportForPatient(String patientId, {String? noteText}) async {
+    final text = noteText ?? noteController.text.trim();
+    if (text.isEmpty) return;
+        PatientReport? report;
+      for (var r in _reports) {
+        if (r.patientId == patientId) {
+          report = r;
+          break;
+        }
+      }
+      if (report == null) return;
+
+      final DoctorNote note = DoctorNote(
+        doctorId: _auth.currentUser!.uid,
+        note: text,
+        createdAt: DateTime.now(),
+      );
+
+      await _reportsService.addNoteToReport(reportId: report.id, note: note);
+      noteController.clear();
+    }
 
   /// Persist profile changes to Firestore and update display name.
   Future<void> saveProfile() async {
@@ -155,9 +159,18 @@ class DoctorViewModel extends BaseViewModel {
     locationController.dispose();
     super.dispose();
   }
+  /// Sign the current user out and navigate back to [LoginView].
+  Future<void> logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('keepMeLoggedIn');
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => LoginView()),
+        (route) => false,
+      );
+    }
+  }
 }
 
-  Future<void> addNoteToReportForPatient(String pid) async {}
 
-  Future<void> saveProfile() async {}
-}

@@ -1,327 +1,14 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/ui/views/doctor/doctor_view.dart b/lib/ui/views/doctor/doctor_view.dart
-index 5146f3c3fec3d592dabe2ed761554e92065bbd00..dc1b79f7d54f73093353b0cf0ad3b3faa2d4e915 100644
---- a/lib/ui/views/doctor/doctor_view.dart
-+++ b/lib/ui/views/doctor/doctor_view.dart
-@@ -1,134 +1,258 @@
- import 'package:flutter/material.dart';
- import 'package:stacked/stacked.dart';
- 
- import 'doctor_viewmodel.dart';
- import '../../../models/patient_report.dart';
- 
-+/// Doctor dashboard with tab navigation similar to the patient view.
-+/// Tabs: profile editing, list of patient reports and a shared community feed.
- class DoctorView extends StackedView<DoctorViewModel> {
--  const DoctorView({Key? key}) : super(key: key);
-+  const DoctorView({super.key});
- 
-   @override
-   Widget builder(
-     BuildContext context,
-     DoctorViewModel vm,
-     Widget? child,
-   ) {
-     final ThemeData theme = Theme.of(context);
- 
-     if (vm.isBusy) {
-       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-     }
- 
--    final patients = vm.reports.map((r) => r.patientId).toSet().toList();
-+    return DefaultTabController(
-+      length: 3,
-+      child: Scaffold(
-+        appBar: AppBar(
-+          toolbarHeight: 0,
-+          bottom: TabBar(
-+            tabs: const [
-+              Tab(text: 'Profile', icon: Icon(Icons.person)),
-+              Tab(text: 'MyPatients', icon: Icon(Icons.people)),
-+              Tab(text: 'Community', icon: Icon(Icons.diversity_1)),
-+            ],
-+            indicatorColor: theme.colorScheme.primary,
-+          ),
-+        ),
-+        body: TabBarView(
-+          children: [
-+            _buildProfileTab(context, vm, theme),
-+            _buildPatientsTab(vm, theme),
-+            _buildCommunityTab(vm, theme),
-+          ],
-+        ),
-+      ),
-+    );
-+  }
- 
--    return Scaffold(
--      appBar: AppBar(title: const Text('Doctor Dashboard')),
--      body: ListView.separated(
--        padding: const EdgeInsets.all(16),
--        itemCount: patients.length,
--        separatorBuilder: (_, __) => const SizedBox(height: 12),
--        itemBuilder: (context, index) {
--          final pid = patients[index];
--          final reports = vm.reports.where((r) => r.patientId == pid).toList();
--          return Card(
--            shape:
--                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
--            child: ExpansionTile(
--              title: Text(vm.patientName(pid)),
--              subtitle: Text('Reports: ${reports.length}'),
--              childrenPadding: const EdgeInsets.all(16),
--              children: [
--                ListView.builder(
--                  shrinkWrap: true,
--                  physics: const NeverScrollableScrollPhysics(),
--                  itemCount: reports.length,
--                  itemBuilder: (context, rIndex) {
--                    final rep = reports[rIndex];
--                    return ListTile(
--                      title: Text('Sent: ${rep.sentAt.toLocal()}'),
--                      subtitle: Text('Tests: ${rep.results.length}'),
--                      onTap: () => _showReportDialog(context, rep),
--                    );
-+  /// Profile information form allowing the doctor to update basic details.
-+  Widget _buildProfileTab(
-+      BuildContext context, DoctorViewModel vm, ThemeData theme) {
-+    return SingleChildScrollView(
-+      padding: const EdgeInsets.all(16),
-+      child: Column(
-+        crossAxisAlignment: CrossAxisAlignment.center,
-+        children: [
-+          CircleAvatar(
-+            radius: 48,
-+            backgroundColor: theme.colorScheme.primaryContainer,
-+            child: const Icon(Icons.person, size: 48),
-+          ),
-+          const SizedBox(height: 16),
-+          Text(vm.name, style: theme.textTheme.headlineSmall),
-+          const SizedBox(height: 8),
-+          Text(vm.email, style: theme.textTheme.bodyMedium),
-+          const SizedBox(height: 24),
-+          TextField(
-+            controller: vm.nameController,
-+            decoration: const InputDecoration(
-+              labelText: 'Name',
-+              border: OutlineInputBorder(),
-+            ),
-+          ),
-+          const SizedBox(height: 16),
-+          TextField(
-+            controller: vm.specialtyController,
-+            decoration: const InputDecoration(
-+              labelText: 'Specialty',
-+              border: OutlineInputBorder(),
-+            ),
-+          ),
-+          const SizedBox(height: 16),
-+          TextField(
-+            controller: vm.locationController,
-+            decoration: const InputDecoration(
-+              labelText: 'Location',
-+              border: OutlineInputBorder(),
-+            ),
-+          ),
-+          const SizedBox(height: 16),
-+          ElevatedButton.icon(
-+            onPressed: vm.isBusy
-+                ? null
-+                : () async {
-+                    await vm.saveProfile();
-+                    if (context.mounted) {
-+                      ScaffoldMessenger.of(context).showSnackBar(
-+                        const SnackBar(content: Text('Profile saved')),
-+                      );
-+                    }
-                   },
-+            icon: const Icon(Icons.save),
-+            label: const Text('Save'),
-+          ),
-+        ],
-+      ),
-+    );
-+  }
-+
-+  /// Displays patients that have sent reports to this doctor.
-+  Widget _buildPatientsTab(DoctorViewModel vm, ThemeData theme) {
-+    final patients = vm.reports.map((r) => r.patientId).toSet().toList();
-+
-+    if (patients.isEmpty) {
-+      return const Center(child: Text('No patient reports yet.'));
-+    }
-+
-+    return ListView.separated(
-+      padding: const EdgeInsets.all(16),
-+      itemCount: patients.length,
-+      separatorBuilder: (_, __) => const SizedBox(height: 12),
-+      itemBuilder: (context, index) {
-+        final pid = patients[index];
-+        final reports =
-+            vm.reports.where((r) => r.patientId == pid).toList();
-+        return Card(
-+          shape:
-+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-+          child: ExpansionTile(
-+            title: Text(vm.patientName(pid)),
-+            subtitle: Text('Reports: ${reports.length}'),
-+            childrenPadding: const EdgeInsets.all(16),
-+            children: [
-+              ListView.builder(
-+                shrinkWrap: true,
-+                physics: const NeverScrollableScrollPhysics(),
-+                itemCount: reports.length,
-+                itemBuilder: (context, rIndex) {
-+                  final rep = reports[rIndex];
-+                  return ListTile(
-+                    title: Text('Sent: ${rep.sentAt.toLocal()}'),
-+                    subtitle: Text('Tests: ${rep.results.length}'),
-+                    onTap: () => _showReportDialog(context, rep),
-+                  );
-+                },
-+              ),
-+              const SizedBox(height: 12),
-+              TextField(
-+                controller: vm.noteController,
-+                minLines: 3,
-+                maxLines: 5,
-+                decoration: const InputDecoration(
-+                  hintText: 'Write notes for patient...',
-+                  border: OutlineInputBorder(),
-                 ),
--                const SizedBox(height: 12),
--                TextField(
--                  controller: vm.noteController,
--                  minLines: 3,
--                  maxLines: 5,
--                  decoration: const InputDecoration(
--                    hintText: 'Write notes for patient...',
--                    border: OutlineInputBorder(),
--                  ),
-+              ),
-+              const SizedBox(height: 8),
-+              Align(
-+                alignment: Alignment.centerRight,
-+                child: ElevatedButton(
-+                  onPressed: () async {
-+                    await vm.addNoteToReportForPatient(pid);
-+                  },
-+                  child: const Text('Add Note'),
-                 ),
-+              ),
-+            ],
-+          ),
-+        );
-+      },
-+    );
-+  }
-+
-+  /// Simple list of community posts. Currently uses sample data.
-+  Widget _buildCommunityTab(DoctorViewModel vm, ThemeData theme) {
-+    if (vm.posts.isEmpty) {
-+      return const Center(child: Text('No posts yet.'));
-+    }
-+
-+    return ListView.separated(
-+      padding: const EdgeInsets.all(16),
-+      itemCount: vm.posts.length,
-+      separatorBuilder: (_, __) => const SizedBox(height: 12),
-+      itemBuilder: (context, index) {
-+        final post = vm.posts[index];
-+        return Card(
-+          child: ListTile(
-+            title: Text(post['author'] ?? ''),
-+            subtitle: Column(
-+              crossAxisAlignment: CrossAxisAlignment.start,
-+              children: [
-+                Text(post['date'] ?? ''),
-                 const SizedBox(height: 8),
--                Align(
--                  alignment: Alignment.centerRight,
--                  child: ElevatedButton(
--                    onPressed: () async {
--                      await vm.addNoteToReportForPatient(pid);
--                    },
--                    child: const Text('Add Note'),
--                  ),
--                ),
-+                Text(post['content'] ?? ''),
-               ],
-             ),
--          );
--        },
--      ),
-+          ),
-+        );
-+      },
-     );
-   }
- 
-   void _showReportDialog(BuildContext context, PatientReport report) {
-     showDialog<void>(
-       context: context,
-       builder: (ctx) {
-         return AlertDialog(
-           title: Text('Report ${report.sentAt.toLocal()}'),
-           content: SizedBox(
-             width: double.maxFinite,
-             child: ListView(
-               shrinkWrap: true,
-               children: report.results.map((r) {
-                 return ExpansionTile(
-                   title: Text(r.type.name),
-                   subtitle: Text('Score: ${(r.score * 100).round()}%'),
-                   children: [
-                     if (r.data.isEmpty)
-                       const Padding(
-                         padding: EdgeInsets.all(8.0),
-                         child: Text('No additional data'),
-                       )
-                     else
-                       Padding(
-                         padding: const EdgeInsets.all(8.0),
-                         child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
--                          children: r.data.entries.map((e) => Text('${e.key}: ${e.value}')).toList(),
-+                          children: r.data.entries
-+                              .map((e) => Text('${e.key}: ${e.value}'))
-+                              .toList(),
-                         ),
-                       ),
-                   ],
-                 );
-               }).toList(),
-             ),
-           ),
-           actions: [
-             TextButton(
-               onPressed: () => Navigator.of(ctx).pop(),
-               child: const Text('Close'),
-             )
-           ],
-         );
-       },
-     );
-   }
- 
-   @override
-   DoctorViewModel viewModelBuilder(BuildContext context) => DoctorViewModel();
- 
-   @override
-   void onViewModelReady(DoctorViewModel viewModel) {
-     viewModel.init();
-     super.onViewModelReady(viewModel);
-   }
- }
-+
 diff --git a/lib/ui/views/doctor/doctor_viewmodel.dart b/lib/ui/views/doctor/doctor_viewmodel.dart
-index 504d59e92827681dbc52fe2f6a90c85f5dadf5d9..aa044257d00ccf44aa28842d42ee9be02cd4fd29 100644
+index e2fa280d0bab860c0b6f50f291b64e612ea21c29..92b23c756c251598d867cb7b30a2dc6e8e20c0f5 100644
 --- a/lib/ui/views/doctor/doctor_viewmodel.dart
 +++ b/lib/ui/views/doctor/doctor_viewmodel.dart
-@@ -1,58 +1,102 @@
+@@ -1,28 +1,30 @@
  import 'package:stacked/stacked.dart';
  import 'package:flutter/material.dart';
-+import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import '../login/login_view.dart';
  
  import '../../../app/app.locator.dart';
  import '../../../services/reports_service.dart';
@@ -334,68 +21,24 @@ index 504d59e92827681dbc52fe2f6a90c85f5dadf5d9..aa044257d00ccf44aa28842d42ee9be0
    final ReportsService _reportsService = locator<ReportsService>();
    final AuthenticationService _auth = locator<AuthenticationService>();
  
-+  // --- Profile fields ---
-+  String get email => _auth.currentUser?.email ?? '--';
-+
-+  String _name = '--';
-+  String get name => _name.isEmpty ? '--' : _name;
-+
-+  String _specialty = '';
-+  String get specialty => _specialty;
-+
-+  String _location = '';
-+  String get location => _location;
-+
-+  final TextEditingController nameController = TextEditingController();
-+  final TextEditingController specialtyController = TextEditingController();
-+  final TextEditingController locationController = TextEditingController();
-+
-   List<PatientReport> _reports = [];
-   List<PatientReport> get reports => _reports;
+   // --- Profile fields ---
+   String get email => _auth.currentUser?.email ?? '--';
  
-   String? _selectedPatientId;
-   String? get selectedPatientId => _selectedPatientId;
+   String _name = '--';
+   String get name => _name.isEmpty ? '--' : _name;
  
-   List<PatientReport> get selectedReports =>
-       _reports.where((r) => r.patientId == _selectedPatientId).toList();
+   String _specialty = '';
+   String get specialty => _specialty;
  
-   final Map<String, String> _patientNames = {}; // uid -> name
-   String patientName(String id) => _patientNames[id] ?? id;
+   String _location = '';
+   String get location => _location;
  
-   final TextEditingController noteController = TextEditingController();
- 
-+  /// Sample community posts; in the future these would come from Firestore.
-+  List<Map<String, String>> posts = [];
-+
-   Future<void> init() async {
-     final String? doctorId = _auth.currentUser?.uid;
-     if (doctorId == null) return;
- 
-     setBusy(true);
-+
-+    // Load profile info
-+    _name = await _auth.fetchDisplayName() ?? '--';
-+    nameController.text = _name == '--' ? '' : _name;
-+
-+    final doc =
-+        await FirebaseFirestore.instance.collection('users').doc(doctorId).get();
-+    final data = doc.data();
-+    if (data != null) {
-+      _specialty = data['specialty'] ?? '';
-+      _location = data['location'] ?? '';
-+      specialtyController.text = _specialty;
-+      locationController.text = _location;
-+    }
-+
-+    // Demo community posts
-+    posts = [
-+      {
-+        'author': _name,
-+        'date': DateTime.now().toIso8601String().substring(0, 10),
-+        'content': 'Excited to join the community!'
-+      }
-+    ];
-+
+   final TextEditingController nameController = TextEditingController();
+diff --git a/lib/ui/views/doctor/doctor_viewmodel.dart b/lib/ui/views/doctor/doctor_viewmodel.dart
+index e2fa280d0bab860c0b6f50f291b64e612ea21c29..92b23c756c251598d867cb7b30a2dc6e8e20c0f5 100644
+--- a/lib/ui/views/doctor/doctor_viewmodel.dart
++++ b/lib/ui/views/doctor/doctor_viewmodel.dart
+@@ -78,86 +80,97 @@ class DoctorViewModel extends BaseViewModel {
      _reportsService.watchReportsForDoctor(doctorId).listen((data) async {
        _reports = data;
  
@@ -421,12 +64,18 @@ index 504d59e92827681dbc52fe2f6a90c85f5dadf5d9..aa044257d00ccf44aa28842d42ee9be0
    }
  
    Future<void> addNoteToSelectedReport(String noteText) async {
-@@ -73,31 +117,56 @@ class DoctorViewModel extends BaseViewModel {
-   }
+-  
++    final pid = _selectedPatientId;
++    if (pid == null) return;
++    await addNoteToReportForPatient(pid, noteText: noteText);
++  }
  
-   Future<void> addNoteToReportForPatient(String patientId) async {
-     final noteText = noteController.text.trim();
-     if (noteText.isEmpty) return;
+-  Future<void> addNoteToReportForPatient(String patientId) async {
+-    final noteText = noteController.text.trim();
+-    if (noteText.isEmpty) return;
++  Future<void> addNoteToReportForPatient(String patientId, {String? noteText}) async {
++    final text = noteText ?? noteController.text.trim();
++    if (text.isEmpty) return;
  
      PatientReport? report;
      for (var r in _reports) {
@@ -439,7 +88,8 @@ index 504d59e92827681dbc52fe2f6a90c85f5dadf5d9..aa044257d00ccf44aa28842d42ee9be0
  
      final DoctorNote note = DoctorNote(
        doctorId: _auth.currentUser!.uid,
-       note: noteText,
+-      note: noteText,
++      note: text,
        createdAt: DateTime.now(),
      );
  
@@ -447,36 +97,53 @@ index 504d59e92827681dbc52fe2f6a90c85f5dadf5d9..aa044257d00ccf44aa28842d42ee9be0
      noteController.clear();
    }
  
-+  /// Persist profile changes to Firestore and update display name.
-+  Future<void> saveProfile() async {
-+    final String? uid = _auth.currentUser?.uid;
-+    if (uid == null) return;
-+
-+    _name = nameController.text.trim();
-+    _specialty = specialtyController.text.trim();
-+    _location = locationController.text.trim();
-+    notifyListeners();
-+
-+    await _auth.updateDisplayName(_name);
-+
-+    await FirebaseFirestore.instance.collection('users').doc(uid).set(
-+      {
-+        'name': _name,
-+        'specialty': _specialty,
-+        'location': _location,
-+      },
-+      SetOptions(merge: true),
-+    );
-+  }
-+
+   /// Persist profile changes to Firestore and update display name.
+   Future<void> saveProfile() async {
+     final String? uid = _auth.currentUser?.uid;
+     if (uid == null) return;
+ 
+     _name = nameController.text.trim();
+     _specialty = specialtyController.text.trim();
+     _location = locationController.text.trim();
+     notifyListeners();
+ 
+     await _auth.updateDisplayName(_name);
+ 
+     await FirebaseFirestore.instance.collection('users').doc(uid).set(
+       {
+         'name': _name,
+         'specialty': _specialty,
+         'location': _location,
+       },
+       SetOptions(merge: true),
+     );
+   }
+ 
    @override
    void dispose() {
      noteController.dispose();
-+    nameController.dispose();
-+    specialtyController.dispose();
-+    locationController.dispose();
+     nameController.dispose();
+     specialtyController.dispose();
+     locationController.dispose();
      super.dispose();
    }
+-}
+-
+-  Future<void> addNoteToReportForPatient(String pid) async {}
+ 
+-  Future<void> saveProfile() async {}
++  /// Sign the current user out and navigate back to [LoginView].
++  Future<void> logout(BuildContext context) async {
++    final prefs = await SharedPreferences.getInstance();
++    await prefs.remove('keepMeLoggedIn');
++    await _auth.signOut();
++    if (context.mounted) {
++      Navigator.of(context).pushAndRemoveUntil(
++        MaterialPageRoute(builder: (_) => LoginView()),
++        (route) => false,
++      );
++    }
++  }
  }
  
 EOF

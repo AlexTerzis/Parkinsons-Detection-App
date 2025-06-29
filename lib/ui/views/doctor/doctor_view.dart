@@ -102,6 +102,23 @@ class DoctorView extends StackedView<DoctorViewModel> {
             icon: const Icon(Icons.save),
             label: const Text('Save'),
           ),
+         const SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: Colors.red, width: 2),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            onPressed: () => vm.logout(context),
+            child: const Text(
+              'LOG OUT',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ), 
         ],
       ),
     );
