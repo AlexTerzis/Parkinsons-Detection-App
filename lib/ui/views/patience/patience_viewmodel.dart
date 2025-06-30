@@ -60,9 +60,21 @@ class PatienceViewModel extends BaseViewModel {
 
   final Map<String, AppUser> _doctorLookup = {};
   String doctorName(String id) => _doctorLookup[id]?.name ?? id;
+  AppUser? doctorById(String id) => _doctorLookup[id];
+
+  String? _primaryDoctorId;
+  String? get primaryDoctorId => _primaryDoctorId;
+  AppUser? get primaryDoctor =>
+      _primaryDoctorId == null ? null : _doctorLookup[_primaryDoctorId];
 
   List<AppUser> _doctors = [];
   List<AppUser> get doctors => _doctors;
+
+  List<String> get secondOpinionDoctorIds {
+    final ids = _reports.map((r) => r.doctorId).toSet();
+    ids.remove(_primaryDoctorId);
+    return ids.toList();
+  }
 
   // Subscriptions for realtime updates
   StreamSubscription<List<TestResult>>? _resultsSub;
@@ -111,12 +123,14 @@ class PatienceViewModel extends BaseViewModel {
       });
 
       // Fetch extra profile data (DOB + medication) from Firestore
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       final data = doc.data();
       if (data != null) {
         _dob = data['dob'] ?? '';
         _medication = data['medication'] ?? '';
+        _primaryDoctorId = data['primaryDoctorId'] as String?;
         dobController.text = _dob;
         medicationController.text = _medication;
       }
@@ -182,6 +196,23 @@ class PatienceViewModel extends BaseViewModel {
       results: _results,
     );
     setBusy(false);
+  }
+
+  Future<void> sendResultsToPrimaryDoctor() async {
+    final id = _primaryDoctorId;
+    if (id == null) return;
+    await sendResultsToDoctor(id);
+  }
+
+  Future<void> setPrimaryDoctor(String doctorId) async {
+    final String? uid = _authService.currentUser?.uid;
+    if (uid == null) return;
+    _primaryDoctorId = doctorId;
+    notifyListeners();
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({'primaryDoctorId': doctorId}, SetOptions(merge: true));
   }
 
   // Demo generator
