@@ -403,8 +403,10 @@ class PatienceView extends StackedView<PatienceViewModel> {
           );
         }),
         if (grouped.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text('Overall Summary', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 24),
+        Text('Summary', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 12),
+        if (viewModel.resultsSummary.length >= 3)
           SizedBox(
             height: 220,
             child: RadarChart(
@@ -421,19 +423,27 @@ class PatienceView extends StackedView<PatienceViewModel> {
                 ],
                 radarBackgroundColor: Colors.transparent,
                 radarBorderData: const BorderSide(color: Colors.transparent),
-                tickCount: 4,
+                tickCount: 10,
                 ticksTextStyle: const TextStyle(fontSize: 10),
                 tickBorderData: BorderSide(color: theme.dividerColor),
                 titleTextStyle: const TextStyle(fontSize: 12),
                 getTitle: (index, angle) {
                   final keys = viewModel.resultsSummary.keys.toList();
-                  if (index < 0 || index >= keys.length) return const RadarChartTitle(text: '');
+                  if (index < 0 || index >= keys.length) {
+                    return const RadarChartTitle(text: '');
+                  }
                   return RadarChartTitle(text: keys[index], angle: angle);
                 },
               ),
             ),
+          )
+        else
+          const Text(
+            'Complete at least 3 different tests to view the summary chart.',
+            style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
           ),
-        ],
+      ],
+
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: () {
