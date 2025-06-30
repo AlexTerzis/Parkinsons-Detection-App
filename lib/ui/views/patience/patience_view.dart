@@ -437,13 +437,59 @@ class PatienceView extends StackedView<PatienceViewModel> {
               ),
             ),
           )
-        else
-          const Text(
-            'Complete at least 3 different tests to view the summary chart.',
-            style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
-          ),
-      ],
+          else
+            const Text(
+              'Complete at least 3 different tests to view the summary chart.',
+              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            ),
+        ],
 
+        //Average Chart for all tests
+        if (viewModel.results.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          // Selector for the averaging window
+          Align(
+            alignment: Alignment.centerLeft,
+            child: DropdownButton<int>(
+              value: viewModel.selectedAverageWindow,
+              items: const [3,7, 14, 30]
+                  .map((d) => DropdownMenuItem(value: d, child: Text('$d days')))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) viewModel.updateAverageWindow(val);
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          // N-day moving average chart
+          SizedBox(
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (viewModel.getAverageTrend().length - 1).toDouble(),
+                minY: 0,
+                maxY: 1,
+                titlesData: const FlTitlesData(show: false),
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: viewModel.getAverageTrend(),
+                    isCurved: true,
+                    color: theme.colorScheme.primary,
+                    barWidth: 3,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: () {

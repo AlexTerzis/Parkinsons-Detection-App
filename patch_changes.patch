@@ -1,424 +1,57 @@
-diff --git a/lib/models/app_user.dart b/lib/models/app_user.dart
-index c60318dac2cca8f47f0e87ff8c227e0740a1f3a3..a62a2a07087c8fbac30cb3ab0bf44b3a7c7f20a0 100644
---- a/lib/models/app_user.dart
-+++ b/lib/models/app_user.dart
-@@ -1,50 +1,65 @@
- import 'package:cloud_firestore/cloud_firestore.dart';
- 
- import '../services/authentication_service.dart';
- 
- class AppUser {
-   const AppUser({
-     required this.uid,
-     required this.email,
-     required this.role,
-     this.name,
-+    this.specialty,
-+    this.location,
-+    this.primaryDoctorId,
-   });
- 
-   final String uid;
-   final String email;
-   final UserRole role;
-   final String? name;
-+  final String? specialty;
-+  final String? location;
-+  final String? primaryDoctorId;
- 
-   factory AppUser.fromJson(Map<String, dynamic> json, String documentId) {
-     return AppUser(
-       uid: documentId,
-       email: json['email'] as String? ?? '',
-       role: _roleFromString(json['role'] as String? ?? 'patient'),
-       name: json['name'] as String?,
-+      specialty: json['specialty'] as String?,
-+      location: json['location'] as String?,
-+      primaryDoctorId: json['primaryDoctorId'] as String?,
-     );
-   }
- 
-   Map<String, dynamic> toJson() {
-     return <String, dynamic>{
-       'email': email,
-       'role': role.value,
-       if (name != null) 'name': name,
-+      if (specialty != null) 'specialty': specialty,
-+      if (location != null) 'location': location,
-+      if (primaryDoctorId != null) 'primaryDoctorId': primaryDoctorId,
-     };
-   }
- 
-   static UserRole _roleFromString(String value) {
-     return value == 'doctor' ? UserRole.doctor : UserRole.patient;
-   }
- 
-   DocumentReference<Map<String, dynamic>> get firestoreRef =>
-       FirebaseFirestore.instance.collection('users').doc(uid);
- 
--  AppUser copyWith({String? name}) {
-+  AppUser copyWith({String? name, String? specialty, String? location, String? primaryDoctorId}) {
-     return AppUser(
-       uid: uid,
-       email: email,
-       role: role,
-       name: name ?? this.name,
-+      specialty: specialty ?? this.specialty,
-+      location: location ?? this.location,
-+      primaryDoctorId: primaryDoctorId ?? this.primaryDoctorId,
-     );
-   }
- }
-diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
-index d021eb5274993b76351107f0e26874d3b76c490c..bd5d6bcf46da5efa81eecff0aef82f3dc608705d 100644
---- a/lib/ui/views/patience/patience_view.dart
-+++ b/lib/ui/views/patience/patience_view.dart
-@@ -1,37 +1,38 @@
- import 'package:flutter/material.dart';
- import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
- import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
- import 'package:stacked/stacked.dart';
- import 'package:fl_chart/fl_chart.dart';
- 
- import 'patience_viewmodel.dart';
- import '../../../models/test_type.dart';
- import '../../../models/test_result.dart';
- import '../camera_test/camera_test_view.dart';
- import '../../../app/app.locator.dart';
- import 'package:stacked_services/stacked_services.dart';
-+import '../../../models/app_user.dart';
- 
- class PatienceView extends StackedView<PatienceViewModel> {
-   const PatienceView({Key? key}) : super(key: key);
- 
-   @override
-   Widget builder(
-     BuildContext context,
-     PatienceViewModel viewModel,
-     Widget? child,
-   ) {
-     final ThemeData theme = Theme.of(context);
- 
-     if (viewModel.isBusy) {
-       return const Center(child: CircularProgressIndicator());
-     }
- 
-     return DefaultTabController(
-       length: 6,
-       child: Scaffold(
-         appBar: AppBar(     
-           toolbarHeight: 0,   
-           bottom: TabBar(
-             isScrollable: true,
-             tabs: [
-               Tab(text: 'Profile', icon: Icon(Icons.person)),
-@@ -423,88 +424,280 @@ class PatienceView extends StackedView<PatienceViewModel> {
-                 tickCount: 4,
-                 ticksTextStyle: const TextStyle(fontSize: 10),
-                 tickBorderData: BorderSide(color: theme.dividerColor),
-                 titleTextStyle: const TextStyle(fontSize: 12),
-                 getTitle: (index, angle) {
-                   final keys = viewModel.resultsSummary.keys.toList();
-                   if (index < 0 || index >= keys.length) return const RadarChartTitle(text: '');
-                   return RadarChartTitle(text: keys[index], angle: angle);
-                 },
-               ),
-             ),
-           ),
-         ],
-         const SizedBox(height: 24),
-         ElevatedButton.icon(
-           onPressed: () {
-             // TODO: Export or share results
-           },
-           icon: const Icon(Icons.download),
-           label: const Text('Export Results'),
-         ),
-       ],
-     );
-   }
- 
--  Widget _buildDoctorTab(PatienceViewModel viewModel, ThemeData theme) {
--    if (viewModel.reports.isEmpty) {
--      return const Center(child: Text('No doctor feedback yet.'));
-+  Widget _buildDoctorTab(PatienceViewModel vm, ThemeData theme) {
-+    return SingleChildScrollView(
-+      padding: const EdgeInsets.all(16),
-+      child: Column(
-+        crossAxisAlignment: CrossAxisAlignment.stretch,
-+        children: [
-+          if (vm.primaryDoctor == null)
-+            ElevatedButton(
-+              onPressed: () => _showDoctorSelectionDialog(
-+                context,
-+                vm,
-+                onSelect: (doc) => vm.setPrimaryDoctor(doc.uid),
-+              ),
-+              child: const Text(
-+                "You haven't selected a doctor yet.\nClick to select",
-+                textAlign: TextAlign.center,
-+              ),
-+            )
-+          else ...[
-+            Card(
-+              child: ListTile(
-+                leading: const Icon(Icons.person),
-+                title: Text(vm.primaryDoctor!.name ?? vm.primaryDoctor!.email),
-+                subtitle: Text(
-+                  '${vm.primaryDoctor!.specialty ?? ''} ${vm.primaryDoctor!.location != null ? '• ${vm.primaryDoctor!.location}' : ''}',
-+                ),
-+                trailing: const Chip(label: Text('My Doctor')),
-+              ),
-+            ),
-+            const SizedBox(height: 12),
-+            ElevatedButton.icon(
-+              onPressed: vm.sendResultsToPrimaryDoctor,
-+              icon: const Icon(Icons.send),
-+              label: const Text('Send Results'),
-+            ),
-+            const SizedBox(height: 8),
-+            ElevatedButton.icon(
-+              onPressed: () => _showDiagnosesDialog(context, vm, theme),
-+              icon: const Icon(Icons.receipt),
-+              label: const Text('Diagnoses'),
-+            ),
-+            const SizedBox(height: 8),
-+            ElevatedButton.icon(
-+              onPressed: () {},
-+              icon: const Icon(Icons.calendar_today),
-+              label: const Text('Book Appointment'),
-+            ),
-+            const SizedBox(height: 8),
-+            ElevatedButton.icon(
-+              onPressed: () => _showDoctorSelectionDialog(
-+                context,
-+                vm,
-+                excludePrimary: true,
-+                onSelect: (doc) => vm.sendResultsToDoctor(doc.uid),
-+              ),
-+              icon: const Icon(Icons.group),
-+              label: const Text('Get Second Opinion'),
-+            ),
-+          ],
-+          const SizedBox(height: 24),
-+          _buildSecondOpinions(vm, theme),
-+        ],
-+      ),
-+    );
-+  }
-+
-+  Widget _buildSecondOpinions(PatienceViewModel vm, ThemeData theme) {
-+    final ids = vm.secondOpinionDoctorIds;
-+    if (ids.isEmpty) {
-+      return const SizedBox.shrink();
-     }
-+    return Column(
-+      crossAxisAlignment: CrossAxisAlignment.start,
-+      children: [
-+        Text('Second Opinions', style: theme.textTheme.titleMedium),
-+        const SizedBox(height: 8),
-+        ...ids.map((id) {
-+          final doc = vm.doctorById(id);
-+          final reports = vm.reports.where((r) => r.doctorId == id).toList();
-+          return Card(
-+            child: ExpansionTile(
-+              title: Text(doc?.name ?? id),
-+              children: reports.map((rep) {
-+                return ListTile(
-+                  title: Text(rep.status.name.toUpperCase()),
-+                  subtitle: Text(rep.sentAt.toLocal().toString()),
-+                );
-+              }).toList(),
-+            ),
-+          );
-+        })
-+      ],
-+    );
-+  }
-+
-+  void _showDiagnosesDialog(
-+      BuildContext context, PatienceViewModel vm, ThemeData theme) {
-+    showDialog<void>(
-+      context: context,
-+      builder: (ctx) {
-+        return AlertDialog(
-+          title: const Text('Diagnoses'),
-+          content: SizedBox(
-+            width: double.maxFinite,
-+            child: _diagnosesList(vm),
-+          ),
-+          actions: [
-+            TextButton(
-+              onPressed: () => Navigator.of(ctx).pop(),
-+              child: const Text('Close'),
-+            )
-+          ],
-+        );
-+      },
-+    );
-+  }
- 
-+  Widget _diagnosesList(PatienceViewModel vm) {
-+    if (vm.reports.isEmpty) {
-+      return const Center(child: Text('No doctor feedback yet.'));
-+    }
-     return ListView.separated(
--      padding: const EdgeInsets.all(16),
--      itemCount: viewModel.reports.length,
-+      shrinkWrap: true,
-+      itemCount: vm.reports.length,
-       separatorBuilder: (_, __) => const SizedBox(height: 12),
-       itemBuilder: (context, index) {
--        final report = viewModel.reports[index];
-+        final report = vm.reports[index];
-         return Card(
--          shape:
--              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-           child: ExpansionTile(
-             leading: const Icon(Icons.person_outline),
--            title: Text(viewModel.doctorName(report.doctorId)),
-+            title: Text(vm.doctorName(report.doctorId)),
-             subtitle: Text(report.status.name.toUpperCase()),
-             children: [
-               if (report.notes.isEmpty)
-                 const Padding(
-                   padding: EdgeInsets.all(16.0),
-                   child: Text('No notes yet.'),
-                 )
-               else
--                ...report.notes.map((n) => ListTile(
--                      leading: const Icon(Icons.note),
--                      title: Text(n.note),
--                      subtitle:
--                          Text(n.createdAt.toIso8601String().substring(0, 10)),
--                    )),
-+                ...report.notes.map(
-+                  (n) => ListTile(
-+                    leading: const Icon(Icons.note),
-+                    title: Text(n.note),
-+                    subtitle:
-+                        Text(n.createdAt.toIso8601String().substring(0, 10)),
-+                  ),
-+                ),
-             ],
-           ),
-         );
-       },
-     );
-   }
- 
-+  void _showDoctorSelectionDialog(
-+      BuildContext rootContext, PatienceViewModel vm,
-+      {required void Function(AppUser doc) onSelect, bool excludePrimary = false}) {
-+    if (vm.results.isEmpty && onSelect != vm.setPrimaryDoctor) {
-+      ScaffoldMessenger.of(rootContext).showSnackBar(
-+        const SnackBar(content: Text('Please complete at least one test first.')),
-+      );
-+      return;
-+    }
-+
-+    showDialog<void>(
-+      context: rootContext,
-+      builder: (ctx) {
-+        String query = '';
-+        return StatefulBuilder(builder: (ctx, setState) {
-+          final String q = query.toLowerCase();
-+          final filtered = vm.doctors.where((d) {
-+            if (excludePrimary && d.uid == vm.primaryDoctorId) return false;
-+            final combined = ('${d.name ?? ''} ${d.email}').toLowerCase();
-+            return combined.contains(q);
-+          }).toList();
-+
-+          return AlertDialog(
-+            title: const Text('Select Doctor'),
-+            content: SizedBox(
-+              width: double.maxFinite,
-+              child: Column(
-+                mainAxisSize: MainAxisSize.min,
-+                children: [
-+                  TextField(
-+                    decoration: const InputDecoration(
-+                      hintText: 'Search doctor...',
-+                      prefixIcon: Icon(Icons.search),
-+                    ),
-+                    onChanged: (val) => setState(() => query = val),
-+                  ),
-+                  const SizedBox(height: 12),
-+                  Expanded(
-+                    child: filtered.isEmpty
-+                        ? const Center(child: Text('No doctors found'))
-+                        : ListView.builder(
-+                            shrinkWrap: true,
-+                            itemCount: filtered.length,
-+                            itemBuilder: (context, index) {
-+                              final doc = filtered[index];
-+                              return ListTile(
-+                                leading: const Icon(Icons.person),
-+                                title: Text(doc.name ?? doc.email),
-+                                subtitle: Text(
-+                                  '${doc.specialty ?? ''} ${doc.location != null ? '• ${doc.location}' : ''}',
-+                                ),
-+                                onTap: () async {
-+                                  Navigator.of(ctx).pop();
-+                                  await onSelect(doc);
-+                                  if (rootContext.mounted &&
-+                                      onSelect != vm.setPrimaryDoctor) {
-+                                    ScaffoldMessenger.of(rootContext).showSnackBar(
-+                                      SnackBar(
-+                                          content: Text(
-+                                              'Results sent to ${doc.name ?? doc.email}')),
-+                                    );
-+                                  }
-+                                },
-+                              );
-+                            },
-+                          ),
-+                  ),
-+                ],
-+              ),
-+            ),
-+          );
-+        });
-+      },
-+    );
-+  }
-+
-   Widget _buildInsightsTab(ThemeData theme) {
-     return ListView(
-       padding: const EdgeInsets.all(16),
-       children: [
-         Card(
-           child: ListTile(
-             leading: const Text('🧠', style: TextStyle(fontSize: 28)),
-             title: const Text('Overall AI Summary'),
-             subtitle: const Text(
-                 'Low risk – more advanced analytics will appear here.'),
-           ),
-         ),
-         const SizedBox(height: 16),
-         Card(
-           child: ListTile(
-             title: const Text('Test-by-Test Breakdown'),
-             subtitle: const Text(
-                 'Charts of tapping, tremor and other tests will be added.'),
-           ),
-         ),
-         const SizedBox(height: 16),
-         Card(
-           child: ListTile(
-             title: const Text('Risk Alerts or Anomalies'),
-             subtitle: const Text('No alerts detected recently.'),
 diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
-index add04c18b8bdfeebbc2c2064b0bcf00f99fd9460..86b58db620d2c319ea04bd71b553a19283ec6d76 100644
+index 86b58db620d2c319ea04bd71b553a19283ec6d76..22ac99b5747f6093630ce5b49744d0b78862815d 100644
 --- a/lib/ui/views/patience/patience_viewmodel.dart
 +++ b/lib/ui/views/patience/patience_viewmodel.dart
-@@ -38,107 +38,121 @@ class PatienceViewModel extends BaseViewModel {
+@@ -1,68 +1,74 @@
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:flutter/material.dart';
++import 'package:fl_chart/fl_chart.dart';
++import 'dart:math' as math;
+ import 'dart:async';
+ 
+ import '../../../app/app.locator.dart';
+ import '../../../services/authentication_service.dart';
+ import '../../../services/test_service.dart';
+ import '../../../services/reports_service.dart';
+ import '../../../models/test_result.dart';
+ import '../../../models/patient_report.dart';
+ import '../../../models/app_user.dart';
+ import '../../../models/test_type.dart';
+ 
+ class PatienceViewModel extends BaseViewModel {
+   final AuthenticationService _authService = locator<AuthenticationService>();
+   final TestService _testService = locator<TestService>();
+   final ReportsService _reportsService = locator<ReportsService>();
+ 
+   String get email => _authService.currentUser?.email ?? '--';
+ 
+   // --- Profile fields ---
+   String _name = '--';
+   String get name => _name.isEmpty ? '--' : _name;
+ 
+   String _dob = ''; // Date of birth
+   String get dob => _dob;
+ 
+   String _medication = ''; // Medication info
+   String get medication => _medication;
+ 
+   // Controllers for editing profile fields
+   final TextEditingController nameController = TextEditingController();
+   final TextEditingController dobController = TextEditingController();
    final TextEditingController medicationController = TextEditingController();
  
    // --- Reactive data ---
    List<TestResult> _results = [];
    List<TestResult> get results => _results;
  
++  // Number of days to average over for trend chart
++  int _selectedAverageWindow = 7;
++  int get selectedAverageWindow => _selectedAverageWindow;
++
    Map<String, double> get resultsSummary =>
        _testService.computeSummary(_results);
  
@@ -438,146 +71,26 @@ index add04c18b8bdfeebbc2c2064b0bcf00f99fd9460..86b58db620d2c319ea04bd71b553a192
  
    final Map<String, AppUser> _doctorLookup = {};
    String doctorName(String id) => _doctorLookup[id]?.name ?? id;
-+  AppUser? doctorById(String id) => _doctorLookup[id];
-+
-+  String? _primaryDoctorId;
-+  String? get primaryDoctorId => _primaryDoctorId;
-+  AppUser? get primaryDoctor =>
-+      _primaryDoctorId == null ? null : _doctorLookup[_primaryDoctorId];
+   AppUser? doctorById(String id) => _doctorLookup[id];
  
-   List<AppUser> _doctors = [];
-   List<AppUser> get doctors => _doctors;
- 
-+  List<String> get secondOpinionDoctorIds {
-+    final ids = _reports.map((r) => r.doctorId).toSet();
-+    ids.remove(_primaryDoctorId);
-+    return ids.toList();
-+  }
-+
-   // Subscriptions for realtime updates
-   StreamSubscription<List<TestResult>>? _resultsSub;
-   StreamSubscription<List<PatientReport>>? _reportsSub;
- 
-   // Summary items for display
-   List<Map<String, String>> get historyItems => _results
-       .map((r) => {
-             'date': '${r.performedAt.month}/${r.performedAt.day}  ${r.performedAt.hour.toString().padLeft(2, '0')}:${r.performedAt.minute.toString().padLeft(2, '0')}',
-             'test': _labelForType(r),
-             'result': '${(r.score * 100).round()}%',
-           })
-       .toList();
- 
-   // Logout and clear preference
-   Future<void> logout(BuildContext context) async {
-     final prefs = await SharedPreferences.getInstance();
-     await prefs.remove('keepMeLoggedIn');
-     await FirebaseAuth.instance.signOut();
- 
-     Navigator.of(context).pushAndRemoveUntil(
-       MaterialPageRoute(builder: (_) => LoginView()),
-       (route) => false,
-     );
-   }
- 
-   // Initialization: Load user info, subscribe to result/report streams, preload doctors
-   Future<void> init() async {
-     setBusy(true);
- 
-     _name = await _authService.fetchDisplayName() ?? '--';
-     nameController.text = _name == '--' ? '' : _name;
- 
-     final String? uid = _authService.currentUser?.uid;
-     if (uid != null) {
-       // Subscribe to test results and keep the subscription
-       _resultsSub = _testService.watchResultsForPatient(uid).listen((list) {
-         _results = list;
-         notifyListeners();
-       });
- 
-       // Subscribe to reports and keep the subscription
-       _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
-         _reports = data;
-         notifyListeners();
-       });
- 
-       // Fetch extra profile data (DOB + medication) from Firestore
--      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-+      final doc =
-+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
- 
-       final data = doc.data();
-       if (data != null) {
-         _dob = data['dob'] ?? '';
-         _medication = data['medication'] ?? '';
-+        _primaryDoctorId = data['primaryDoctorId'] as String?;
-         dobController.text = _dob;
-         medicationController.text = _medication;
-       }
- 
-       // Preload doctor lookup map
-       _doctors = await _reportsService.fetchAllDoctors();
-       for (var d in _doctors) {
-         _doctorLookup[d.uid] = d;
-       }
-     }
- 
-     setBusy(false);
-   }
- 
-   // Save name to Firebase
-   Future<void> updateName(String newName) async {
-     if (newName.trim().isEmpty) return;
-     _name = newName.trim();
-     notifyListeners();
-     await _authService.updateDisplayName(_name);
-   }
- 
-   Future<void> saveName() async {
-     await updateName(nameController.text);
-   }
-@@ -162,50 +176,67 @@ class PatienceViewModel extends BaseViewModel {
-   void dispose() {
-     // Cancel subscriptions to avoid memory leaks
-     _resultsSub?.cancel();
-     _reportsSub?.cancel();
-     nameController.dispose();
-     dobController.dispose();
-     medicationController.dispose();
-     super.dispose();
-   }
- 
-   // Send results to selected doctor
-   Future<void> sendResultsToDoctor(String doctorId) async {
-     if (_results.isEmpty) return;
-     final String? uid = _authService.currentUser?.uid;
+   String? _primaryDoctorId;
+   String? get primaryDoctorId => _primaryDoctorId;
+   AppUser? get primaryDoctor =>
+       _primaryDoctorId == null ? null : _doctorLookup[_primaryDoctorId];
+diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
+index 86b58db620d2c319ea04bd71b553a19283ec6d76..22ac99b5747f6093630ce5b49744d0b78862815d 100644
+--- a/lib/ui/views/patience/patience_viewmodel.dart
++++ b/lib/ui/views/patience/patience_viewmodel.dart
+@@ -209,47 +215,90 @@ class PatienceViewModel extends BaseViewModel {
      if (uid == null) return;
- 
-     setBusy(true);
-     await _reportsService.sendResultsToDoctor(
-       patientId: uid,
-       doctorId: doctorId,
-       results: _results,
-     );
-     setBusy(false);
+     _primaryDoctorId = doctorId;
+     notifyListeners();
+     await FirebaseFirestore.instance
+         .collection('users')
+         .doc(uid)
+         .set({'primaryDoctorId': doctorId}, SetOptions(merge: true));
    }
  
-+  Future<void> sendResultsToPrimaryDoctor() async {
-+    final id = _primaryDoctorId;
-+    if (id == null) return;
-+    await sendResultsToDoctor(id);
-+  }
-+
-+  Future<void> setPrimaryDoctor(String doctorId) async {
-+    final String? uid = _authService.currentUser?.uid;
-+    if (uid == null) return;
-+    _primaryDoctorId = doctorId;
-+    notifyListeners();
-+    await FirebaseFirestore.instance
-+        .collection('users')
-+        .doc(uid)
-+        .set({'primaryDoctorId': doctorId}, SetOptions(merge: true));
-+  }
-+
    // Demo generator
    Future<void> recordDemoResult(TestType type) async {
      final String? uid = _authService.currentUser?.uid;
@@ -594,6 +107,49 @@ index add04c18b8bdfeebbc2c2064b0bcf00f99fd9460..86b58db620d2c319ea04bd71b553a192
      await _testService.addResult(res);
    }
  
++  /// Update the number of days used for the moving average
++  void updateAverageWindow(int days) {
++    // Ignore if the same value is selected
++    if (_selectedAverageWindow == days) return;
++    _selectedAverageWindow = days;
++    notifyListeners();
++  }
++
++  /// Calculate the N-day moving average trend for all test scores
++  List<FlSpot> getAverageTrend() {
++    // Nothing to plot if there are no results
++    if (_results.isEmpty) return [];
++
++    // 1. Bucket every result by its calendar day
++    final Map<DateTime, List<TestResult>> daily = {};
++    for (final r in _results) {
++      final d = DateTime(r.performedAt.year, r.performedAt.month, r.performedAt.day);
++      daily.putIfAbsent(d, () => []).add(r);
++    }
++
++    // 2. Compute the average score for each day
++    final dailyAvg = daily.entries.map((e) {
++      final scores = e.value.map((r) => r.score).toList();
++      final avg = scores.reduce((a, b) => a + b) / scores.length;
++      return MapEntry(e.key, avg);
++    }).toList();
++
++    // 3. Sort days chronologically for cumulative processing
++    dailyAvg.sort((a, b) => a.key.compareTo(b.key));
++
++    // 4. Walk through the list computing moving averages
++    final List<FlSpot> spots = [];
++    final values = dailyAvg.map((e) => e.value).toList();
++    for (int i = 0; i < values.length; i++) {
++      final start = math.max(0, i - _selectedAverageWindow + 1);
++      final slice = values.sublist(start, i + 1);
++      final avg = slice.reduce((a, b) => a + b) / slice.length;
++      spots.add(FlSpot(i.toDouble(), avg));
++    }
++
++    return spots;
++  }
++
    // Type to label mapping
    String _labelForType(TestResult r) {
      return labelForType(r.type);
@@ -603,3 +159,16 @@ index add04c18b8bdfeebbc2c2064b0bcf00f99fd9460..86b58db620d2c319ea04bd71b553a192
      switch (type) {
        case TestType.drawing:
          return 'Drawing';
+       case TestType.questionnaire:
+         return 'Questionnaire';
+       case TestType.tremor:
+         return 'Tremor';
+       case TestType.tap:
+         return 'Tap';
+       case TestType.voice:
+         return 'Voice';
+       case TestType.cameraDetection:
+         return 'Camera Detection';
+     }
+   }
+ }

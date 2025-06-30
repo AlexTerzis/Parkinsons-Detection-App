@@ -4,6 +4,8 @@ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 import 'dart:async';
 
 import '../../../app/app.locator.dart';
@@ -40,6 +42,10 @@ class PatienceViewModel extends BaseViewModel {
   // --- Reactive data ---
   List<TestResult> _results = [];
   List<TestResult> get results => _results;
+
+  // Number of days to average over for trend chart
+  int _selectedAverageWindow = 7;
+  int get selectedAverageWindow => _selectedAverageWindow;
 
   Map<String, double> get resultsSummary =>
       _testService.computeSummary(_results);
@@ -229,6 +235,49 @@ class PatienceViewModel extends BaseViewModel {
     );
 
     await _testService.addResult(res);
+  }
+
+  /// Update the number of days used for the moving average
+  void updateAverageWindow(int days) {
+    // Ignore if the same value is selected
+    if (_selectedAverageWindow == days) return;
+    _selectedAverageWindow = days;
+    notifyListeners();
+  }
+
+  /// Calculate the N-day moving average trend for all test scores
+  List<FlSpot> getAverageTrend() {
+    // Nothing to plot if there are no results
+    if (_results.isEmpty) return [];
+
+    // 1. Bucket every result by its calendar day
+    final Map<DateTime, List<TestResult>> daily = {};
+    for (final r in _results) {
+      final d = DateTime(r.performedAt.year, r.performedAt.month, r.performedAt.day);
+      daily.putIfAbsent(d, () => []).add(r);
+    }
+
+    // 2. Compute the average score for each day
+    final dailyAvg = daily.entries.map((e) {
+      final scores = e.value.map((r) => r.score).toList();
+      final avg = scores.reduce((a, b) => a + b) / scores.length;
+      return MapEntry(e.key, avg);
+    }).toList();
+
+    // 3. Sort days chronologically for cumulative processing
+    dailyAvg.sort((a, b) => a.key.compareTo(b.key));
+
+    // 4. Walk through the list computing moving averages
+    final List<FlSpot> spots = [];
+    final values = dailyAvg.map((e) => e.value).toList();
+    for (int i = 0; i < values.length; i++) {
+      final start = math.max(0, i - _selectedAverageWindow + 1);
+      final slice = values.sublist(start, i + 1);
+      final avg = slice.reduce((a, b) => a + b) / slice.length;
+      spots.add(FlSpot(i.toDouble(), avg));
+    }
+
+    return spots;
   }
 
   // Type to label mapping
