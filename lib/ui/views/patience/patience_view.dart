@@ -8,6 +8,7 @@ import 'patience_viewmodel.dart';
 import '../../../models/test_type.dart';
 import '../../../models/test_result.dart';
 import '../camera_test/camera_test_view.dart';
+import '../questionnaire/questionnaire_view.dart';
 import '../../../app/app.locator.dart';
 import 'package:stacked_services/stacked_services.dart';
 import '../../../models/app_user.dart';
@@ -244,6 +245,9 @@ class PatienceView extends StackedView<PatienceViewModel> {
                       } else if (type == TestType.tap) {
                         await locator<NavigationService>()
                             .navigateToView(const TapTestView());
+                      } else if (type == TestType.questionnaire) {
+                        await locator<NavigationService>()
+                            .navigateToView(const QuestionnaireView());
                       } else {
                         await viewModel.recordDemoResult(type);
                         ScaffoldMessenger.of(rootContext).showSnackBar(

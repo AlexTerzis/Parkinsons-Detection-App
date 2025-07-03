@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each user has a private `responses` subcollection under their UID.
+    // Only the authenticated owner can read or write within this path.
+    match /users/{userId}/responses/{respId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Deny all other access by default to keep the database locked down.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

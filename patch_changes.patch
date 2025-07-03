@@ -1,174 +1,99 @@
-diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
-index 86b58db620d2c319ea04bd71b553a19283ec6d76..22ac99b5747f6093630ce5b49744d0b78862815d 100644
---- a/lib/ui/views/patience/patience_viewmodel.dart
-+++ b/lib/ui/views/patience/patience_viewmodel.dart
-@@ -1,68 +1,74 @@
- import 'package:cloud_firestore/cloud_firestore.dart';
- import 'package:firebase_auth/firebase_auth.dart';
- import 'package:parkinsondetetion/ui/views/login/login_view.dart';
- import 'package:shared_preferences/shared_preferences.dart';
- import 'package:stacked/stacked.dart';
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb365555c4 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -1,35 +1,36 @@
  import 'package:flutter/material.dart';
-+import 'package:fl_chart/fl_chart.dart';
-+import 'dart:math' as math;
- import 'dart:async';
+ import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
+ import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:fl_chart/fl_chart.dart';
  
- import '../../../app/app.locator.dart';
- import '../../../services/authentication_service.dart';
- import '../../../services/test_service.dart';
- import '../../../services/reports_service.dart';
- import '../../../models/test_result.dart';
- import '../../../models/patient_report.dart';
- import '../../../models/app_user.dart';
+ import 'patience_viewmodel.dart';
  import '../../../models/test_type.dart';
+ import '../../../models/test_result.dart';
+ import '../camera_test/camera_test_view.dart';
++import '../questionnaire/questionnaire_view.dart';
+ import '../../../app/app.locator.dart';
+ import 'package:stacked_services/stacked_services.dart';
+ import '../../../models/app_user.dart';
  
- class PatienceViewModel extends BaseViewModel {
-   final AuthenticationService _authService = locator<AuthenticationService>();
-   final TestService _testService = locator<TestService>();
-   final ReportsService _reportsService = locator<ReportsService>();
+ class PatienceView extends StackedView<PatienceViewModel> {
+   const PatienceView({Key? key}) : super(key: key);
  
-   String get email => _authService.currentUser?.email ?? '--';
+   @override
+   Widget builder(
+     BuildContext context,
+     PatienceViewModel viewModel,
+     Widget? child,
+   ) {
+     final ThemeData theme = Theme.of(context);
  
-   // --- Profile fields ---
-   String _name = '--';
-   String get name => _name.isEmpty ? '--' : _name;
- 
-   String _dob = ''; // Date of birth
-   String get dob => _dob;
- 
-   String _medication = ''; // Medication info
-   String get medication => _medication;
- 
-   // Controllers for editing profile fields
-   final TextEditingController nameController = TextEditingController();
-   final TextEditingController dobController = TextEditingController();
-   final TextEditingController medicationController = TextEditingController();
- 
-   // --- Reactive data ---
-   List<TestResult> _results = [];
-   List<TestResult> get results => _results;
- 
-+  // Number of days to average over for trend chart
-+  int _selectedAverageWindow = 7;
-+  int get selectedAverageWindow => _selectedAverageWindow;
-+
-   Map<String, double> get resultsSummary =>
-       _testService.computeSummary(_results);
- 
-   Map<TestType, List<TestResult>> get groupedResults {
-     final Map<TestType, List<TestResult>> map = {};
-     for (var r in _results) {
-       map.putIfAbsent(r.type, () => []).add(r);
+     if (viewModel.isBusy) {
+       return const Center(child: CircularProgressIndicator());
      }
-     return map;
-   }
  
-   double latestScoreForType(TestType type) =>
-       groupedResults[type]?.first.score ?? 0.0;
- 
-   List<PatientReport> _reports = [];
-   List<PatientReport> get reports => _reports;
- 
-   final Map<String, AppUser> _doctorLookup = {};
-   String doctorName(String id) => _doctorLookup[id]?.name ?? id;
-   AppUser? doctorById(String id) => _doctorLookup[id];
- 
-   String? _primaryDoctorId;
-   String? get primaryDoctorId => _primaryDoctorId;
-   AppUser? get primaryDoctor =>
-       _primaryDoctorId == null ? null : _doctorLookup[_primaryDoctorId];
-diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
-index 86b58db620d2c319ea04bd71b553a19283ec6d76..22ac99b5747f6093630ce5b49744d0b78862815d 100644
---- a/lib/ui/views/patience/patience_viewmodel.dart
-+++ b/lib/ui/views/patience/patience_viewmodel.dart
-@@ -209,47 +215,90 @@ class PatienceViewModel extends BaseViewModel {
-     if (uid == null) return;
-     _primaryDoctorId = doctorId;
-     notifyListeners();
-     await FirebaseFirestore.instance
-         .collection('users')
-         .doc(uid)
-         .set({'primaryDoctorId': doctorId}, SetOptions(merge: true));
-   }
- 
-   // Demo generator
-   Future<void> recordDemoResult(TestType type) async {
-     final String? uid = _authService.currentUser?.uid;
-     if (uid == null) return;
- 
-     final TestResult res = TestResult(
-       id: '',
-       patientId: uid,
-       type: type,
-       performedAt: DateTime.now(),
-       score: (DateTime.now().millisecondsSinceEpoch % 100) / 100.0,
+     return DefaultTabController(
+       length: 6,
+       child: Scaffold(
+         appBar: AppBar(     
+           toolbarHeight: 0,   
+           bottom: TabBar(
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb365555c4 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -222,50 +223,53 @@ class PatienceView extends StackedView<PatienceViewModel> {
+                   shape: RoundedRectangleBorder(
+                       borderRadius: BorderRadius.circular(12)),
+                   child: ListTile(
+                     leading: Icon(test['icon'] as IconData,
+                         color: theme.colorScheme.primary),
+                     title: Text(test['title'] as String),
+                     trailing:
+                         _buildTestTrailing(viewModel, test['type'] as TestType),
+                     onTap: () async {
+                       final type = test['type'] as TestType;
+                       if (type == TestType.cameraDetection) {
+                         final success = await locator<NavigationService>()
+                             .navigateToView(const CameraTestView());
+                         if (rootContext.mounted && success == false) {
+                           ScaffoldMessenger.of(rootContext).showSnackBar(
+                             const SnackBar(
+                                 content: Text('No hands detected. Try again.')),
+                           );
+                         }
+                       } else if (type == TestType.tremor) {
+                         await locator<NavigationService>()
+                             .navigateToView(const TremorTestView());
+                       } else if (type == TestType.tap) {
+                         await locator<NavigationService>()
+                             .navigateToView(const TapTestView());
++                      } else if (type == TestType.questionnaire) {
++                        await locator<NavigationService>()
++                            .navigateToView(const QuestionnaireView());
+                       } else {
+                         await viewModel.recordDemoResult(type);
+                         ScaffoldMessenger.of(rootContext).showSnackBar(
+                           SnackBar(
+                               content: Text('${test['title']} completed')),
+                         );
+                       }
+                     },
+                   ),
+                 );
+               },
+             ),
+           ),
+           const SizedBox(height: 12),
+           ElevatedButton.icon(
+             onPressed: () => _onSendResultsPressed(rootContext, viewModel),
+             icon: const Icon(Icons.send),
+             label: const Text('Send Results to Doctor'),
+           ),
+         ],
+       ),
      );
- 
-     await _testService.addResult(res);
    }
  
-+  /// Update the number of days used for the moving average
-+  void updateAverageWindow(int days) {
-+    // Ignore if the same value is selected
-+    if (_selectedAverageWindow == days) return;
-+    _selectedAverageWindow = days;
-+    notifyListeners();
-+  }
-+
-+  /// Calculate the N-day moving average trend for all test scores
-+  List<FlSpot> getAverageTrend() {
-+    // Nothing to plot if there are no results
-+    if (_results.isEmpty) return [];
-+
-+    // 1. Bucket every result by its calendar day
-+    final Map<DateTime, List<TestResult>> daily = {};
-+    for (final r in _results) {
-+      final d = DateTime(r.performedAt.year, r.performedAt.month, r.performedAt.day);
-+      daily.putIfAbsent(d, () => []).add(r);
-+    }
-+
-+    // 2. Compute the average score for each day
-+    final dailyAvg = daily.entries.map((e) {
-+      final scores = e.value.map((r) => r.score).toList();
-+      final avg = scores.reduce((a, b) => a + b) / scores.length;
-+      return MapEntry(e.key, avg);
-+    }).toList();
-+
-+    // 3. Sort days chronologically for cumulative processing
-+    dailyAvg.sort((a, b) => a.key.compareTo(b.key));
-+
-+    // 4. Walk through the list computing moving averages
-+    final List<FlSpot> spots = [];
-+    final values = dailyAvg.map((e) => e.value).toList();
-+    for (int i = 0; i < values.length; i++) {
-+      final start = math.max(0, i - _selectedAverageWindow + 1);
-+      final slice = values.sublist(start, i + 1);
-+      final avg = slice.reduce((a, b) => a + b) / slice.length;
-+      spots.add(FlSpot(i.toDouble(), avg));
-+    }
-+
-+    return spots;
-+  }
-+
-   // Type to label mapping
-   String _labelForType(TestResult r) {
-     return labelForType(r.type);
-   }
- 
-   String labelForType(TestType type) {
-     switch (type) {
-       case TestType.drawing:
-         return 'Drawing';
-       case TestType.questionnaire:
-         return 'Questionnaire';
-       case TestType.tremor:
-         return 'Tremor';
-       case TestType.tap:
-         return 'Tap';
-       case TestType.voice:
-         return 'Voice';
-       case TestType.cameraDetection:
-         return 'Camera Detection';
-     }
-   }
- }
+   Widget _buildTestTrailing(PatienceViewModel vm, TestType type) {

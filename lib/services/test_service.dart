@@ -9,12 +9,16 @@ class TestService {
   TestService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  CollectionReference<Map<String, dynamic>> get _resultsCol =>
-      _firestore.collection('test_results');
+  /// Returns a reference to the questionnaire responses collection for a
+  /// specific user. The path is `/users/{uid}/responses` so that security rules
+  /// can restrict access on a per-user basis.
+  CollectionReference<Map<String, dynamic>> _responsesCol(String uid) =>
+      _firestore.collection('users').doc(uid).collection('responses');
 
+  /// Loads all results for the given patient ordered by date. Each document is
+  /// converted to a [TestResult] model.
   Future<List<TestResult>> fetchResultsForPatient(String patientId) async {
-    final QuerySnapshot<Map<String, dynamic>> snap = await _resultsCol
-        .where('patientId', isEqualTo: patientId)
+    final QuerySnapshot<Map<String, dynamic>> snap = await _responsesCol(patientId)
         .orderBy('performedAt', descending: true)
         .get();
 
@@ -23,18 +27,18 @@ class TestService {
         .toList();
   }
 
+  /// Watches the patient's response collection for live updates.
   Stream<List<TestResult>> watchResultsForPatient(String patientId) {
-    return _resultsCol
-        .where('patientId', isEqualTo: patientId)
+    return _responsesCol(patientId)
         .orderBy('performedAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => TestResult.fromJson(doc.data(), doc.id))
-            .toList());
+        .map((snap) =>
+            snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
   }
 
+  /// Saves a new [TestResult] document under the current user's collection.
   Future<void> addResult(TestResult result) {
-    return _resultsCol.add(result.toJson());
+    return _responsesCol(result.patientId).add(result.toJson());
   }
 
   Map<String, double> computeSummary(List<TestResult> results) {
