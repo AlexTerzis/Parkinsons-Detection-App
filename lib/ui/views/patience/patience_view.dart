@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/app/app.router.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:stacked/stacked.dart';
@@ -248,6 +249,8 @@ class PatienceView extends StackedView<PatienceViewModel> {
                       } else if (type == TestType.questionnaire) {
                         await locator<NavigationService>()
                             .navigateToView(const QuestionnaireView());
+                      } else if (type == TestType.drawing) {
+                        showDrawingOptions(rootContext, viewModel);
                       } else {
                         await viewModel.recordDemoResult(type);
                         ScaffoldMessenger.of(rootContext).showSnackBar(
@@ -861,6 +864,55 @@ class PatienceView extends StackedView<PatienceViewModel> {
             ),
           );
         });
+      },
+    );
+  }
+
+  
+  // Displays a bottom sheet allowing the patient to either draw directly on the
+  // phone, take a photo or upload one from the gallery. Each option navigates to
+  // its dedicated view and passes the resulting image back to [vm].
+  void showDrawingOptions(BuildContext ctx, PatienceViewModel vm) {
+    showModalBottomSheet<void>(
+      context: ctx,
+      builder: (c) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.draw),
+                title: const Text('Draw on phone'),
+                onTap: () {
+                  Navigator.of(c).pop();
+                  locator<NavigationService>().navigateToSignatureCanvasView(
+                    onImageReady: vm.handleCanvasDrawing,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take picture'),
+                onTap: () {
+                  Navigator.of(c).pop();
+                  locator<NavigationService>().navigateToCameraDrawView(
+                    onImageReady: vm.handleCameraImage,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Upload picture'),
+                onTap: () {
+                  Navigator.of(c).pop();
+                  locator<NavigationService>().navigateToGalleryDrawView(
+                    onImageReady: vm.handleGalleryImage,
+                  );
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
   }

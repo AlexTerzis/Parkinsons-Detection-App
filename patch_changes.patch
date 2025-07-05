@@ -1,8 +1,8 @@
 diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
-index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb365555c4 100644
+index 3b28016b5a3d0200f195c3b231a650eb365555c4..a7a9466c6494ba655b25cba0761b5bfefdb15974 100644
 --- a/lib/ui/views/patience/patience_view.dart
 +++ b/lib/ui/views/patience/patience_view.dart
-@@ -1,35 +1,36 @@
+@@ -1,37 +1,38 @@
  import 'package:flutter/material.dart';
  import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
  import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
@@ -13,8 +13,9 @@ index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb
  import '../../../models/test_type.dart';
  import '../../../models/test_result.dart';
  import '../camera_test/camera_test_view.dart';
-+import '../questionnaire/questionnaire_view.dart';
+ import '../questionnaire/questionnaire_view.dart';
  import '../../../app/app.locator.dart';
++import '../../../app/app.router.dart';
  import 'package:stacked_services/stacked_services.dart';
  import '../../../models/app_user.dart';
  
@@ -39,14 +40,12 @@ index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb
          appBar: AppBar(     
            toolbarHeight: 0,   
            bottom: TabBar(
+             isScrollable: true,
 diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
-index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb365555c4 100644
+index 3b28016b5a3d0200f195c3b231a650eb365555c4..a7a9466c6494ba655b25cba0761b5bfefdb15974 100644
 --- a/lib/ui/views/patience/patience_view.dart
 +++ b/lib/ui/views/patience/patience_view.dart
-@@ -222,50 +223,53 @@ class PatienceView extends StackedView<PatienceViewModel> {
-                   shape: RoundedRectangleBorder(
-                       borderRadius: BorderRadius.circular(12)),
-                   child: ListTile(
+@@ -226,50 +227,52 @@ class PatienceView extends StackedView<PatienceViewModel> {
                      leading: Icon(test['icon'] as IconData,
                          color: theme.colorScheme.primary),
                      title: Text(test['title'] as String),
@@ -69,9 +68,11 @@ index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb
                        } else if (type == TestType.tap) {
                          await locator<NavigationService>()
                              .navigateToView(const TapTestView());
-+                      } else if (type == TestType.questionnaire) {
-+                        await locator<NavigationService>()
-+                            .navigateToView(const QuestionnaireView());
+                       } else if (type == TestType.questionnaire) {
+                         await locator<NavigationService>()
+                             .navigateToView(const QuestionnaireView());
++                      } else if (type == TestType.drawing) {
++                        showDrawingOptions(rootContext, viewModel);
                        } else {
                          await viewModel.recordDemoResult(type);
                          ScaffoldMessenger.of(rootContext).showSnackBar(
@@ -97,3 +98,89 @@ index 69f5e926463d3223375605f9a3bf85fbf8efc4c9..3b28016b5a3d0200f195c3b231a650eb
    }
  
    Widget _buildTestTrailing(PatienceViewModel vm, TestType type) {
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index 3b28016b5a3d0200f195c3b231a650eb365555c4..a7a9466c6494ba655b25cba0761b5bfefdb15974 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -842,33 +845,81 @@ class PatienceView extends StackedView<PatienceViewModel> {
+                                 subtitle: Text(doc.email),
+                                 onTap: () async {
+                                   Navigator.of(ctx).pop();
+                                   await vm.sendResultsToDoctor(doc.uid);
+                                   if (rootContext.mounted) {
+                                     ScaffoldMessenger.of(rootContext)
+                                         .showSnackBar(
+                                       SnackBar(
+                                           content: Text(
+                                               'Results sent to ${doc.name ?? doc.email}')),
+                                     );
+                                   }
+                                 },
+                               );
+                             },
+                           ),
+                   ),
+                 ],
+               ),
+             ),
+           );
+         });
+       },
+     );
+   }
++
++  // Displays a bottom sheet allowing the patient to either draw directly on the
++  // phone, take a photo or upload one from the gallery. Each option navigates to
++  // its dedicated view and passes the resulting image back to [vm].
++  void showDrawingOptions(BuildContext ctx, PatienceViewModel vm) {
++    showModalBottomSheet<void>(
++      context: ctx,
++      builder: (c) {
++        return SafeArea(
++          child: Column(
++            mainAxisSize: MainAxisSize.min,
++            children: [
++              ListTile(
++                leading: const Icon(Icons.draw),
++                title: const Text('Draw on phone'),
++                onTap: () {
++                  Navigator.of(c).pop();
++                  locator<NavigationService>().navigateToSignatureCanvasView(
++                    onImageReady: vm.handleCanvasDrawing,
++                  );
++                },
++              ),
++              ListTile(
++                leading: const Icon(Icons.camera_alt),
++                title: const Text('Take picture'),
++                onTap: () {
++                  Navigator.of(c).pop();
++                  locator<NavigationService>().navigateToCameraDrawView(
++                    onImageReady: vm.handleCameraImage,
++                  );
++                },
++              ),
++              ListTile(
++                leading: const Icon(Icons.photo_library),
++                title: const Text('Upload picture'),
++                onTap: () {
++                  Navigator.of(c).pop();
++                  locator<NavigationService>().navigateToGalleryDrawView(
++                    onImageReady: vm.handleGalleryImage,
++                  );
++                },
++              ),
++            ],
++          ),
++        );
++      },
++    );
++  }
+ }
+ 
+ class _ScorePoint {
+   final DateTime time;
+   final double score;
+   _ScorePoint(this.time, this.score);
+ }
+ 

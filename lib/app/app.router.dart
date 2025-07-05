@@ -16,6 +16,11 @@ import 'package:parkinsondetetion/ui/views/patience/patience_view.dart' as _i6;
 import 'package:parkinsondetetion/ui/views/startup/startup_view.dart' as _i3;
 import 'package:stacked/stacked.dart' as _i1;
 import 'package:stacked_services/stacked_services.dart' as _i9;
+import 'dart:io' as _i10;
+import 'package:parkinsondetetion/ui/views/drawing_test/signature_canvas_view.dart' as _i11;
+import 'package:parkinsondetetion/ui/views/drawing_test/camera_draw_view.dart' as _i12;
+import 'package:parkinsondetetion/ui/views/drawing_test/gallery_draw_view.dart' as _i13;
+import 'dart:ui' as _i14;
 
 class Routes {
   static const homeView = '/home-view';
@@ -30,6 +35,12 @@ class Routes {
 
   static const cameraTestView = '/camera-test-view';
 
+  static const signatureCanvasView = '/signature-canvas-view';
+
+  static const cameraDrawView = '/camera-draw-view';
+
+  static const galleryDrawView = '/gallery-draw-view';
+
   static const all = <String>{
     homeView,
     startupView,
@@ -37,6 +48,9 @@ class Routes {
     doctorView,
     patienceView,
     cameraTestView,
+    signatureCanvasView,
+    cameraDrawView,
+    galleryDrawView,
   };
 }
 
@@ -65,6 +79,18 @@ class StackedRouter extends _i1.RouterBase {
     _i1.RouteDef(
       Routes.cameraTestView,
       page: _i7.CameraTestView,
+    ),
+    _i1.RouteDef(
+      Routes.signatureCanvasView,
+      page: _i11.SignatureCanvasView,
+    ),
+    _i1.RouteDef(
+      Routes.cameraDrawView,
+      page: _i12.CameraDrawView,
+    ),
+    _i1.RouteDef(
+      Routes.galleryDrawView,
+      page: _i13.GalleryDrawView,
     ),
   ];
 
@@ -108,6 +134,33 @@ class StackedRouter extends _i1.RouterBase {
         settings: data,
       );
     },
+    _i11.SignatureCanvasView: (data) {
+      final args = data.getArgs<SignatureCanvasViewArguments>(
+        orElse: () => throw ArgumentError('args'),
+      );
+      return _i8.MaterialPageRoute<dynamic>(
+        builder: (context) => _i11.SignatureCanvasView(onImageReady: args.onImageReady),
+        settings: data,
+      );
+    },
+    _i12.CameraDrawView: (data) {
+      final args = data.getArgs<CameraDrawViewArguments>(
+        orElse: () => throw ArgumentError('args'),
+      );
+      return _i8.MaterialPageRoute<dynamic>(
+        builder: (context) => _i12.CameraDrawView(onImageReady: args.onImageReady),
+        settings: data,
+      );
+    },
+    _i13.GalleryDrawView: (data) {
+      final args = data.getArgs<GalleryDrawViewArguments>(
+        orElse: () => throw ArgumentError('args'),
+      );
+      return _i8.MaterialPageRoute<dynamic>(
+        builder: (context) => _i13.GalleryDrawView(onImageReady: args.onImageReady),
+        settings: data,
+      );
+    },
   };
 
   @override
@@ -137,6 +190,48 @@ class LoginViewArguments {
   int get hashCode {
     return key.hashCode;
   }
+}
+
+class SignatureCanvasViewArguments {
+  const SignatureCanvasViewArguments({required this.onImageReady});
+
+  final void Function(_i14.Image) onImageReady;
+
+  @override
+  bool operator ==(covariant SignatureCanvasViewArguments other) {
+    return identical(this, other) || other.onImageReady == onImageReady;
+  }
+
+  @override
+  int get hashCode => onImageReady.hashCode;
+}
+
+class CameraDrawViewArguments {
+  const CameraDrawViewArguments({required this.onImageReady});
+
+  final void Function(_i10.File) onImageReady;
+
+  @override
+  bool operator ==(covariant CameraDrawViewArguments other) {
+    return identical(this, other) || other.onImageReady == onImageReady;
+  }
+
+  @override
+  int get hashCode => onImageReady.hashCode;
+}
+
+class GalleryDrawViewArguments {
+  const GalleryDrawViewArguments({required this.onImageReady});
+
+  final void Function(_i10.File) onImageReady;
+
+  @override
+  bool operator ==(covariant GalleryDrawViewArguments other) {
+    return identical(this, other) || other.onImageReady == onImageReady;
+  }
+
+  @override
+  int get hashCode => onImageReady.hashCode;
 }
 
 extension NavigatorStateExtension on _i9.NavigationService {
@@ -226,6 +321,54 @@ extension NavigatorStateExtension on _i9.NavigationService {
         transition: transition);
   }
 
+  Future<dynamic> navigateToSignatureCanvasView({
+    required void Function(_i14.Image) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return navigateTo<dynamic>(Routes.signatureCanvasView,
+        arguments: SignatureCanvasViewArguments(onImageReady: onImageReady),
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> navigateToCameraDrawView({
+    required void Function(_i10.File) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return navigateTo<dynamic>(Routes.cameraDrawView,
+        arguments: CameraDrawViewArguments(onImageReady: onImageReady),
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> navigateToGalleryDrawView({
+    required void Function(_i10.File) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return navigateTo<dynamic>(Routes.galleryDrawView,
+        arguments: GalleryDrawViewArguments(onImageReady: onImageReady),
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
   Future<dynamic> replaceWithHomeView([
     int? routerId,
     bool preventDuplicates = true,
@@ -306,6 +449,54 @@ extension NavigatorStateExtension on _i9.NavigationService {
         transition,
   ]) async {
     return replaceWith<dynamic>(Routes.cameraTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithSignatureCanvasView({
+    required void Function(_i14.Image) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return replaceWith<dynamic>(Routes.signatureCanvasView,
+        arguments: SignatureCanvasViewArguments(onImageReady: onImageReady),
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithCameraDrawView({
+    required void Function(_i10.File) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return replaceWith<dynamic>(Routes.cameraDrawView,
+        arguments: CameraDrawViewArguments(onImageReady: onImageReady),
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithGalleryDrawView({
+    required void Function(_i10.File) onImageReady,
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  }) async {
+    return replaceWith<dynamic>(Routes.galleryDrawView,
+        arguments: GalleryDrawViewArguments(onImageReady: onImageReady),
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,

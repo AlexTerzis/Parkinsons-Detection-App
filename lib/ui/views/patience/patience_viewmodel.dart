@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import '../../../app/app.locator.dart';
 import '../../../services/authentication_service.dart';
@@ -300,5 +302,19 @@ class PatienceViewModel extends BaseViewModel {
       case TestType.cameraDetection:
         return 'Camera Detection';
     }
+  }
+
+  // Stubs for the drawing test. When implemented these will run the ML model
+  // on the provided input and save a [TestResult].
+  Future<void> handleCanvasDrawing(ui.Image img) async {
+    // TODO: run model
+  }
+
+  Future<void> handleCameraImage(File file) async {
+    // TODO
+  }
+
+  Future<void> handleGalleryImage(File file) async {
+    // TODO
   }
 }
