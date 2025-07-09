@@ -1,48 +1,81 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class DrawingPredictor {
   late Interpreter _interpreter;
+  final List<String> _classNames = const [
+    'Healthy Spiral',
+    'Healthy Wave',
+    'Parkinson Spiral',
+    'Parkinson Wave'
+  ];
 
   Future<void> loadModel() async {
-    _interpreter = await Interpreter.fromAsset('models/keras_logistic_model.tflite');
+    _interpreter =
+        await Interpreter.fromAsset('assets/models/drawing_classifier.tflite');
   }
 
-  Future<String> predict(File imageFile) async {
+  Map<String, dynamic> _runModel(img.Image image) {
     const int inputSize = 128;
-    final classNames = [
-      'Healthy Spiral',
-      'Healthy Wave',
-      'Parkinson Spiral',
-      'Parkinson Wave'
-    ];
 
-    // Decode & preprocess
-    final bytes = await imageFile.readAsBytes();
-    img.Image? image = img.decodeImage(bytes);
-    if (image == null) throw Exception("Image could not be loaded.");
+    final img.Image resized =
+        img.copyResize(image, width: inputSize, height: inputSize);
+    final img.Image grayscale = img.grayscale(resized);
 
-    img.Image resized = img.copyResize(image, width: inputSize, height: inputSize);
-    img.Image grayscale = img.grayscale(resized);
-
-    // Normalize + flatten
-    List<double> inputList = grayscale
+    final List<double> inputList = grayscale
         .getBytes()
-        .map((e) => e / 255.0) // Normalize
+        .map((e) => e / 255.0)
         .toList()
         .cast<double>();
 
-    var input = Float32List.fromList(inputList).reshape([1, inputSize * inputSize]);
-    var output = List.filled(4, 0.0).reshape([1, 4]);
+    final input =
+        Float32List.fromList(inputList).reshape([1, inputSize * inputSize]);
+    final output = List.filled(4, 0.0).reshape([1, 4]);
 
     _interpreter.run(input, output);
 
     final prediction = output[0];
-    final predictedIndex = prediction.indexOf(prediction.reduce((a, b) => a > b ? a : b));
-    final confidence = prediction[predictedIndex];
+    int idx = 0;
+    double maxVal = prediction[0];
+    for (int i = 1; i < prediction.length; i++) {
+      if (prediction[i] > maxVal) {
+        maxVal = prediction[i];
+        idx = i;
+      }
+    }
 
-    return '${classNames[predictedIndex]} (Confidence: ${(confidence * 100).toStringAsFixed(2)}%)';
+    return {'index': idx, 'confidence': maxVal};
+  }
+
+  Future<Map<String, dynamic>> predictFile(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    final img.Image? image = img.decodeImage(bytes);
+    if (image == null) throw Exception('Image could not be loaded');
+    final result = _runModel(image);
+    return {
+      'label': _classNames[result['index'] as int],
+      'confidence': result['confidence'] as double,
+    };
+  }
+
+  Future<Map<String, dynamic>> predictCanvas(ui.Image canvasImage) async {
+    final byteData =
+        await canvasImage.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) throw Exception('Failed to convert image');
+    final img.Image? image =
+        img.decodeImage(byteData.buffer.asUint8List());
+    if (image == null) throw Exception('Image decode error');
+    final result = _runModel(image);
+    return {
+      'label': _classNames[result['index'] as int],
+      'confidence': result['confidence'] as double,
+    };
+  }
+
+  void dispose() {
+    _interpreter.close();
   }
 }
