@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:stacked_services/stacked_services.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import 'dart:io';
@@ -14,6 +15,7 @@ import '../../../app/app.locator.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/test_service.dart';
 import '../../../services/reports_service.dart';
+import '../../../services/drawing_predictor.dart';
 import '../../../models/test_result.dart';
 import '../../../models/patient_report.dart';
 import '../../../models/app_user.dart';
@@ -23,6 +25,7 @@ class PatienceViewModel extends BaseViewModel {
   final AuthenticationService _authService = locator<AuthenticationService>();
   final TestService _testService = locator<TestService>();
   final ReportsService _reportsService = locator<ReportsService>();
+  final DrawingPredictor _drawingPredictor = DrawingPredictor();
 
   String get email => _authService.currentUser?.email ?? '--';
 
@@ -304,17 +307,56 @@ class PatienceViewModel extends BaseViewModel {
     }
   }
 
-  // Stubs for the drawing test. When implemented these will run the ML model
-  // on the provided input and save a [TestResult].
+  /// Generic handler that decides how to process [source] and stores the
+  /// resulting score. The [source] can be a [ui.Image] from the drawing
+  /// canvas or a [File] from the gallery/camera.
+  Future<DrawingPrediction> handleDrawingPrediction(dynamic source) async {
+    DrawingPrediction prediction;
+    if (source is ui.Image) {
+      prediction = await _drawingPredictor.predictCanvas(source);
+    } else if (source is File) {
+      prediction = await _drawingPredictor.predictFile(source);
+    } else {
+      throw ArgumentError('Unsupported image source: $source');
+    }
+
+    // Persist the confidence score so it appears in history.
+    final uid = _authService.currentUser?.uid;
+    if (uid != null) {
+      final result = TestResult(
+        id: '',
+        patientId: uid,
+        type: TestType.drawing,
+        performedAt: DateTime.now(),
+        score: prediction.confidence.clamp(0, 1),
+        data: {'label': prediction.label},
+      );
+      await _testService.addResult(result);
+    }
+
+     final ctx = locator<NavigationService>().navigatorKey!.currentContext;
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${prediction.label} (${(prediction.confidence * 100).toStringAsFixed(1)}%)',
+          ),
+        ),
+      );
+    }
+
+    return prediction;
+  }
+
   Future<void> handleCanvasDrawing(ui.Image img) async {
-    // TODO: run model
+    await handleDrawingPrediction(img);
   }
 
   Future<void> handleCameraImage(File file) async {
-    // TODO
+    await handleDrawingPrediction(file);
   }
 
   Future<void> handleGalleryImage(File file) async {
-    // TODO
+    await handleDrawingPrediction(file);
   }
 }

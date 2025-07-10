@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:signature/signature.dart';
 import 'package:stacked_services/stacked_services.dart';
 
@@ -19,6 +20,9 @@ class _SignatureCanvasViewState extends State<SignatureCanvasView> {
   final SignatureController _controller =
       SignatureController(penStrokeWidth: 3, penColor: Colors.black);
 
+  // Key to capture the canvas area for rendering
+  final GlobalKey _canvasKey = GlobalKey();
+
   @override
   void dispose() {
     _controller.dispose();
@@ -27,9 +31,19 @@ class _SignatureCanvasViewState extends State<SignatureCanvasView> {
 
   Future<void> _submit() async {
     if (_controller.isEmpty) return;
-    final img = await _controller.toImage();
-    widget.onImageReady(img!);
-    locator<NavigationService>().back();
+
+    try {
+      // Capture the rendered widget as an image
+      final boundary =
+          _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+
+      widget.onImageReady(image);
+      locator<NavigationService>().back();
+    } catch (e) {
+      debugPrint('Error capturing drawing: $e');
+    }
   }
 
   @override
@@ -39,9 +53,15 @@ class _SignatureCanvasViewState extends State<SignatureCanvasView> {
       body: Column(
         children: [
           Expanded(
-            child: Signature(
-              controller: _controller,
-              backgroundColor: Colors.white,
+            child: Container(
+              color: Colors.white,
+              child: RepaintBoundary(
+                key: _canvasKey,
+                child: Signature(
+                  controller: _controller,
+                  backgroundColor: Colors.white,
+                ),
+              ),
             ),
           ),
           Padding(
