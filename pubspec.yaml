@@ -46,7 +46,7 @@ flutter:
     - assets/images/logo128x128.png    
     - assets/images/logo192x192.png
     - assets/tapping_model.tflite
-    - assets/models/drawing_classifier.tflite
+    - assets/models/drawing_binary_classifier2.tflite
 
 flutter_launcher_icons:
   android: true

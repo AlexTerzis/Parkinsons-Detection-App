@@ -335,13 +335,19 @@ class PatienceViewModel extends BaseViewModel {
     }
 
      final ctx = locator<NavigationService>().navigatorKey!.currentContext;
-    if (ctx != null) {
+     if (ctx != null) {
+      String message;
+      if (prediction.label == 'Parkinson') {
+        message =
+            '🧠 Parkinson with probability ${(prediction.confidence * 100).toStringAsFixed(1)}%';
+      } else {
+        final healthyProb =
+            ((1 - prediction.confidence) * 100).clamp(0, 100).toStringAsFixed(1);
+        message = '💪 Healthy with probability $healthyProb%';
+      }
+
       ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${prediction.label} (${(prediction.confidence * 100).toStringAsFixed(1)}%)',
-          ),
-        ),
+        SnackBar(content: Text(message)),
       );
     }
 
