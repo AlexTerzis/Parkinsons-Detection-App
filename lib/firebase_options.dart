@@ -4,16 +4,6 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -47,29 +37,33 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAQVuSaRCk8YjxKuMGd6Ez18awK4H_AUvQ',
-    appId: '1:559294794835:web:ecc8f9a2873f7857148aa6',
-    messagingSenderId: '559294794835',
-    projectId: 'parkinsondetection-4803f',
-    authDomain: 'parkinsondetection-4803f.firebaseapp.com',
-    storageBucket: 'parkinsondetection-4803f.firebasestorage.app',
-    measurementId: 'G-E725128YK2',
+    apiKey: 'AIzaSyC4UbnjJf_hbGC4I3SPeRrN9dO6EjlC2pY',
+    appId: '1:659877999449:web:7c00b4cc9b4c5e3f0cd248',
+    messagingSenderId: '659877999449',
+    projectId: 'parkinsonaidetector',
+    authDomain: 'parkinsonaidetector.firebaseapp.com',
+    databaseURL: 'https://parkinsonaidetector-default-rtdb.europe-west1.firebasedatabase.app',
+    storageBucket: 'parkinsonaidetector.firebasestorage.app',
+    measurementId: 'G-REJNYQ4JPL',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDPsgKPxDKQkHPUUsmhW4JfjU7v2poGP1w',
-    appId: '1:559294794835:android:4cea9b2a2a41a586148aa6',
-    messagingSenderId: '559294794835',
-    projectId: 'parkinsondetection-4803f',
-    storageBucket: 'parkinsondetection-4803f.firebasestorage.app',
+    apiKey: 'AIzaSyAINyjaGYmZgJ2lIzyCI7ygd1ChdoKOKsk',
+    appId: '1:659877999449:android:3ecfbb2c2156d63b0cd248',
+    messagingSenderId: '659877999449',
+    projectId: 'parkinsonaidetector',
+    databaseURL: 'https://parkinsonaidetector-default-rtdb.europe-west1.firebasedatabase.app',
+    storageBucket: 'parkinsonaidetector.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyD2AisgqBfxkwSV1nEgWAtm2MBQU7L8xS0',
-    appId: '1:559294794835:ios:7a5de34ace68d71c148aa6',
-    messagingSenderId: '559294794835',
-    projectId: 'parkinsondetection-4803f',
-    storageBucket: 'parkinsondetection-4803f.firebasestorage.app',
-    iosBundleId: 'com.parkinson.detector',
+    apiKey: 'AIzaSyDZafqEsm1R59b5MSoSHdv2RfpjG4NQY5E',
+    appId: '1:659877999449:ios:1e019afa74a6f24d0cd248',
+    messagingSenderId: '659877999449',
+    projectId: 'parkinsonaidetector',
+    databaseURL: 'https://parkinsonaidetector-default-rtdb.europe-west1.firebasedatabase.app',
+    storageBucket: 'parkinsonaidetector.firebasestorage.app',
+    iosBundleId: 'com.terzis.parkinsonaidetector',
   );
+
 }
