@@ -14,7 +14,7 @@ class VoicePredictor {
   Future<void> _ensureModel() async {
     if (_loaded) return;
     _interpreter =
-        await Interpreter.fromAsset('assets/models/offline_voice.tflite');
+        await Interpreter.fromAsset('assets/models/kalo.tflite');
     _loaded = true;
   }
 
@@ -22,19 +22,60 @@ class VoicePredictor {
   /// that the recording indicates Parkinson's disease.
   Future<double> predict(File wav) async {
     await _ensureModel();
-    final features = await _extractFeatures(wav);
-    final input = [features];
-    final output = List.filled(1 * 1, 0.0).reshape([1, 1]);
+
+    final rawFeatures = await _extractFeatures(wav);
+    final features = _normalizeFeatures(rawFeatures);
+
+    // 🧪 Debugging logs
+    print('🧠 Extracted features: $rawFeatures');
+    print('🧪 Normalized features: $features');
+    print('🔢 Feature count: ${features.length}');
+    print('🔢 Raw Feature count: ${rawFeatures.length}');
+    print('✅ All finite: ${features.every((v) => v.isFinite)}');
+
+
+    final input = Float32List.fromList(features).reshape([1, 16]);
+    final output = Float32List(1).reshape([1, 1]);
+    print('📤 Final input to model: ${input[0]}');
     _interpreter.run(input, output);
+
+    
+    print('📤 Final input to model: ${input[0]}');
+    print('📈 raw Model output: $output');
+    
+    print('📈 Raw output: ${output[0][0]}');
     return output[0][0];
+
+  }
+
+  /// Normalizes features using the same means and stds used in training.
+  List<double> _normalizeFeatures(List<double> features) {
+    final means = [
+      154.228641, 197.104918, 116.324631, 0.00622,
+      4.4e-05, 0.003306, 0.003446, 0.00992,
+      0.029709, 0.282251, 0.015664, 0.017878,
+      0.024081, 0.046993, 0.024847, 21.885974
+    ];
+
+    final stds = [
+      41.2838, 91.256652, 43.409676, 0.004836,
+      3.5e-05, 0.00296, 0.002752, 0.00888,
+      0.018809, 0.194377, 0.010127, 0.011993,
+      0.016903, 0.030381, 0.040315, 4.414402
+    ];
+
+    List<double> normalized = [];
+    for (int i = 0; i < features.length; i++) {
+      final std = stds[i];
+      final mean = means[i];
+      normalized.add(std != 0 ? (features[i] - mean) / std : 0.0);
+    }
+    return normalized;
   }
 
   /// Extracts a simplified set of voice features from the WAV bytes.
-  /// The implementation is intentionally lightweight and only approximates the
-  /// classic jitter/shimmer metrics used in clinical studies.
   Future<List<double>> _extractFeatures(File wav) async {
     final bytes = await wav.readAsBytes();
-    // Skip the 44 byte WAV header and treat the rest as 16‑bit PCM samples.
     final samples = bytes.buffer
         .asInt16List(44)
         .map((e) => e.toDouble())
@@ -44,30 +85,28 @@ class VoicePredictor {
       return List.filled(16, 0);
     }
 
-    // Estimate the sample rate from header bytes 24‑27.
+    // 🎧 Debug audio levels
+    print('🔊 Max sample: ${samples.reduce(max)}');
+    print('🔊 Min sample: ${samples.reduce(min)}');
+
     final rate = bytes.buffer.asByteData().getUint32(24, Endian.little);
 
-    // --- Frequency domain analysis ---
     final fft = FFT(samples.length);
     final freqs = fft.realFft(samples);
-    final magnitudes = List<double>.generate(
-        freqs.length ~/ 2, (i) {
-          final abs = freqs[i].abs();
-          return abs.x + abs.y; // Sum both lanes as a simple magnitude approximation
-        });
+    final magnitudes = List<double>.generate(freqs.length ~/ 2, (i) {
+      final abs = freqs[i].abs();
+      return abs.x + abs.y;
+    });
 
-    // Basic pitch estimation using the strongest frequency component.
     int maxIndex = 0;
     for (int i = 1; i < magnitudes.length; i++) {
       if (magnitudes[i] > magnitudes[maxIndex]) maxIndex = i;
     }
-    final fo = maxIndex * rate / samples.length;
 
-    // Highest and lowest detected frequencies.
+    final fo = maxIndex * rate / samples.length;
     final fhi = (magnitudes.lastIndexWhere((m) => m > 0.01)) * rate / samples.length;
     final flo = (magnitudes.indexWhere((m) => m > 0.01)) * rate / samples.length;
 
-    // --- Time domain analysis for jitter/shimmer approximations ---
     final zeroCrossings = <int>[];
     for (int i = 1; i < samples.length; i++) {
       if ((samples[i - 1] <= 0 && samples[i] > 0) ||
@@ -75,23 +114,23 @@ class VoicePredictor {
         zeroCrossings.add(i);
       }
     }
+
     final periods = <double>[];
     for (int i = 1; i < zeroCrossings.length; i++) {
       final diff = zeroCrossings[i] - zeroCrossings[i - 1];
       periods.add(diff / rate);
     }
 
-    final avgPeriod =
-        periods.isNotEmpty ? periods.reduce((a, b) => a + b) / periods.length : 0.0;
-    final jitterAbs = periods.isNotEmpty
-        ? periods
-                .map((p) => (p - avgPeriod).abs())
-                .reduce((a, b) => a + b) /
-            periods.length
+    final avgPeriod = periods.isNotEmpty
+        ? periods.reduce((a, b) => a + b) / periods.length
         : 0.0;
+
+    final jitterAbs = periods.isNotEmpty
+        ? periods.map((p) => (p - avgPeriod).abs()).reduce((a, b) => a + b) / periods.length
+        : 0.0;
+
     final jitterPct = avgPeriod > 0 ? jitterAbs / avgPeriod : 0.0;
 
-    // RAP and PPQ approximated using moving averages of period differences.
     double _rap() {
       if (periods.length < 3) return 0.0;
       double sum = 0;
@@ -116,44 +155,49 @@ class VoicePredictor {
     final ppq = _ppq();
     final ddp = 3 * rap;
 
-    // Shimmer estimated from amplitude variations.
     final amplitudes = samples.map((e) => e.abs().toDouble()).toList();
     final ampMean = amplitudes.reduce((a, b) => a + b) / amplitudes.length;
+
     final shimmer = amplitudes
             .map((a) => (a - ampMean).abs())
-            .reduce((a, b) => a + b) /
-        amplitudes.length /
-        ampMean;
+            .reduce((a, b) => a + b) / amplitudes.length / ampMean;
+
     final shimmerDb = 20 * log(shimmer + 1e-6) / ln10;
-    final apq3 = shimmer; // very rough approximation
-    final apq5 = shimmer; // reuse shimmer for simplicity
+    final apq3 = shimmer;
+    final apq5 = shimmer;
     final apq = shimmer;
     final dda = 3 * apq3;
 
-    // Noise-to-harmonics estimated from spectral flatness.
     final totalEnergy = magnitudes.reduce((a, b) => a + b);
     final harmonicEnergy = magnitudes[maxIndex];
-    final nhr =
-        harmonicEnergy > 0 ? (totalEnergy - harmonicEnergy) / harmonicEnergy : 0.0;
+    final nhr = harmonicEnergy > 0 ? (totalEnergy - harmonicEnergy) / harmonicEnergy : 0.0;
     final hnr = nhr > 0 ? 1 / nhr : 0.0;
 
+    print("fo: $fo");
+    print("fhi: $fhi");
+    print("flo: $flo");
+    print("jitterAbs: $jitterAbs");
+    print("jitterPct: $jitterPct");
+    print("rap: $rap");
+    print("ppq: $ppq");
+    print("ddp: $ddp");
+    print("shimmer: $shimmer");
+    print("shimmerDb: $shimmerDb");
+    print("apq3: $apq3");
+    print("apq5: $apq5");
+    print("apq: $apq");
+    print("dda: $dda");
+    print("nhr: $nhr");
+    print("hnr: $hnr");
+// ...
+
     return [
-      fo,
-      fhi,
-      flo,
-      jitterPct,
-      jitterAbs,
-      rap,
-      ppq,
-      ddp,
-      shimmer,
-      shimmerDb,
-      apq3,
-      apq5,
-      apq,
-      dda,
-      nhr,
-      hnr,
+      fo, fhi, flo,
+      jitterPct, jitterAbs,
+      rap, ppq, ddp,
+      shimmer, shimmerDb,
+      apq3, apq5, apq, dda,
+      nhr, hnr,
     ];
   }
 }

@@ -67,29 +67,32 @@ class VoiceTestViewModel extends BaseViewModel {
 
   /// Stops the recording and runs prediction
   Future<void> stopTest() async {
-    if (!isRecording) return;
+  if (!isRecording) return;
 
-    _timer?.cancel();
-    final path = await _recorder.stop(); // Returns the path to recorded file
-    isRecording = false;
-    status = 'Processing...';
+  _timer?.cancel();
+  final path = await _recorder.stop(); // Returns the path to recorded file
+  isRecording = false;
+  status = 'Processing...';
+  notifyListeners();
+
+  if (path != null) {
+    final healthyScore = await _predictor.predict(File(path)); // model gives probability of healthy
+    final pdScore = 1.0 - healthyScore; // inverse is Parkinson's likelihood
+
+    _result = (pdScore * 100).toStringAsFixed(1);
+
+    status = pdScore >= 0.5
+        ? '⚠️ Possible Parkinson pattern ($_result%)'
+        : '✅ Normal voice ($_result%)';
+
     notifyListeners();
-
-    if (path != null) {
-      final score = await _predictor.predict(File(path));
-      _result = (score * 100).toStringAsFixed(1);
-
-      status = score >= 0.5
-          ? '⚠️ Possible Parkinson pattern ($_result%)'
-          : '✅ Normal voice ($_result%)';
-
-      notifyListeners();
-      await _saveResult(score);
-    } else {
-      status = 'Recording failed';
-      notifyListeners();
-    }
+    await _saveResult(pdScore); // save Parkinson's probability
+  } else {
+    status = 'Recording failed';
+    notifyListeners();
   }
+}
+
 
   /// Saves the test result to Firebase
   Future<void> _saveResult(double score) async {

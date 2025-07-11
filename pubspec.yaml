@@ -49,7 +49,7 @@ flutter:
     - assets/images/logo192x192.png
     - assets/tapping_model.tflite
     - assets/models/drawing_binary_classifier2.tflite
-    - assets/models/offline_voice.tflite
+    - assets/models/kalo.tflite
 
 flutter_launcher_icons:
   android: true
