@@ -50,6 +50,7 @@ flutter:
     - assets/tapping_model.tflite
     - assets/models/drawing_binary_classifier2.tflite
     - assets/models/kalo.tflite
+    - assets/models/voice_norm.json
 
 flutter_launcher_icons:
   android: true

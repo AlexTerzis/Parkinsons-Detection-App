@@ -1,146 +1,118 @@
-diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
-index e28840965724917817d29cf2e61b703a4e833c1f..b065ef0d70aaa9d478168320cf6ed67201771bef 100644
---- a/lib/ui/views/patience/patience_viewmodel.dart
-+++ b/lib/ui/views/patience/patience_viewmodel.dart
-@@ -1,50 +1,53 @@
- import 'package:cloud_firestore/cloud_firestore.dart';
- import 'package:firebase_auth/firebase_auth.dart';
- import 'package:parkinsondetetion/ui/views/login/login_view.dart';
- import 'package:shared_preferences/shared_preferences.dart';
- import 'package:stacked/stacked.dart';
- import 'package:flutter/material.dart';
- import 'package:fl_chart/fl_chart.dart';
-+import 'package:stacked_services/stacked_services.dart';
- import 'dart:math' as math;
- import 'dart:async';
+diff --git a/lib/services/voice_predictor.dart b/lib/services/voice_predictor.dart
+index 5bdaeb2646daabea0c82cf5431d184cff1987a78..0c0595b9f1dafb6ad24365452ad2da21912d1e86 100644
+--- a/lib/services/voice_predictor.dart
++++ b/lib/services/voice_predictor.dart
+@@ -1,95 +1,96 @@
  import 'dart:io';
- import 'dart:ui' as ui;
+ import 'dart:math';
+ import 'dart:typed_data';
++import 'dart:convert';
++import 'package:flutter/services.dart' show rootBundle;
  
- import '../../../app/app.locator.dart';
- import '../../../services/authentication_service.dart';
- import '../../../services/test_service.dart';
- import '../../../services/reports_service.dart';
-+import '../../../services/drawing_predictor.dart';
- import '../../../models/test_result.dart';
- import '../../../models/patient_report.dart';
- import '../../../models/app_user.dart';
- import '../../../models/test_type.dart';
+ import 'package:fftea/fftea.dart';
+ import 'package:tflite_flutter/tflite_flutter.dart';
  
- class PatienceViewModel extends BaseViewModel {
-   final AuthenticationService _authService = locator<AuthenticationService>();
-   final TestService _testService = locator<TestService>();
-   final ReportsService _reportsService = locator<ReportsService>();
-+  final DrawingPredictor _drawingPredictor = DrawingPredictor();
+ /// Handles feature extraction and model inference for the voice test.
+ class VoicePredictor {
+   late final Interpreter _interpreter;
+   bool _loaded = false;
++  List<double>? _means;
++  List<double>? _stds;
  
-   String get email => _authService.currentUser?.email ?? '--';
- 
-   // --- Profile fields ---
-   String _name = '--';
-   String get name => _name.isEmpty ? '--' : _name;
- 
-   String _dob = ''; // Date of birth
-   String get dob => _dob;
- 
-   String _medication = ''; // Medication info
-   String get medication => _medication;
- 
-   // Controllers for editing profile fields
-   final TextEditingController nameController = TextEditingController();
-   final TextEditingController dobController = TextEditingController();
-   final TextEditingController medicationController = TextEditingController();
- 
-   // --- Reactive data ---
-   List<TestResult> _results = [];
-   List<TestResult> get results => _results;
- 
-   // Number of days to average over for trend chart
-   int _selectedAverageWindow = 7;
-   int get selectedAverageWindow => _selectedAverageWindow;
-diff --git a/lib/ui/views/patience/patience_viewmodel.dart b/lib/ui/views/patience/patience_viewmodel.dart
-index e28840965724917817d29cf2e61b703a4e833c1f..b065ef0d70aaa9d478168320cf6ed67201771bef 100644
---- a/lib/ui/views/patience/patience_viewmodel.dart
-+++ b/lib/ui/views/patience/patience_viewmodel.dart
-@@ -282,39 +285,78 @@ class PatienceViewModel extends BaseViewModel {
-     return spots;
+   /// Loads the TFLite model from assets if it hasn't been loaded yet.
+   Future<void> _ensureModel() async {
+     if (_loaded) return;
+     _interpreter =
+         await Interpreter.fromAsset('assets/models/kalo.tflite');
++    final normJson =
++        await rootBundle.loadString('assets/models/voice_norm.json');
++    final data = json.decode(normJson) as Map<String, dynamic>;
++    _means = List<double>.from(data['means']);
++    _stds = List<double>.from(data['stds']);
+     _loaded = true;
    }
  
-   // Type to label mapping
-   String _labelForType(TestResult r) {
-     return labelForType(r.type);
+   /// Runs inference directly on an audio file and returns the probability
+   /// that the recording indicates Parkinson's disease.
+   Future<double> predict(File wav) async {
+     await _ensureModel();
+ 
+     final rawFeatures = await _extractFeatures(wav);
+     final features = _normalizeFeatures(rawFeatures);
+ 
+     // 🧪 Debugging logs
+     print('🧠 Extracted features: $rawFeatures');
+     print('🧪 Normalized features: $features');
+     print('🔢 Feature count: ${features.length}');
+     print('🔢 Raw Feature count: ${rawFeatures.length}');
+     print('✅ All finite: ${features.every((v) => v.isFinite)}');
+ 
+ 
+     final input = Float32List.fromList(features).reshape([1, 16]);
+     final output = Float32List(1).reshape([1, 1]);
+     print('📤 Final input to model: ${input[0]}');
+     _interpreter.run(input, output);
+ 
+     
+     print('📤 Final input to model: ${input[0]}');
+     print('📈 raw Model output: $output');
+     
+     print('📈 Raw output: ${output[0][0]}');
+     return output[0][0];
+ 
    }
  
-   String labelForType(TestType type) {
-     switch (type) {
-       case TestType.drawing:
-         return 'Drawing';
-       case TestType.questionnaire:
-         return 'Questionnaire';
-       case TestType.tremor:
-         return 'Tremor';
-       case TestType.tap:
-         return 'Tap';
-       case TestType.voice:
-         return 'Voice';
-       case TestType.cameraDetection:
-         return 'Camera Detection';
+   /// Normalizes features using the same means and stds used in training.
++  /// The parameters are loaded from [voice_norm.json] when the model is
++  /// initialized so that Flutter and Python share identical values.
+   List<double> _normalizeFeatures(List<double> features) {
+-    final means = [
+-      154.228641, 197.104918, 116.324631, 0.00622,
+-      4.4e-05, 0.003306, 0.003446, 0.00992,
+-      0.029709, 0.282251, 0.015664, 0.017878,
+-      0.024081, 0.046993, 0.024847, 21.885974
+-    ];
+-
+-    final stds = [
+-      41.2838, 91.256652, 43.409676, 0.004836,
+-      3.5e-05, 0.00296, 0.002752, 0.00888,
+-      0.018809, 0.194377, 0.010127, 0.011993,
+-      0.016903, 0.030381, 0.040315, 4.414402
+-    ];
++    if (_means == null || _stds == null) {
++      throw StateError('Normalization parameters not loaded');
++    }
+ 
+-    List<double> normalized = [];
+-    for (int i = 0; i < features.length; i++) {
+-      final std = stds[i];
+-      final mean = means[i];
++    final normalized = <double>[];
++    for (var i = 0; i < features.length; i++) {
++      final std = _stds![i];
++      final mean = _means![i];
+       normalized.add(std != 0 ? (features[i] - mean) / std : 0.0);
      }
+     return normalized;
    }
  
--  // Stubs for the drawing test. When implemented these will run the ML model
--  // on the provided input and save a [TestResult].
-+  /// Generic handler that decides how to process [source] and stores the
-+  /// resulting score. The [source] can be a [ui.Image] from the drawing
-+  /// canvas or a [File] from the gallery/camera.
-+  Future<DrawingPrediction> handleDrawingPrediction(dynamic source) async {
-+    DrawingPrediction prediction;
-+    if (source is ui.Image) {
-+      prediction = await _drawingPredictor.predictCanvas(source);
-+    } else if (source is File) {
-+      prediction = await _drawingPredictor.predictFile(source);
-+    } else {
-+      throw ArgumentError('Unsupported image source: $source');
-+    }
-+
-+    // Persist the confidence score so it appears in history.
-+    final uid = _authService.currentUser?.uid;
-+    if (uid != null) {
-+      final result = TestResult(
-+        id: '',
-+        patientId: uid,
-+        type: TestType.drawing,
-+        performedAt: DateTime.now(),
-+        score: prediction.confidence.clamp(0, 1),
-+        data: {'label': prediction.label},
-+      );
-+      await _testService.addResult(result);
-+    }
-+
-+    final ctx = locator<NavigationService>().navigatorKey.currentContext;
-+    if (ctx != null) {
-+      ScaffoldMessenger.of(ctx).showSnackBar(
-+        SnackBar(
-+          content: Text(
-+            '${prediction.label} (${(prediction.confidence * 100).toStringAsFixed(1)}%)',
-+          ),
-+        ),
-+      );
-+    }
-+
-+    return prediction;
-+  }
-+
-   Future<void> handleCanvasDrawing(ui.Image img) async {
--    // TODO: run model
-+    await handleDrawingPrediction(img);
-   }
+   /// Extracts a simplified set of voice features from the WAV bytes.
+   Future<List<double>> _extractFeatures(File wav) async {
+     final bytes = await wav.readAsBytes();
+     final samples = bytes.buffer
+         .asInt16List(44)
+         .map((e) => e.toDouble())
+         .toList();
  
-   Future<void> handleCameraImage(File file) async {
--    // TODO
-+    await handleDrawingPrediction(file);
-   }
+     if (samples.isEmpty) {
+       return List.filled(16, 0);
+     }
  
-   Future<void> handleGalleryImage(File file) async {
--    // TODO
-+    await handleDrawingPrediction(file);
-   }
- }
+     // 🎧 Debug audio levels
+     print('🔊 Max sample: ${samples.reduce(max)}');
+     print('🔊 Min sample: ${samples.reduce(min)}');
+ 
+     final rate = bytes.buffer.asByteData().getUint32(24, Endian.little);
+ 
+     final fft = FFT(samples.length);
+     final freqs = fft.realFft(samples);

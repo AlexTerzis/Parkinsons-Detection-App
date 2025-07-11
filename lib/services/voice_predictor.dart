@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:fftea/fftea.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -9,12 +11,19 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 class VoicePredictor {
   late final Interpreter _interpreter;
   bool _loaded = false;
+  List<double>? _means;
+  List<double>? _stds;
 
   /// Loads the TFLite model from assets if it hasn't been loaded yet.
   Future<void> _ensureModel() async {
     if (_loaded) return;
     _interpreter =
         await Interpreter.fromAsset('assets/models/kalo.tflite');
+    final normJson =
+        await rootBundle.loadString('assets/models/voice_norm.json');
+    final data = json.decode(normJson) as Map<String, dynamic>;
+    _means = List<double>.from(data['means']);
+    _stds = List<double>.from(data['stds']);
     _loaded = true;
   }
 
@@ -49,25 +58,17 @@ class VoicePredictor {
   }
 
   /// Normalizes features using the same means and stds used in training.
+  /// The parameters are loaded from [voice_norm.json] when the model is
+  /// initialized so that Flutter and Python share identical values.
   List<double> _normalizeFeatures(List<double> features) {
-    final means = [
-      154.228641, 197.104918, 116.324631, 0.00622,
-      4.4e-05, 0.003306, 0.003446, 0.00992,
-      0.029709, 0.282251, 0.015664, 0.017878,
-      0.024081, 0.046993, 0.024847, 21.885974
-    ];
+    if (_means == null || _stds == null) {
+      throw StateError('Normalization parameters not loaded');
+    }
 
-    final stds = [
-      41.2838, 91.256652, 43.409676, 0.004836,
-      3.5e-05, 0.00296, 0.002752, 0.00888,
-      0.018809, 0.194377, 0.010127, 0.011993,
-      0.016903, 0.030381, 0.040315, 4.414402
-    ];
-
-    List<double> normalized = [];
-    for (int i = 0; i < features.length; i++) {
-      final std = stds[i];
-      final mean = means[i];
+    final normalized = <double>[];
+    for (var i = 0; i < features.length; i++) {
+      final std = _stds![i];
+      final mean = _means![i];
       normalized.add(std != 0 ? (features[i] - mean) / std : 0.0);
     }
     return normalized;
