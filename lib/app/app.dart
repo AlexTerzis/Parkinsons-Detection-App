@@ -14,6 +14,7 @@ import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart';
 import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:parkinsondetetion/ui/views/questionnaire/questionnaire_view.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
+import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
 // @stacked-import
 
 @StackedApp(
@@ -27,6 +28,7 @@ import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
     MaterialRoute(page: TremorTestView),
     MaterialRoute(page: TapTestView),
     MaterialRoute(page: QuestionnaireView),
+     MaterialRoute(page: VoiceTestView),
 // @stacked-route
   ],
   dependencies: [
