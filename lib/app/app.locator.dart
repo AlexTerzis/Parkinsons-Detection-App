@@ -14,6 +14,7 @@ import 'package:stacked_shared/stacked_shared.dart';
 import '../services/authentication_service.dart';
 import '../services/reports_service.dart';
 import '../services/test_service.dart';
+import '../services/voice_api_service.dart';
 
 final locator = StackedLocator.instance;
 
@@ -23,7 +24,10 @@ Future<void> setupLocator({
 }) async {
 // Register environments
   locator.registerEnvironment(
-      environment: environment, environmentFilter: environmentFilter);
+    environment: environment,
+    environmentFilter: environmentFilter,
+  );
+
 
 // Register dependencies
   locator.registerLazySingleton(() => BottomSheetService());
@@ -32,4 +36,5 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => AuthenticationService());
   locator.registerLazySingleton(() => TestService());
   locator.registerLazySingleton(() => ReportsService());
+  locator.registerLazySingleton(() => VoiceApiService());
 }
