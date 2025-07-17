@@ -131,7 +131,6 @@ class QuestionnaireViewModel extends BaseViewModel {
       'D1p3xi', 'D1p3xii','D1p3xiii','D1p3xiv','D1p3xv',
     ];
     final gdsCount = gdsKeys.where((k) => responses[k] == true).length;
-    // if ≥7 positives, assign 'D1p3a', otherwise 'D1p3b'
     computed['D1p3'] = gdsCount >= 7 ? 'D1p3a' : 'D1p3b';
     
     // --- QUIP composite flag: positive if more than 1.5 (i.e. ≥2) QUIP items are true ---
@@ -140,14 +139,13 @@ class QuestionnaireViewModel extends BaseViewModel {
       'D1p4v',  'D1p4vi', 'D1p4vii','D1p4viii',
     ];
     final quipCount = quipKeys.where((k) => responses[k] == true).length;
-    // if ≥2 yes's, mark D1p4 true, else false
     computed['D1p41IV'] = quipCount >= 2;
 
     // --- D1p5: RBD 
     // responses['D1p5x'] comes back as List<String>
     final selectedConds = (responses['D1p5x'] as List<dynamic>?)?.cast<String>() ?? [];
 
-    // D1p5x_flag → true if they picked anything except "Κανένα"
+              // D1p5x_flag → true if they picked anything except "Κανένα"
     computed['D1p5x_flag'] =
     selectedConds.isNotEmpty && !selectedConds.contains('D1p5x_none');
 
@@ -159,6 +157,21 @@ class QuestionnaireViewModel extends BaseViewModel {
     final rbdCount = rbdKeys.where((k) => responses[k] == true).length;
     // true if more than 6.5 yes answers, i.e. at least 7
     computed['D1p51V'] = rbdCount > 6;
+
+    // --- SCOPA‑AUT scoring ---
+    final scopaKeys = [
+      'D1p6i','D1p6ii','D1p6iii','D1p6iv','D1p6v','D1p6vi','D1p6vii','D1p6viii',
+      'D1p6ix','D1p6x','D1p6xi','D1p6xii','D1p6xiii','D1p6xiv','D1p6xv','D1p6xvi',
+      'D1p6xvii','D1p6xviii','D1p6xix','D1p6xx','D1p6xxi',
+      if (responses['W']=='W1') ...['D1p6xxii','D1p6xxiii','D1p6xxiv'],
+      if (responses['W']=='W2') ...['D1p6xxv','D1p6xxvi']
+    ];
+    var scopaTotal = 0;
+    for (final key in scopaKeys) {
+      scopaTotal += int.tryParse(responses[key] as String? ?? '0')!;
+    }
+    computed['SCOPA_total'] = scopaTotal;
+    computed['SCOPA>3'] = scopaTotal >= 3;
 
     // Authentication check
     final uid = _auth.currentUser?.uid;
