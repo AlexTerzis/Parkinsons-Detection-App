@@ -134,6 +134,37 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
           onChanged: (v) => setState(() => _responses[id] = v),
           validator: (v) => _validate(q, v),
         );
+      case 'checkbox':
+        final options = q['options'] as List<dynamic>;
+        // ensure we start with an empty list if nothing's set yet
+        final selected = (_responses[id] as List<dynamic>?)?.cast<String>() ?? <String>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.titleMedium),
+            ...options.map<Widget>((opt) {
+              final val = opt['value'] as String;
+              final lab = opt['label'] as String;
+              final isChecked = selected.contains(val);
+              return CheckboxListTile(
+                title: Text(lab),
+                value: isChecked,
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked == true) {
+                      selected.add(val);
+                    } else {
+                      selected.remove(val);
+                    }
+                    _responses[id] = selected;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+              );
+            }),
+          ],
+        );
+  
 
       case 'radio':
         final options = q['options'] as List<dynamic>;

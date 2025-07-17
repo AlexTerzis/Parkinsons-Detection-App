@@ -124,7 +124,42 @@ class QuestionnaireViewModel extends BaseViewModel {
     ];
     final takenCountD2 = medFlagsD2.where((flag) => flag).length;
     computed['D1i'] = (takenCountD2 > 1);     
+    // --- GDS section: count all boolean “D1p3…” items ---
+    final gdsKeys = [
+      'D1p3i',  'D1p3ii', 'D1p3iii', 'D1p3iv', 'D1p3v',
+      'D1p3vi', 'D1p3vii','D1p3viii','D1p3ix','D1p3x',
+      'D1p3xi', 'D1p3xii','D1p3xiii','D1p3xiv','D1p3xv',
+    ];
+    final gdsCount = gdsKeys.where((k) => responses[k] == true).length;
+    // if ≥7 positives, assign 'D1p3a', otherwise 'D1p3b'
+    computed['D1p3'] = gdsCount >= 7 ? 'D1p3a' : 'D1p3b';
     
+    // --- QUIP composite flag: positive if more than 1.5 (i.e. ≥2) QUIP items are true ---
+    final quipKeys = [
+      'D1p4i',  'D1p4ii', 'D1p4iii', 'D1p4iv',
+      'D1p4v',  'D1p4vi', 'D1p4vii','D1p4viii',
+    ];
+    final quipCount = quipKeys.where((k) => responses[k] == true).length;
+    // if ≥2 yes's, mark D1p4 true, else false
+    computed['D1p41IV'] = quipCount >= 2;
+
+    // --- D1p5: RBD 
+    // responses['D1p5x'] comes back as List<String>
+    final selectedConds = (responses['D1p5x'] as List<dynamic>?)?.cast<String>() ?? [];
+
+    // D1p5x_flag → true if they picked anything except "Κανένα"
+    computed['D1p5x_flag'] =
+    selectedConds.isNotEmpty && !selectedConds.contains('D1p5x_none');
+
+    final rbdKeys = [
+    'D1p5i','D1p5ii','D1p5iii','D1p5iv','D1p5v',
+    'D1p5via','D1p5vib','D1p5vic','D1p5vid','D1p5vii',
+    'D1p5viii','D1p5ix','D1p5x_flag',
+    ];
+    final rbdCount = rbdKeys.where((k) => responses[k] == true).length;
+    // true if more than 6.5 yes answers, i.e. at least 7
+    computed['D1p51V'] = rbdCount > 6;
+
     // Authentication check
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
