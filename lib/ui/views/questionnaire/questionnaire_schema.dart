@@ -288,5 +288,443 @@ const List<Map<String, dynamic>> questionnaireSchema = [
   'dependsOn': {'questionId': 'B', 'value': 'yes'},
   'validation': {'required': true},
 },
+//----------------C-----------------------------
+  // Medication Section
+  // Γ: Παίρνετε φάρμακα αυτή τη στιγμή;
+  {
+    'id': 'G',
+    'section': 'Medication',
+    'type': 'radio',
+    'label': 'Παίρνετε φάρμακα αυτή τη στιγμή;',
+    'options': [
+      {'value': 'G1', 'label': 'Ναι'},
+      {'value': 'G2', 'label': 'Όχι'},
+    ],
+    'validation': {'required': true},
+  },
+  // Γ1α: Ντοπαμινεργικοί αγωνιστές
+  {
+    'id': 'G1a',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Ντοπαμινεργικοί αγωνιστές;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  
+  // Γ1aΙ: Ανταπόκριση στη λεβοντόπα
+  {
+    'id': 'G1aI',
+    'section': 'Medication',
+    'type': 'radio',
+    'label': 'Ανταπόκριση στους ντοπαμινεργικούς αγωνιστές;',
+    'options': [
+      {'value': 'G1aI1', 'label': 'Όχι'},
+      {'value': 'G1aI3', 'label': 'Ναι, μετρίως'},
+      {'value': 'G1aI2', 'label': 'Ναι, πολύ'},
+    ],
+    'dependsOn': {'questionId': 'G1a', 'value': true},
+    'validation': {'required': true},
+  },
+  // Γ1β: Λεβοντόπα
+  {
+    'id': 'G1b',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Λεβοντόπα;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1γ: Αναστολείς ΜΑΟ
+  {
+    'id': 'G1g',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Αναστολείς ΜΑΟ;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1δ: Αναστολείς COMT
+  {
+    'id': 'G1d',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Αναστολείς COMT;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1ε: Αναστολείς χολινεστεράσης
+  {
+    'id': 'G1e',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Αναστολείς χολινεστεράσης;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1στ: NMDA ανταγωνιστές
+  {
+    'id': 'G1st',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'NMDA ανταγωνιστές;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1η: Αντικαταθλιπτικά
+  {
+    'id': 'G1h',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Αντικαταθλιπτικά;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+  // Γ1θ: Αντιψυχωσικά/νευροληπτικά
+  {
+    'id': 'G1u',
+    'section': 'Medication',
+    'type': 'boolean',
+    'label': 'Αντιψυχωσικά/νευροληπτικά;',
+    'dependsOn': {'questionId': 'G', 'value': 'G1'},
+    'validation': {'required': true},
+  },
+//------------Diagnostics----------------
+  // D: Έχετε κάνει παρακλινικό έλεγχο;
+  {
+    'id': 'D',
+    'section': 'Clinical',
+    'type': 'radio',
+    'label': 'Έχετε κάνει παρακλινικό έλεγχο;',
+    'options': [
+      {'value': 'D1', 'label': 'Ναι'},
+      {'value': 'D2', 'label': 'Όχι'},
+    ],
+    'validation': {'required': true},
+  },
+  // --- D1α: MRI εγκεφάλου ---
+{
+  "id": "D1a_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει MRI εγκεφάλου;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1a",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "MRI εγκεφάλου αποτελέσματα;",
+  "options": [
+    { "value": "D1a1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1a2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1a_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1β: MRI ΑΜΣΣ (αυχενική μοίρα) ---
+{
+  "id": "D1b_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει MRI ΑΜΣΣ(αυχενική μοίρα της σπονδυλικής στήλης);",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1b",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "MRI ΑΜΣΣ αποτελέσματα;",
+  "options": [
+    { "value": "D1b1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1b2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1b_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1γ: MRI ΘΜΣΣ (θωρακική μοίρα) ---
+{
+  "id": "D1g_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει MRI ΘΜΣΣ (θωρακικής);",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1g",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "MRI ΘΜΣΣ αποτελέσματα;",
+  "options": [
+    { "value": "D1g1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1g2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1g_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1δ: MRI ΟΜΣΣ (οσφυϊκή μοίρα) ---
+{
+  "id": "D1d_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει MRI ΟΜΣΣ (Οσφυικής);",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1d",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "MRI ΟΜΣΣ αποτελέσματα;",
+  "options": [
+    { "value": "D1d1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1d2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1d_done", "value": true },
+  "validation": { "required": true }
+},
+
+
+
+// --- D1ζ: DaTSCAN ---
+{
+  "id": "D1z_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει DaTSCAN;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1z",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "DaTSCAN αποτελέσματα;",
+  "options": [
+    { "value": "D1z1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1z2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1z_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1η: HMPAO ---
+{
+  "id": "D1h_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει HMPAO;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1h",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "HMPAO αποτελέσματα;",
+  "options": [
+    { "value": "D1h1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1h2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1h_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1θ: MIBG ---
+{
+  "id": "D1u_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει MIBG;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1u",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "MIBG αποτελέσματα;",
+  "options": [
+    { "value": "D1u1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1u2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1u_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1κ: Μελέτη ΑΝΣ (αυτόνομο νευρικό σύστημα) ---
+{
+  "id": "D1k_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει μελέτη ΑΝΣ (αυτόνομο νευρικό σύστημα);",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1k",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Μελέτη ΑΝΣ αποτελέσματα;",
+  "options": [
+    { "value": "D1k1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1k2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1k_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1λ: Μελέτη ύπνου ---
+{
+  "id": "D1l_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει μελέτη ύπνου;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1l",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Μελέτη ύπνου αποτελέσματα;",
+  "options": [
+    { "value": "D1l1", "label": "Παθολογικά ευρήματα για RBD" },
+    { "value": "D1l2", "label": "Παθολογικά ευρήματα για Άπνοια‑Υπόπνοια" },
+    { "value": "D1l3", "label": "Μη παθολογικά ευρήματα" },
+    { "value": "D1l5", "label": "Παθολογικά ευρήματα για RBD χωρίς ατονία" },
+    { "value": "D1l6", "label": "Παθολογικά ευρήματα για RLS" }
+  ],
+  "dependsOn": { "questionId": "D1l_done", "value": true },
+  "validation": { "required": true }
+},
+{
+  "id": "D1l4",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε ανήσυχο ύπνο (κλωτσάτε, πέφτετε από το κρεβάτι);",
+  "dependsOn": { "questionId": "D1l_done", "value": "false" },
+  "validation": { "required": true }
+},
+
+// --- D1μ: Αιματολογικός έλεγχος ---
+{
+  "id": "D1m_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει αιματολογικό έλεγχο;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1m",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Αιματολογικός έλεγχος αποτελέσματα;",
+  "options": [
+    { "value": "D1m1", "label": "Γενική αίματος" },
+    { "value": "D1m2", "label": "Βιοχημικός" },
+    { "value": "D1m3", "label": "Δ1μ1+Δ1μ2" },
+    { "value": "D1m4", "label": "Ανοσολογικός" },
+    { "value": "D1m5", "label": "Παρανεοπλασματικά αντισώματα" },
+    { "value": "D1m6", "label": "Συνδυασμός Δ1μ1–Δ1μ5" }
+  ],
+  "dependsOn": { "questionId": "D1m_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1ν: Γενετικός/μοριακός έλεγχος ---
+{
+  "id": "D1n_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει γενετικό/μοριακό έλεγχο;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1n",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Γενετικός/μοριακός έλεγχος αποτελέσματα;",
+  "options": [
+    { "value": "D1na", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1nb", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1n_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1ξ: Οσφυονωτιαία παρακέντηση ---
+{
+  "id": "D1j_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει οσφυονωτιαία παρακέντηση;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1j",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Οσφυονωτιαία παρακέντηση αποτελέσματα;",
+  "options": [
+    { "value": "D1ja", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1jb", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1j_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1ο: ΗΜΓ/ΗΝΓ ---
+{
+  "id": "D1o_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει ΗΜΓ/ΗΝΓ (Ηλεκτρομυογράφημα – Ηλεκτρονευρογράφημα );",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1o",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "ΗΜΓ/ΗΝΓ αποτελέσματα;",
+  "options": [
+    { "value": "D1oa", "label": "Παθολογικα ευρήματα" },
+    { "value": "D1ob", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1o_done", "value": true },
+  "validation": { "required": true }
+},
+
+// --- D1π: Νευροψυχολογικός έλεγχος ---
+{
+  "id": "D1p_done",
+  "section": "Clinical",
+  "type": "boolean",
+  "label": "Έχετε κάνει νευροψυχολογικό έλεγχο;",
+  "dependsOn": { "questionId": "D", "value": "D1" },
+  "validation": { "required": true }
+},
+{
+  "id": "D1p",
+  "section": "Clinical",
+  "type": "radio",
+  "label": "Νευροψυχολογικός έλεγχος αποτελέσματα;",
+  "options": [
+    { "value": "D1p1", "label": "Παθολογικά ευρήματα" },
+    { "value": "D1p2", "label": "Μη παθολογικά ευρήματα" }
+  ],
+  "dependsOn": { "questionId": "D1p_done", "value": true },
+  "validation": { "required": true }
+}
 
 ];

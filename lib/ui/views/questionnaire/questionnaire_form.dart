@@ -19,7 +19,16 @@ class QuestionnaireForm extends StatefulWidget {
 class _QuestionnaireFormState extends State<QuestionnaireForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _responses = {};
-
+  @override
+  void initState() {
+    super.initState();
+    // Initialize all boolean fields to false so “No” is recorded by default.
+    for (final q in questionnaireSchema) {
+      if (q['type'] == 'boolean') {
+        _responses[q['id'] as String] = false;
+      }
+    }
+  }
   @override
   Widget build(BuildContext context) {
     // Group visible questions by section.
@@ -101,7 +110,7 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
           keyboardType: TextInputType.number,
           initialValue: _responses[id]?.toString(),
           validator: (v) => _validate(q, v),
-          onChanged: (v) => _responses[id] = int.tryParse(v ?? ''),
+          onChanged: (v) => _responses[id] = int.tryParse(v),
         );
 
       case 'boolean':

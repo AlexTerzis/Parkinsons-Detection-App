@@ -85,8 +85,46 @@ class QuestionnaireViewModel extends BaseViewModel {
     computed['B6'] = (responses['B3'] == false &&
         (responses['B2'] == true &&
          responses['B1'] == true));
+    //--------------C section----------------
+    //G1i combination of G1a-u
+    // G1i: true if more than two medication flags are ON
+    final medFlagsG1 = [
+      responses['G1a'] == true,
+      responses['G1b'] == true,
+      responses['G1c'] == true,
+      responses['G1d'] == true,
+      responses['G1e'] == true,
+      responses['G1st'] == true,
+      responses['G1h'] == true,
+      responses['G1u'] == true,
+    ];
+    final takenCountG = medFlagsG1.where((flag) => flag).length;
+    computed['G1i'] = (takenCountG > 1);
 
-         
+  //-----------D------ section----------------
+  // D1d: combination of MRI results 
+    final medFlagsD1 = [
+      responses['D1a'] == true,
+      responses['D1b'] == true,
+      responses['D1c'] == true,
+      responses['D1d'] == true,
+    ];
+    final takenCountD1 = medFlagsD1.where((flag) => flag).length;
+    computed['D1e'] = (takenCountD1 > 1);     
+  // D1d: combination of D results 
+    final medFlagsD2 = [
+      responses['D1a'] == true,
+      responses['D1b'] == true,
+      responses['D1c'] == true,
+      responses['D1d'] == true,
+      computed['D1e'] == true,
+      responses['D1z'] == true,
+      responses['D1h'] == true,
+      responses['D1u'] == true,
+    ];
+    final takenCountD2 = medFlagsD2.where((flag) => flag).length;
+    computed['D1i'] = (takenCountD2 > 1);     
+    
     // Authentication check
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
