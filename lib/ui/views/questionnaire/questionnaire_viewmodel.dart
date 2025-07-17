@@ -25,8 +25,11 @@ class QuestionnaireViewModel extends BaseViewModel {
       performedAt: DateTime.now(),
       score: 0,
       data: responses,
-    );
-    await _tests.addResult(result);
+    );    
+    // Overwrite any previous questionnaire so the patient keeps only one
+    // saved response document. This prevents creating new database entries
+    // every time the form is re-submitted.
+    await _tests.setQuestionnaireResult(result);
     setBusy(false);
   }
 }

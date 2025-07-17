@@ -40,7 +40,18 @@ class TestService {
   Future<void> addResult(TestResult result) {
     return _responsesCol(result.patientId).add(result.toJson());
   }
-
+  /// Creates or updates the questionnaire result for a patient.
+  ///
+  /// Each user only keeps a single questionnaire document identified by the
+  /// fixed id `questionnaire`. When a questionnaire is submitted again the
+  /// previous data is overwritten instead of creating another document. This
+  /// allows the UI to simply render the most recent answers without cluttering
+  /// the collection with historical entries.
+  Future<void> setQuestionnaireResult(TestResult result) {
+    return _responsesCol(result.patientId)
+        .doc('questionnaire')
+        .set(result.toJson());
+  }
   Map<String, double> computeSummary(List<TestResult> results) {
     if (results.isEmpty) return {};
 

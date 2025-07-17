@@ -8,7 +8,7 @@ typedef SubmitCallback = Future<void> Function(Map<String, dynamic> responses);
 
 /// A dynamic questionnaire form that renders fields from [questionnaireSchema].
 class QuestionnaireForm extends StatefulWidget {
-  const QuestionnaireForm({super.key, required this.onSubmit});
+  const QuestionnaireForm({Key? key, required this.onSubmit}) : super(key: key);
 
   final SubmitCallback onSubmit;
 
@@ -30,8 +30,8 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
       }
     }
 
-    return ResponsiveBuilder(builder: (context, _) {
-      return Scaffold(
+    return ResponsiveBuilder(
+      builder: (context, _) => Scaffold(
         appBar: AppBar(title: const Text('Questionnaire')),
         body: Form(
           key: _formKey,
@@ -41,8 +41,10 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
               for (final entry in sections.entries) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(entry.key,
-                      style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    entry.key,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 ...entry.value.map(_buildField),
               ],
@@ -54,20 +56,27 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
             ],
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 
   bool _isValid() => _formKey.currentState?.validate() ?? false;
 
   void _submit() {
-    if (_isValid()) {
-      widget.onSubmit(Map<String, dynamic>.from(_responses));
+    if (!_isValid()) return;
+    // Only include keys defined in the current schema
+    final allowedIds = questionnaireSchema.map((q) => q['id'] as String).toSet();
+    final filtered = <String, dynamic>{};
+    for (final entry in _responses.entries) {
+      if (allowedIds.contains(entry.key)) {
+        filtered[entry.key] = entry.value;
+      }
     }
+    widget.onSubmit(filtered);
   }
 
   bool _shouldShow(Map<String, dynamic> q) {
-    final cond = q['dependsOn'];
+    final cond = q['dependsOn'] as Map<String, dynamic>?;
     if (cond == null) return true;
     return _responses[cond['questionId']] == cond['value'];
   }
@@ -81,58 +90,109 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
       case 'string':
         return TextFormField(
           decoration: InputDecoration(labelText: label),
-          initialValue: _responses[id],
+          initialValue: _responses[id] as String?,
           validator: (v) => _validate(q, v),
           onChanged: (v) => _responses[id] = v,
         );
-      case 'number':
+
       case 'integer':
         return TextFormField(
           decoration: InputDecoration(labelText: label),
           keyboardType: TextInputType.number,
           initialValue: _responses[id]?.toString(),
           validator: (v) => _validate(q, v),
-          onChanged: (v) => _responses[id] = num.tryParse(v ?? ''),
+          onChanged: (v) => _responses[id] = int.tryParse(v ?? ''),
         );
+
       case 'boolean':
         return SwitchListTile(
           title: Text(label),
-          value: _responses[id] ?? false,
+          value: _responses[id] as bool? ?? false,
           onChanged: (v) => setState(() => _responses[id] = v),
         );
+
       case 'select':
-        final options = q['options'] as List;
-        return DropdownButtonFormField(
+        final options = q['options'] as List<dynamic>;
+        return DropdownButtonFormField<dynamic>(
           decoration: InputDecoration(labelText: label),
           value: _responses[id],
           items: options
-              .map<DropdownMenuItem<dynamic>>(
-                (o) => DropdownMenuItem(
-                  value: o['value'],
-                  child: Text(o['label']),
-                ),
-              )
+              .map((o) => DropdownMenuItem(
+                    value: o['value'],
+                    child: Text(o['label']),
+                  ))
               .toList(),
           onChanged: (v) => setState(() => _responses[id] = v),
           validator: (v) => _validate(q, v),
         );
+
+      case 'radio':
+        final options = q['options'] as List<dynamic>;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.titleMedium),
+            Wrap(
+              spacing: 16.0,
+              runSpacing: 8.0,
+              children: options.map<Widget>((o) {
+                final val = o['value'];
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Radio<dynamic>(
+                      value: val,
+                      groupValue: _responses[id],
+                      onChanged: (v) => setState(() => _responses[id] = v),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() => _responses[id] = val),
+                      child: Text(o['label']),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        );
+
+      case 'slider':
+        final min = (q['min'] as num).toDouble();
+        final max = (q['max'] as num).toDouble();
+        final current = (_responses[id] as num?)?.toDouble() ?? min;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.titleMedium),
+            Slider(
+              value: current,
+              min: min,
+              max: max,
+              divisions: (max - min).round(),
+              label: current.round().toString(),
+              onChanged: (newVal) => setState(() => _responses[id] = newVal.round()),
+            ),
+            Text('${current.round()}', style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        );
+
       default:
         return const SizedBox.shrink();
     }
   }
 
   String? _validate(Map<String, dynamic> q, dynamic value) {
-    final rules = q['validation'] as Map<String, dynamic>? ?? {};
-    if (rules['required'] == true && (value == null || value.toString().isEmpty)) {
+    final rules = q['validation'] as Map<String, dynamic>?;
+    if (rules != null && rules['required'] == true && (value == null || value.toString().isEmpty)) {
       return 'Required';
     }
-    if (value != null && value.toString().isNotEmpty) {
-      final num? min = rules['min'];
-      final num? max = rules['max'];
+    if (value != null && rules != null) {
+      final num? min = rules['min'] as num?;
+      final num? max = rules['max'] as num?;
       final num? parsed = num.tryParse(value.toString());
       if (parsed != null) {
-        if (min != null && parsed < min) return 'Minimum is $min';
-        if (max != null && parsed > max) return 'Maximum is $max';
+        if (min != null && parsed < min) return 'Minimum is \$min';
+        if (max != null && parsed > max) return 'Maximum is \$max';
       }
     }
     return null;
