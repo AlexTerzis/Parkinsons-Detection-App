@@ -15,7 +15,7 @@ class QuestionnaireView extends StackedView<QuestionnaireViewModel> {
     Widget? child,
   ) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Questionnaire')),
+      
       body: QuestionnaireForm(onSubmit: viewModel.submitQuestionnaire),
     );
   }

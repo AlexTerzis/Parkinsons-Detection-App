@@ -71,7 +71,7 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
 
   bool _isValid() => _formKey.currentState?.validate() ?? false;
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_isValid()) return;
     // Only include keys defined in the current schema
     final allowedIds = questionnaireSchema.map((q) => q['id'] as String).toSet();
@@ -81,7 +81,13 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
         filtered[entry.key] = entry.value;
       }
     }
-    widget.onSubmit(filtered);
+    // 2. call the injected submit callback
+    await widget.onSubmit(filtered);
+
+    // 3. then pop back to the previous screen
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   bool _shouldShow(Map<String, dynamic> q) {
