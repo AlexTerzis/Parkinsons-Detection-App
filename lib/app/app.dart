@@ -1,5 +1,8 @@
 import 'package:parkinsondetetion/ui/bottom_sheets/notice/notice_sheet.dart';
 import 'package:parkinsondetetion/ui/dialogs/info_alert/info_alert_dialog.dart';
+import 'package:parkinsondetetion/ui/views/drawing_test/camera_draw_view.dart';
+import 'package:parkinsondetetion/ui/views/drawing_test/gallery_draw_view.dart';
+import 'package:parkinsondetetion/ui/views/drawing_test/signature_canvas_view.dart';
 import 'package:parkinsondetetion/ui/views/home/home_view.dart';
 import 'package:parkinsondetetion/ui/views/startup/startup_view.dart';
 import 'package:stacked/stacked_annotations.dart';
@@ -30,7 +33,9 @@ import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
     MaterialRoute(page: TapTestView),
     MaterialRoute(page: QuestionnaireView),
     MaterialRoute(page: VoiceTestView),
-    MaterialRoute(page: VoiceTestView),
+    MaterialRoute(page: SignatureCanvasView),
+    MaterialRoute(page: CameraDrawView),
+    MaterialRoute(page: GalleryDrawView),
     // @stacked-route 
 // @stacked-route
   ],

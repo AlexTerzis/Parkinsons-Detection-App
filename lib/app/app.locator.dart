@@ -24,10 +24,7 @@ Future<void> setupLocator({
 }) async {
 // Register environments
   locator.registerEnvironment(
-    environment: environment,
-    environmentFilter: environmentFilter,
-  );
-
+      environment: environment, environmentFilter: environmentFilter);
 
 // Register dependencies
   locator.registerLazySingleton(() => BottomSheetService());
