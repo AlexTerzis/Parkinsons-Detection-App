@@ -94,10 +94,5 @@ class RaisonApiService {
         .map((e) => RaisonResult.fromJson(e as Map<String, dynamic>))
         .toList();
   }
-  
-  /// Closes the HTTP client.
-  void close() {
-    _client.close();
-  }
 
 }
