@@ -1,118 +1,329 @@
-diff --git a/lib/services/voice_predictor.dart b/lib/services/voice_predictor.dart
-index 5bdaeb2646daabea0c82cf5431d184cff1987a78..0c0595b9f1dafb6ad24365452ad2da21912d1e86 100644
---- a/lib/services/voice_predictor.dart
-+++ b/lib/services/voice_predictor.dart
-@@ -1,95 +1,96 @@
- import 'dart:io';
- import 'dart:math';
- import 'dart:typed_data';
+diff --git a/lib/main.dart b/lib/main.dart
+index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..397ff28310b7c97f22d1365c2773df3d0e3b18cb 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,48 +1,51 @@
+ import 'dart:async';
+ import 'package:firebase_core/firebase_core.dart';
+ import 'package:flutter/material.dart';
+ import 'package:parkinsondetetion/app/app.bottomsheets.dart';
+ import 'package:parkinsondetetion/app/app.dialogs.dart';
+ import 'package:parkinsondetetion/app/app.locator.dart';
+ import 'package:parkinsondetetion/app/app.router.dart';
+ import 'package:parkinsondetetion/firebase_options.dart';
+ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
+ import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
+ import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart';
+ import 'package:responsive_builder/responsive_builder.dart';
+ import 'package:stacked_services/stacked_services.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
++import 'services/raison_api_service.dart';
+ 
+ Future<void> main() async {
+   WidgetsFlutterBinding.ensureInitialized();
+   await Firebase.initializeApp(
+     options: DefaultFirebaseOptions.currentPlatform,
+   );
+   await setupLocator();
++  // Raison API isn't part of the generated locator so register manually
++  locator.registerLazySingleton(() => RaisonApiService());
+   setupDialogUi();
+   setupBottomSheetUi();
+ 
+   runApp(const MainApp());
+ }
+ 
+ class MainApp extends StatelessWidget {
+   const MainApp({super.key});
+ 
+   @override
+   Widget build(BuildContext context) {
+     return ResponsiveApp(
+       builder: (_) => MaterialApp(
+         title: "Parkinson AI Detector",
+         theme: ThemeData(
+           colorScheme: ColorScheme.fromSeed(
+             seedColor: const Color.fromARGB(255, 7, 24, 51),
+           ),
+           useMaterial3: true,
+         ),
+         debugShowCheckedModeBanner: false,
+         home: const SplashScreen(),
+         onGenerateRoute: StackedRouter().onGenerateRoute,
+         navigatorKey: StackedService.navigatorKey,
+       ),
+diff --git a/lib/models/raison_result.dart b/lib/models/raison_result.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d923a83d8305f7d95534a892c1f54ce353453dd
+--- /dev/null
++++ b/lib/models/raison_result.dart
+@@ -0,0 +1,22 @@
++class RaisonResult {
++  const RaisonResult({
++    required this.label,
++    required this.explanation,
++    required this.isSolution,
++  });
++
++  final String label;
++  final List<String> explanation;
++  final bool isSolution;
++
++  factory RaisonResult.fromJson(Map<String, dynamic> json) {
++    final option = json['option'] as Map<String, dynamic>? ?? {};
++    return RaisonResult(
++      label: option['label'] as String? ?? '',
++      explanation: (json['explanation'] as List<dynamic>? ?? [])
++          .map((e) => e.toString())
++          .toList(),
++      isSolution: json['isSolution'] as bool? ?? false,
++    );
++  }
++}
+diff --git a/lib/services/raison_api_service.dart b/lib/services/raison_api_service.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..209da3cf4afc859a1d414532fca99be0e0b5f0a3
+--- /dev/null
++++ b/lib/services/raison_api_service.dart
+@@ -0,0 +1,75 @@
 +import 'dart:convert';
-+import 'package:flutter/services.dart' show rootBundle;
- 
- import 'package:fftea/fftea.dart';
- import 'package:tflite_flutter/tflite_flutter.dart';
- 
- /// Handles feature extraction and model inference for the voice test.
- class VoicePredictor {
-   late final Interpreter _interpreter;
-   bool _loaded = false;
-+  List<double>? _means;
-+  List<double>? _stds;
- 
-   /// Loads the TFLite model from assets if it hasn't been loaded yet.
-   Future<void> _ensureModel() async {
-     if (_loaded) return;
-     _interpreter =
-         await Interpreter.fromAsset('assets/models/kalo.tflite');
-+    final normJson =
-+        await rootBundle.loadString('assets/models/voice_norm.json');
-+    final data = json.decode(normJson) as Map<String, dynamic>;
-+    _means = List<double>.from(data['means']);
-+    _stds = List<double>.from(data['stds']);
-     _loaded = true;
-   }
- 
-   /// Runs inference directly on an audio file and returns the probability
-   /// that the recording indicates Parkinson's disease.
-   Future<double> predict(File wav) async {
-     await _ensureModel();
- 
-     final rawFeatures = await _extractFeatures(wav);
-     final features = _normalizeFeatures(rawFeatures);
- 
-     // 🧪 Debugging logs
-     print('🧠 Extracted features: $rawFeatures');
-     print('🧪 Normalized features: $features');
-     print('🔢 Feature count: ${features.length}');
-     print('🔢 Raw Feature count: ${rawFeatures.length}');
-     print('✅ All finite: ${features.every((v) => v.isFinite)}');
- 
- 
-     final input = Float32List.fromList(features).reshape([1, 16]);
-     final output = Float32List(1).reshape([1, 1]);
-     print('📤 Final input to model: ${input[0]}');
-     _interpreter.run(input, output);
- 
-     
-     print('📤 Final input to model: ${input[0]}');
-     print('📈 raw Model output: $output');
-     
-     print('📈 Raw output: ${output[0][0]}');
-     return output[0][0];
- 
-   }
- 
-   /// Normalizes features using the same means and stds used in training.
-+  /// The parameters are loaded from [voice_norm.json] when the model is
-+  /// initialized so that Flutter and Python share identical values.
-   List<double> _normalizeFeatures(List<double> features) {
--    final means = [
--      154.228641, 197.104918, 116.324631, 0.00622,
--      4.4e-05, 0.003306, 0.003446, 0.00992,
--      0.029709, 0.282251, 0.015664, 0.017878,
--      0.024081, 0.046993, 0.024847, 21.885974
--    ];
--
--    final stds = [
--      41.2838, 91.256652, 43.409676, 0.004836,
--      3.5e-05, 0.00296, 0.002752, 0.00888,
--      0.018809, 0.194377, 0.010127, 0.011993,
--      0.016903, 0.030381, 0.040315, 4.414402
--    ];
-+    if (_means == null || _stds == null) {
-+      throw StateError('Normalization parameters not loaded');
++import 'package:http/http.dart' as http;
++
++import '../models/raison_result.dart';
++
++/// Handles communication with the Raison reasoning API.
++class RaisonApiService {
++  /// Base URL of the API.
++  static const String _baseUrl = 'https://api.ai-raison.com';
++
++  /// API key header value. Replace with the real key in production.
++  static const String _key = '<YOUR_API_KEY>';
++
++  /// App and version identifiers used by the API.
++  static const String _app = 'PRJ27475';
++  static const String _ver = 'latest';
++
++  final http.Client _client;
++
++  RaisonApiService({http.Client? client}) : _client = client ?? http.Client();
++
++  /// Retrieves the element/option mapping from the Raison API.
++  Future<Map<String, dynamic>> _fetchSchema() async {
++    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
++    final res = await _client.get(uri, headers: {'x-api-key': _key});
++    if (res.statusCode != 200) {
++      throw Exception('Failed to load schema: ${res.statusCode}');
 +    }
++    return jsonDecode(res.body) as Map<String, dynamic>;
++  }
++
++  /// Sends [responses] to the API and returns the list of results.
++  Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
++    final schema = await _fetchSchema();
++
++    final elementsRaw = schema['elements'] as List<dynamic>? ?? [];
++    final optionsRaw = schema['options'] as List<dynamic>? ?? [];
++
++    final List<Map<String, dynamic>> elementPayload = [];
++
++    // Map boolean responses to element ids using the returned labels.
++    for (final e in elementsRaw) {
++      final label = e['label'];
++      if (label != null && responses[label] == true) {
++        elementPayload.add({'id': e['id'], 'parameters': e['parameters'] ?? []});
++      }
++    }
++
++    final List<Map<String, String>> optionPayload = [
++      for (final o in optionsRaw) {'id': o['id'] as String}
++    ];
++
++    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
++    final res = await _client.post(
++      uri,
++      headers: {
++        'x-api-key': _key,
++        'Content-Type': 'application/json',
++      },
++      body: jsonEncode({
++        'elements': elementPayload,
++        'options': optionPayload,
++      }),
++    );
++
++    if (res.statusCode != 200) {
++      throw Exception('Execution failed: ${res.statusCode}');
++    }
++
++    final data = jsonDecode(res.body) as List<dynamic>;
++    return data
++        .map((e) => RaisonResult.fromJson(e as Map<String, dynamic>))
++        .toList();
++  }
++}
+diff --git a/lib/ui/views/insights/insights_view.dart b/lib/ui/views/insights/insights_view.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..f1dfbf7a94ab1a7d60ddaf356fa1f040249a8c80
+--- /dev/null
++++ b/lib/ui/views/insights/insights_view.dart
+@@ -0,0 +1,54 @@
++import 'package:flutter/material.dart';
++import 'package:stacked/stacked.dart';
++
++import '../../../models/raison_result.dart';
++import 'insights_viewmodel.dart';
++
++/// Displays solutions returned by the Raison API.
++class InsightsView extends StackedView<InsightsViewModel> {
++  const InsightsView({super.key, required this.results});
++
++  final List<RaisonResult> results;
++
++  @override
++  Widget builder(
++      BuildContext context, InsightsViewModel viewModel, Widget? child) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Insights')),
++      body: ListView.builder(
++        padding: const EdgeInsets.all(16),
++        itemCount: viewModel.results.length,
++        itemBuilder: (_, index) {
++          final item = viewModel.results[index];
++          return Card(
++            margin: const EdgeInsets.symmetric(vertical: 8),
++            child: Padding(
++              padding: const EdgeInsets.all(12),
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Text(item.label,
++                      style: Theme.of(context).textTheme.titleMedium),
++                  const SizedBox(height: 8),
++                  ...item.explanation.map(
++                    (e) => Row(
++                      crossAxisAlignment: CrossAxisAlignment.start,
++                      children: [
++                        const Text('• '),
++                        Expanded(child: Text(e)),
++                      ],
++                    ),
++                  ),
++                ],
++              ),
++            ),
++          );
++        },
++      ),
++    );
++  }
++
++  @override
++  InsightsViewModel viewModelBuilder(BuildContext context) =>
++      InsightsViewModel(results);
++}
+diff --git a/lib/ui/views/insights/insights_viewmodel.dart b/lib/ui/views/insights/insights_viewmodel.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..c22c44c7021fc4dafa3b60b55440ae4dc7353744
+--- /dev/null
++++ b/lib/ui/views/insights/insights_viewmodel.dart
+@@ -0,0 +1,10 @@
++import 'package:stacked/stacked.dart';
++
++import '../../../models/raison_result.dart';
++
++/// Simple ViewModel that just holds the insight results.
++class InsightsViewModel extends BaseViewModel {
++  InsightsViewModel(this.results);
++
++  final List<RaisonResult> results;
++}
+diff --git a/lib/ui/views/questionnaire/questionnaire_viewmodel.dart b/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
+index 1b7166962c0d2e5264f3c32b5f1755f80de2060b..90246bb68db145ce8ed6d209595d317e13fd4d1f 100644
+--- a/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
++++ b/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
+@@ -1,37 +1,43 @@
+ import 'package:stacked/stacked.dart';
  
--    List<double> normalized = [];
--    for (int i = 0; i < features.length; i++) {
--      final std = stds[i];
--      final mean = means[i];
-+    final normalized = <double>[];
-+    for (var i = 0; i < features.length; i++) {
-+      final std = _stds![i];
-+      final mean = _means![i];
-       normalized.add(std != 0 ? (features[i] - mean) / std : 0.0);
+ import '../../../app/app.locator.dart';
+ import '../../../services/test_service.dart';
+ import '../../../services/authentication_service.dart';
++import '../../../services/raison_api_service.dart';
++import '../../../models/raison_result.dart';
++import '../../../ui/views/insights/insights_view.dart';
++import 'package:stacked_services/stacked_services.dart';
+ import '../../../models/test_result.dart';
+ import '../../../models/test_type.dart';
+ 
+ /// ViewModel responsible for processing and saving questionnaire responses.
+ class QuestionnaireViewModel extends BaseViewModel {
+   final TestService _tests = locator<TestService>();
+   final AuthenticationService _auth = locator<AuthenticationService>();
++  final RaisonApiService _raison = locator<RaisonApiService>();
++  final NavigationService _nav = locator<NavigationService>();
+ 
+   /// Submits and enriches the user responses before saving.
+   Future<void> submitQuestionnaire(Map<String, dynamic> responses) async {
+     setBusy(true);
+ 
+     // Make a mutable copy to add derived flags
+     final computed = Map<String, dynamic>.from(responses);
+ 
+     // Composite symptom flags:
+     // A4 = A1 && A2
+     computed['A4'] = (responses['A1'] == true && responses['A2'] == true);
+ 
+     // A5 = (A2 && A3) || (A1 && A3)
+     computed['A5'] = ((responses['A2'] == true && responses['A3'] == true)
+         || (responses['A1'] == true && responses['A3'] == true));
+ 
+     //A6 (requires A5 and a REM sleep flag 'REM')
+       computed['A6'] = (computed['A5'] == true && (responses['RBD_study_positive'] == true || responses['RBD_q'] == 'true'));
+     //A7 = A5 && Memory_Disorder && Urgent_Urination
+     computed['A7'] = (computed['A5'] == true &&
+         responses['Memory_Disorder'] == true &&
+         responses['Urgent_Urination'] == true);
+     
+     // A8 = Memory_Disorder && Exec_Language_Disorder && A5
+     computed['A8'] = (responses['Memory_Disorder'] == true &&
+@@ -169,28 +175,39 @@ class QuestionnaireViewModel extends BaseViewModel {
+     var scopaTotal = 0;
+     for (final key in scopaKeys) {
+       scopaTotal += int.tryParse(responses[key] as String? ?? '0')!;
      }
-     return normalized;
+     computed['SCOPA_total'] = scopaTotal;
+     computed['SCOPA>3'] = scopaTotal >= 3;
+ 
+     // Authentication check
+     final uid = _auth.currentUser?.uid;
+     if (uid == null) {
+       setBusy(false);
+       return;
+     }
+ 
+     // Build and save the TestResult
+     final result = TestResult(
+       id: '',
+       patientId: uid,
+       type: TestType.questionnaire,
+       performedAt: DateTime.now(),
+       score: 0,
+       data: computed,
+     );
+ 
+     await _tests.setQuestionnaireResult(result);
++
++    List<RaisonResult> solutions = [];
++    try {
++      final res = await _raison.submit(computed);
++      solutions = res.where((r) => r.isSolution).toList();
++    } catch (_) {
++      // Ignore API errors but continue
++    }
++
+     setBusy(false);
++
++    await _nav.navigateToView(InsightsView(results: solutions));
    }
- 
-   /// Extracts a simplified set of voice features from the WAV bytes.
-   Future<List<double>> _extractFeatures(File wav) async {
-     final bytes = await wav.readAsBytes();
-     final samples = bytes.buffer
-         .asInt16List(44)
-         .map((e) => e.toDouble())
-         .toList();
- 
-     if (samples.isEmpty) {
-       return List.filled(16, 0);
-     }
- 
-     // 🎧 Debug audio levels
-     print('🔊 Max sample: ${samples.reduce(max)}');
-     print('🔊 Min sample: ${samples.reduce(min)}');
- 
-     final rate = bytes.buffer.asByteData().getUint32(24, Endian.little);
- 
-     final fft = FFT(samples.length);
-     final freqs = fft.realFft(samples);
+ }

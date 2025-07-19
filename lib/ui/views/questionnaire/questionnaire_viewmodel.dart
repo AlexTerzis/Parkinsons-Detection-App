@@ -3,6 +3,10 @@ import 'package:stacked/stacked.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
+import '../../../services/raison_api_service.dart';
+import '../../../models/raison_result.dart';
+import '../../../ui/views/insights/insights_view.dart';
+import 'package:stacked_services/stacked_services.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
 
@@ -10,6 +14,8 @@ import '../../../models/test_type.dart';
 class QuestionnaireViewModel extends BaseViewModel {
   final TestService _tests = locator<TestService>();
   final AuthenticationService _auth = locator<AuthenticationService>();
+  final RaisonApiService _raison = locator<RaisonApiService>();
+  final NavigationService _nav = locator<NavigationService>();
 
   /// Submits and enriches the user responses before saving.
   Future<void> submitQuestionnaire(Map<String, dynamic> responses) async {
@@ -191,6 +197,19 @@ class QuestionnaireViewModel extends BaseViewModel {
     );
 
     await _tests.setQuestionnaireResult(result);
+
+    List<RaisonResult> solutions = [];
+    try {
+      final res = await _raison.submit(computed);
+      print('🧩 [QVM] received ${res.length} total results from Raison API');
+      solutions = res.where((r) => r.isSolution).toList();
+      print('🧩 [QVM] filtered down to ${solutions.length} solutions');
+    } catch (e) {
+       print('⚠️ [QVM] Raison API error: $e');
+    }
+
     setBusy(false);
+    print('🚀 [QVM] navigating to InsightsView with ${solutions.length} solutions');
+    await _nav.navigateToView(InsightsView(results: solutions));
   }
 }

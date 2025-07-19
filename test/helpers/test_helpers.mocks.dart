@@ -886,6 +886,17 @@ class MockTestService extends _i1.Mock implements _i9.TestService {
       ) as _i6.Future<void>);
 
   @override
+  _i6.Future<void> setQuestionnaireResult(_i10.TestResult? result) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setQuestionnaireResult,
+          [result],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
   Map<String, double> computeSummary(List<_i10.TestResult>? results) =>
       (super.noSuchMethod(
         Invocation.method(

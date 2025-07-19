@@ -4,6 +4,7 @@ import 'package:parkinsondetetion/ui/views/drawing_test/camera_draw_view.dart';
 import 'package:parkinsondetetion/ui/views/drawing_test/gallery_draw_view.dart';
 import 'package:parkinsondetetion/ui/views/drawing_test/signature_canvas_view.dart';
 import 'package:parkinsondetetion/ui/views/home/home_view.dart';
+import 'package:parkinsondetetion/ui/views/insights/insights_view.dart';
 import 'package:parkinsondetetion/ui/views/startup/startup_view.dart';
 import 'package:stacked/stacked_annotations.dart';
 import 'package:stacked_services/stacked_services.dart';
@@ -19,6 +20,7 @@ import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:parkinsondetetion/ui/views/questionnaire/questionnaire_view.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
+import 'package:parkinsondetetion/services/raison_api_service.dart';
 // @stacked-import
 
 @StackedApp(
@@ -36,6 +38,7 @@ import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
     MaterialRoute(page: SignatureCanvasView),
     MaterialRoute(page: CameraDrawView),
     MaterialRoute(page: GalleryDrawView),
+    MaterialRoute(page: InsightsView),
     // @stacked-route 
 // @stacked-route
   ],
@@ -47,6 +50,7 @@ import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
     LazySingleton(classType: TestService),
     LazySingleton(classType: ReportsService),
     LazySingleton(classType: VoiceApiService),
+    LazySingleton(classType: RaisonApiService),
 // @stacked-service
   ],
   bottomsheets: [
