@@ -793,12 +793,27 @@ class PatienceView extends StackedView<PatienceViewModel> {
                 );
               }
               final results = snapshot.data!;
+
+              // No reasoning calculated yet
               if (results.isEmpty) {
                 return const ListTile(
                   title: Text('Argumentation'),
-                  subtitle: Text('No recommendations returned'),
+                  subtitle: Text('Take the questionnaire to see the results'),
                 );
               }
+
+              // Only show entries marked as solutions
+              final solutions =
+                  results.where((r) => r.isSolution).toList(growable: false);
+
+              if (solutions.isEmpty) {
+                return const ListTile(
+                  title: Text('Argumentation'),
+                  subtitle: Text('Cannot give clear argumentation yet from the questionnaire results. If you have any questions, please contact your doctor.'),
+                );
+              }
+
+              // Display each solution with option label and explanation
               return Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -807,13 +822,13 @@ class PatienceView extends StackedView<PatienceViewModel> {
                     const Text('Argumentation',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    for (final r in results) ...[
+                    for (final r in solutions) ...[
                       Text(r.label, style: theme.textTheme.titleMedium),
                       const SizedBox(height: 4),
                       ...r.explanation.map(
                         (e) => Padding(
                           padding: const EdgeInsets.only(left: 16, bottom: 2),
-                          child: Text('• $e'),
+                          child: Text('• ' + e),
                         ),
                       ),
                       const SizedBox(height: 12),
