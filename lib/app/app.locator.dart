@@ -12,6 +12,7 @@ import 'package:stacked_services/src/navigation/navigation_service.dart';
 import 'package:stacked_shared/stacked_shared.dart';
 
 import '../services/authentication_service.dart';
+import '../services/hand_metrics.dart';
 import '../services/raison_api_service.dart';
 import '../services/reports_service.dart';
 import '../services/test_service.dart';
@@ -36,4 +37,5 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => ReportsService());
   locator.registerLazySingleton(() => VoiceApiService());
   locator.registerLazySingleton(() => RaisonApiService());
+  locator.registerLazySingleton(() => HandMetrics());
 }

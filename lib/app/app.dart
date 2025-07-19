@@ -21,6 +21,7 @@ import 'package:parkinsondetetion/ui/views/questionnaire/questionnaire_view.dart
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
 import 'package:parkinsondetetion/services/raison_api_service.dart';
+import '../services/hand_metrics.dart';
 // @stacked-import
 
 @StackedApp(
@@ -38,6 +39,7 @@ import 'package:parkinsondetetion/services/raison_api_service.dart';
     MaterialRoute(page: SignatureCanvasView),
     MaterialRoute(page: CameraDrawView),
     MaterialRoute(page: GalleryDrawView),
+    
     MaterialRoute(page: InsightsView),
     // @stacked-route 
 // @stacked-route
@@ -51,6 +53,8 @@ import 'package:parkinsondetetion/services/raison_api_service.dart';
     LazySingleton(classType: ReportsService),
     LazySingleton(classType: VoiceApiService),
     LazySingleton(classType: RaisonApiService),
+    LazySingleton(classType: HandMetrics),
+    
 // @stacked-service
   ],
   bottomsheets: [

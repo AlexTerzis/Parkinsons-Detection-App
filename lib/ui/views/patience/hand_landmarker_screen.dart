@@ -1,12 +1,14 @@
 // --- Data Structures ---
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:parkinsondetetion/app/app.locator.dart' show locator;
+import 'package:parkinsondetetion/models/landmark_point.dart';
+import 'package:parkinsondetetion/services/hand_metrics.dart';
+import 'package:parkinsondetetion/services/parkinson_config.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:math' as math;
-
 class LandmarkData {
   final String handedness; // 'Left', 'Right', or 'Unknown'
-  final List<Map<String, double>> landmarks;
+  final List<LandmarkPoint> landmarks;
 
   LandmarkData({required this.handedness, required this.landmarks});
 }
@@ -49,14 +51,18 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
 
   // --- Parkinson's Detection State ---
   final List<FrameData> _landmarkHistory = [];
-  final int _historyLength = 30; // Number of frames for analysis
-  final int _tremorWindowSize = 10; // Frames for tremor calculation
-  final double _symptomThreshold = 0.6; // Example threshold for indication
+  static const int _historyLength = 30; // frames kept for analysis
+  static const int _tremorWindowSize = 10; // window size for tremor metric
+  static const double _symptomThreshold = ParkinsonConfig.symptomThreshold; // threshold for demo alerts
 
   double _speedVarianceLeft = 0.0, _speedVarianceRight = 0.0;
   double _tremorScoreLeft = 0.0, _tremorScoreRight = 0.0;
+  double _accelVarianceLeft = 0.0, _accelVarianceRight = 0.0;
+  double _jerkVarianceLeft = 0.0, _jerkVarianceRight = 0.0;
+  double _spreadLeft = 0.0, _spreadRight = 0.0;
   double _asymmetryScore = 0.0; // Overall asymmetry score
   bool _potentialSymptomsDetected = false;
+  final HandMetrics _metrics = locator<HandMetrics>();
 
   // Landmark indices (refer to MediaPipe documentation)
   final int _thumbTipIndex = 4;
@@ -86,45 +92,14 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
     final List<LandmarkData> currentHands = [];
 
     // Parse data from native code
-    for (var handDataRaw in detectedHandsData) {
-      if (handDataRaw is Map) {
-        final Map<String, dynamic> handData =
-            Map<String, dynamic>.from(handDataRaw);
-        final String handedness =
-            handData['handedness'] as String? ?? 'Unknown';
-        final List<dynamic>? landmarksRaw = handData['landmarks'] as List?;
-
-        if (landmarksRaw != null) {
-          // Basic validation: Ensure it's a List and contains Maps
-          if (landmarksRaw is List &&
-              landmarksRaw.isNotEmpty &&
-              landmarksRaw.first is Map) {
-            try {
-              final List<Map<String, double>> landmarks = landmarksRaw
-                  .map((lm) => Map<String, double>.from(lm as Map))
-                  .toList();
-              // Check if expected landmarks exist (e.g., thumb tip)
-              if (landmarks.length > _thumbTipIndex &&
-                  landmarks[_thumbTipIndex].containsKey('x')) {
-                currentHands.add(
-                    LandmarkData(handedness: handedness, landmarks: landmarks));
-              } else {
-                print(
-                    "Warning: Landmark data format unexpected or missing thumb tip.");
-              }
-            } catch (e) {
-              print("Error casting landmark data: $e");
-            }
-          } else if (landmarksRaw.isNotEmpty) {
-            print(
-                "Warning: Landmark list item format unexpected: ${landmarksRaw.first.runtimeType}");
-          }
-        }
+    final parsed = _metrics.parseRawHands(detectedHandsData);
+    parsed.forEach((side, points) {
+      if (points.length > _thumbTipIndex) {
+        currentHands.add(LandmarkData(handedness: side, landmarks: points));
       } else {
-        print(
-            "Warning: Hand data format unexpected: ${handDataRaw.runtimeType}");
+        print("Warning: Landmark data format unexpected or missing thumb tip.");
       }
-    }
+    });
 
     setState(() {
       // Keep raw data for text display if needed
@@ -150,33 +125,58 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
     if (_landmarkHistory.length < _tremorWindowSize)
       return; // Need minimum data
 
-    List<List<Map<String, double>>?> leftHistory = _getHandHistory('Left');
-    List<List<Map<String, double>>?> rightHistory = _getHandHistory('Right');
+    List<List<LandmarkPoint>?> leftHistory = _getHandHistory('Left');
+    List<List<LandmarkPoint>?> rightHistory = _getHandHistory('Right');
 
     // Check if hands were actually present recently enough for calculation
     bool leftHandPresent = leftHistory.any((h) => h != null);
     bool rightHandPresent = rightHistory.any((h) => h != null);
 
-    _speedVarianceLeft = leftHandPresent
-        ? _calculateSpeedVariance(leftHistory, _thumbTipIndex)
-        : 0.0;
-    _speedVarianceRight = rightHandPresent
-        ? _calculateSpeedVariance(rightHistory, _thumbTipIndex)
-        : 0.0;
+    final allLeftTrajectories =
+        List.generate(21, (i) => _metrics.extractTrajectory(leftHistory, i));
+    final allRightTrajectories =
+        List.generate(21, (i) => _metrics.extractTrajectory(rightHistory, i));
 
-    _tremorScoreLeft = leftHandPresent
-        ? _calculateTremorScore(leftHistory, _thumbTipIndex, _tremorWindowSize)
-        : 0.0;
-    _tremorScoreRight = rightHandPresent
-        ? _calculateTremorScore(rightHistory, _thumbTipIndex, _tremorWindowSize)
-        : 0.0;
+    _speedVarianceLeft =
+        leftHandPresent ? _metrics.speedVarianceAll(allLeftTrajectories) : 0.0;
+    _speedVarianceRight =
+        rightHandPresent ? _metrics.speedVarianceAll(allRightTrajectories) : 0.0;
+    _accelVarianceLeft =
+        leftHandPresent ? _metrics.accelerationVarianceAll(allLeftTrajectories) : 0.0;
+    _accelVarianceRight =
+        rightHandPresent ? _metrics.accelerationVarianceAll(allRightTrajectories) : 0.0;
+    _jerkVarianceLeft =
+        leftHandPresent ? _metrics.jerkVarianceAll(allLeftTrajectories) : 0.0;
+    _jerkVarianceRight =
+        rightHandPresent ? _metrics.jerkVarianceAll(allRightTrajectories) : 0.0;
+    _spreadLeft = leftHandPresent ? _metrics.fingerSpread(allLeftTrajectories) : 0.0;
+    _spreadRight = rightHandPresent ? _metrics.fingerSpread(allRightTrajectories) : 0.0;
 
-    // Simple asymmetry: average difference normalized (0-1)
+    final trimmedLeft =
+        allLeftTrajectories.map((t) => t.length > _tremorWindowSize
+            ? t.sublist(t.length - _tremorWindowSize)
+            : t).toList();
+    final trimmedRight =
+        allRightTrajectories.map((t) => t.length > _tremorWindowSize
+            ? t.sublist(t.length - _tremorWindowSize)
+            : t).toList();
+
+    _tremorScoreLeft =
+        leftHandPresent ? _metrics.tremorAll(trimmedLeft) : 0.0;
+    _tremorScoreRight =
+        rightHandPresent ? _metrics.tremorAll(trimmedRight) : 0.0;
+
+    // Simple asymmetry across all metrics (normalized 0-1)
     if (leftHandPresent && rightHandPresent) {
-      double diffSpeed = (_speedVarianceLeft - _speedVarianceRight).abs();
-      double diffTremor = (_tremorScoreLeft - _tremorScoreRight).abs();
-      // Normalize roughly, assuming max difference could be around 1.0 for each metric's scale
-      _asymmetryScore = ((diffSpeed + diffTremor) / 2.0).clamp(0.0, 1.0);
+      final diffs = [
+        (_speedVarianceLeft - _speedVarianceRight).abs(),
+        (_tremorScoreLeft - _tremorScoreRight).abs(),
+        (_accelVarianceLeft - _accelVarianceRight).abs(),
+        (_jerkVarianceLeft - _jerkVarianceRight).abs(),
+        (_spreadLeft - _spreadRight).abs(),
+      ];
+      final meanDiff = diffs.reduce((a, b) => a + b) / diffs.length;
+      _asymmetryScore = meanDiff.clamp(0.0, 1.0);
     } else {
       _asymmetryScore = 0.0; // No asymmetry if only one hand is present
     }
@@ -191,6 +191,14 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
       highMetricsCount++;
     if (_tremorScoreRight > _symptomThreshold && rightHandPresent)
       highMetricsCount++;
+    if (_accelVarianceLeft > _symptomThreshold && leftHandPresent)
+      highMetricsCount++;
+    if (_accelVarianceRight > _symptomThreshold && rightHandPresent)
+      highMetricsCount++;
+    if (_jerkVarianceLeft > _symptomThreshold && leftHandPresent)
+      highMetricsCount++;
+    if (_jerkVarianceRight > _symptomThreshold && rightHandPresent)
+      highMetricsCount++;
     if (_asymmetryScore > _symptomThreshold &&
         leftHandPresent &&
         rightHandPresent) {
@@ -202,8 +210,8 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   }
 
   // Helper to extract history for a specific hand
-  List<List<Map<String, double>>?> _getHandHistory(String handedness) {
-    List<List<Map<String, double>>?> history = [];
+  List<List<LandmarkPoint>?> _getHandHistory(String handedness) {
+    List<List<LandmarkPoint>?> history = [];
     for (var frame in _landmarkHistory) {
       LandmarkData handData = frame.hands.firstWhere(
           (h) => h.handedness == handedness,
@@ -221,97 +229,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   }
 
   // --- Calculation Helpers ---
-
-  // Calculate distance between two points (null safe)
-  double _calculateDistance(Map<String, double>? p1, Map<String, double>? p2) {
-    if (p1 == null || p2 == null) return 0.0;
-    double dx = (p1['x'] ?? 0.0) - (p2['x'] ?? 0.0);
-    double dy = (p1['y'] ?? 0.0) - (p2['y'] ?? 0.0);
-    // Ignore Z for simplicity
-    return math.sqrt(dx * dx + dy * dy);
-  }
-
-  // Calculate speed variance for a landmark index (null safe)
-  double _calculateSpeedVariance(
-      List<List<Map<String, double>>?> history, int landmarkIndex) {
-    List<double> displacements = [];
-    for (int i = 1; i < history.length; i++) {
-      final List<Map<String, double>>? prevFrameLms = history[i - 1];
-      final List<Map<String, double>>? currFrameLms = history[i];
-
-      // Ensure both frames and the landmark exist
-      if (prevFrameLms != null &&
-          currFrameLms != null &&
-          prevFrameLms.length > landmarkIndex &&
-          currFrameLms.length > landmarkIndex) {
-        final Map<String, double>? prevPoint = prevFrameLms[landmarkIndex];
-        final Map<String, double>? currPoint = currFrameLms[landmarkIndex];
-        // Check points are not null before calculating distance
-        if (prevPoint != null && currPoint != null) {
-          displacements.add(_calculateDistance(prevPoint, currPoint));
-        }
-      }
-    }
-    if (displacements.length < 2) return 0.0;
-    return _calculateVariance(
-        displacements); // Variance calc handles normalization
-  }
-
-  // Calculate tremor score (std dev of position in a window) (null safe)
-  double _calculateTremorScore(List<List<Map<String, double>>?> history,
-      int landmarkIndex, int windowSize) {
-    if (history.length < windowSize) return 0.0;
-
-    List<double> xCoords = [];
-    List<double> yCoords = [];
-    // Use the last 'windowSize' frames
-    int start = history.length - windowSize;
-    for (int i = start; i < history.length; i++) {
-      final List<Map<String, double>>? frameLms = history[i];
-      // Check frame and landmark exist
-      if (frameLms != null && frameLms.length > landmarkIndex) {
-        final Map<String, double>? point = frameLms[landmarkIndex];
-        // Check point is not null before accessing coordinates
-        if (point != null) {
-          xCoords.add(point['x'] ?? 0.0);
-          yCoords.add(point['y'] ?? 0.0);
-        }
-      }
-    }
-
-    if (xCoords.length < 2 || yCoords.length < 2) return 0.0;
-
-    double stdDevX = _calculateStdDev(xCoords);
-    double stdDevY = _calculateStdDev(yCoords);
-
-    // Combine std dev and normalize (heuristic) - requires tuning
-    // Factor adjusted based on typical coordinate range (0-1)
-    return ((stdDevX + stdDevY) / 2.0 * 15.0).clamp(0.0, 1.0); // Tuned factor
-  }
-
-  // Basic variance calculation with normalization
-  double _calculateVariance(List<double> data) {
-    if (data.length < 2) return 0.0;
-    double mean = data.reduce((a, b) => a + b) / data.length;
-    double sumOfSquares = data
-        .map((x) => math.pow(x - mean, 2).toDouble())
-        .reduce((a, b) => a + b);
-    double variance = sumOfSquares / data.length;
-    // Normalize heuristically - variance of displacements (0-1 range)
-    // Max expected variance might be around 0.01 if movement is large+fast? Tune this.
-    return (variance / 0.01).clamp(0.0, 1.0);
-  }
-
-  // Basic standard deviation calculation
-  double _calculateStdDev(List<double> data) {
-    if (data.length < 2) return 0.0;
-    double mean = data.reduce((a, b) => a + b) / data.length;
-    double sumOfSquares = data
-        .map((x) => math.pow(x - mean, 2).toDouble())
-        .reduce((a, b) => a + b);
-    double variance = sumOfSquares / data.length;
-    return math.sqrt(variance);
-  }
+  // Detailed metric implementations reside in [HandMetrics].
 
   // --- UI Building ---
 
@@ -337,6 +255,12 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
           _buildBar("Speed Var (R)", _speedVarianceRight),
           _buildBar("Tremor (L)", _tremorScoreLeft),
           _buildBar("Tremor (R)", _tremorScoreRight),
+          _buildBar("Accel Var (L)", _accelVarianceLeft),
+          _buildBar("Accel Var (R)", _accelVarianceRight),
+          _buildBar("Jerk Var (L)", _jerkVarianceLeft),
+          _buildBar("Jerk Var (R)", _jerkVarianceRight),
+          _buildBar("Spread (L)", _spreadLeft),
+          _buildBar("Spread (R)", _spreadRight),
           _buildBar("Asymmetry", _asymmetryScore),
           const SizedBox(height: 8),
           Center(
@@ -437,58 +361,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
     return 'Detected $handCount hand(s), $pointsPerHand points/hand.'; // Simplified text
   }
 
-  String _formatLandmarks(List<dynamic> landmarks) {
-    if (landmarks.isEmpty) {
-      return 'No landmark data.';
-    }
-    final StringBuffer buffer = StringBuffer();
-    for (int i = 0; i < landmarks.length; i++) {
-      final dynamic handDataRaw = landmarks[i];
-      if (handDataRaw is Map) {
-        // Defensive casting
-        final Map<String, dynamic> handData =
-            Map<String, dynamic>.from(handDataRaw);
-        final String handedness =
-            handData['handedness'] as String? ?? 'Unknown';
-        final List<dynamic>? landmarkListRaw = handData['landmarks'] as List?;
-
-        buffer.writeln('Hand ${i + 1} ($handedness):');
-
-        if (landmarkListRaw != null && landmarkListRaw is List) {
-          for (int j = 0; j < landmarkListRaw.length; j++) {
-            final dynamic landmarkDataRaw = landmarkListRaw[j];
-            if (landmarkDataRaw is Map) {
-              try {
-                final Map<String, double> landmarkData =
-                    Map<String, double>.from(landmarkDataRaw);
-                final double? x = landmarkData['x'];
-                final double? y = landmarkData['y'];
-                final double? z = landmarkData['z'];
-                buffer.writeln(
-                    '  Lm $j: (x: ${x?.toStringAsFixed(2) ?? 'N/A'}, ' // Shorter format
-                    'y: ${y?.toStringAsFixed(2) ?? 'N/A'}, '
-                    'z: ${z?.toStringAsFixed(2) ?? 'N/A'})');
-              } catch (e) {
-                buffer.writeln('  Lm $j: Error casting coords');
-              }
-            } else {
-              buffer.writeln(
-                  '  Lm $j: Invalid format ${landmarkDataRaw.runtimeType}');
-            }
-          }
-        } else {
-          buffer.writeln('  Landmark list format error or missing.');
-        }
-      } else {
-        buffer.writeln(
-            'Hand ${i + 1}: Invalid data format ${handDataRaw.runtimeType}');
-      }
-      if (i < landmarks.length - 1) {
-        buffer.writeln(); // Add space between hands
-      }
-    }
-    return buffer.toString();
-  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -549,13 +422,6 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
                                 color: Colors.white),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            _formatLandmarks(_landmarks), // Updated formatting
-                            style: const TextStyle(
-                                fontSize: 10, // Adjusted size
-                                fontFamily: 'monospace',
-                                color: Colors.white),
-                          ),
                         ],
                       ),
                     ),

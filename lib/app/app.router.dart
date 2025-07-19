@@ -5,12 +5,13 @@
 // **************************************************************************
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:io' as _i18;
-import 'dart:ui' as _i17;
+import 'dart:async' as _i17;
+import 'dart:io' as _i20;
+import 'dart:ui' as _i19;
 
 import 'package:flutter/material.dart' as _i16;
 import 'package:flutter/material.dart';
-import 'package:parkinsondetetion/models/raison_result.dart' as _i19;
+import 'package:parkinsondetetion/models/raison_result.dart' as _i18;
 import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart'
     as _i7;
 import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart' as _i5;
@@ -33,7 +34,7 @@ import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart'
 import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart'
     as _i11;
 import 'package:stacked/stacked.dart' as _i1;
-import 'package:stacked_services/stacked_services.dart' as _i20;
+import 'package:stacked_services/stacked_services.dart' as _i21;
 
 class Routes {
   static const homeView = '/home-view';
@@ -171,8 +172,14 @@ class StackedRouter extends _i1.RouterBase {
       );
     },
     _i6.PatienceView: (data) {
+      final args = data.getArgs<PatienceViewArguments>(
+        orElse: () => const PatienceViewArguments(),
+      );
       return _i16.MaterialPageRoute<dynamic>(
-        builder: (context) => const _i6.PatienceView(),
+        builder: (context) => _i6.PatienceView(
+            key: args.key,
+            initialTab: args.initialTab,
+            resultsFuture: args.resultsFuture),
         settings: data,
       );
     },
@@ -269,6 +276,38 @@ class LoginViewArguments {
   }
 }
 
+class PatienceViewArguments {
+  const PatienceViewArguments({
+    this.key,
+    this.initialTab = 0,
+    this.resultsFuture,
+  });
+
+  final _i16.Key? key;
+
+  final int initialTab;
+
+  final _i17.Future<List<_i18.RaisonResult>>? resultsFuture;
+
+  @override
+  String toString() {
+    return '{"key": "$key", "initialTab": "$initialTab", "resultsFuture": "$resultsFuture"}';
+  }
+
+  @override
+  bool operator ==(covariant PatienceViewArguments other) {
+    if (identical(this, other)) return true;
+    return other.key == key &&
+        other.initialTab == initialTab &&
+        other.resultsFuture == resultsFuture;
+  }
+
+  @override
+  int get hashCode {
+    return key.hashCode ^ initialTab.hashCode ^ resultsFuture.hashCode;
+  }
+}
+
 class SignatureCanvasViewArguments {
   const SignatureCanvasViewArguments({
     this.key,
@@ -277,7 +316,7 @@ class SignatureCanvasViewArguments {
 
   final _i16.Key? key;
 
-  final void Function(_i17.Image) onImageReady;
+  final void Function(_i19.Image) onImageReady;
 
   @override
   String toString() {
@@ -304,7 +343,7 @@ class CameraDrawViewArguments {
 
   final _i16.Key? key;
 
-  final void Function(_i18.File) onImageReady;
+  final void Function(_i20.File) onImageReady;
 
   @override
   String toString() {
@@ -331,7 +370,7 @@ class GalleryDrawViewArguments {
 
   final _i16.Key? key;
 
-  final void Function(_i18.File) onImageReady;
+  final void Function(_i20.File) onImageReady;
 
   @override
   String toString() {
@@ -358,7 +397,7 @@ class InsightsViewArguments {
 
   final _i16.Key? key;
 
-  final List<_i19.RaisonResult> results;
+  final List<_i18.RaisonResult> results;
 
   @override
   String toString() {
@@ -377,7 +416,7 @@ class InsightsViewArguments {
   }
 }
 
-extension NavigatorStateExtension on _i20.NavigationService {
+extension NavigatorStateExtension on _i21.NavigationService {
   Future<dynamic> navigateToHomeView([
     int? routerId,
     bool preventDuplicates = true,
@@ -436,14 +475,19 @@ extension NavigatorStateExtension on _i20.NavigationService {
         transition: transition);
   }
 
-  Future<dynamic> navigateToPatienceView([
+  Future<dynamic> navigateToPatienceView({
+    _i16.Key? key,
+    int initialTab = 0,
+    _i17.Future<List<_i18.RaisonResult>>? resultsFuture,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
     Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
         transition,
-  ]) async {
+  }) async {
     return navigateTo<dynamic>(Routes.patienceView,
+        arguments: PatienceViewArguments(
+            key: key, initialTab: initialTab, resultsFuture: resultsFuture),
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,
@@ -522,7 +566,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> navigateToSignatureCanvasView({
     _i16.Key? key,
-    required void Function(_i17.Image) onImageReady,
+    required void Function(_i19.Image) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -540,7 +584,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> navigateToCameraDrawView({
     _i16.Key? key,
-    required void Function(_i18.File) onImageReady,
+    required void Function(_i20.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -558,7 +602,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> navigateToGalleryDrawView({
     _i16.Key? key,
-    required void Function(_i18.File) onImageReady,
+    required void Function(_i20.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -576,7 +620,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> navigateToInsightsView({
     _i16.Key? key,
-    required List<_i19.RaisonResult> results,
+    required List<_i18.RaisonResult> results,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -649,14 +693,19 @@ extension NavigatorStateExtension on _i20.NavigationService {
         transition: transition);
   }
 
-  Future<dynamic> replaceWithPatienceView([
+  Future<dynamic> replaceWithPatienceView({
+    _i16.Key? key,
+    int initialTab = 0,
+    _i17.Future<List<_i18.RaisonResult>>? resultsFuture,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
     Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
         transition,
-  ]) async {
+  }) async {
     return replaceWith<dynamic>(Routes.patienceView,
+        arguments: PatienceViewArguments(
+            key: key, initialTab: initialTab, resultsFuture: resultsFuture),
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,
@@ -735,7 +784,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> replaceWithSignatureCanvasView({
     _i16.Key? key,
-    required void Function(_i17.Image) onImageReady,
+    required void Function(_i19.Image) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -753,7 +802,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> replaceWithCameraDrawView({
     _i16.Key? key,
-    required void Function(_i18.File) onImageReady,
+    required void Function(_i20.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -771,7 +820,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> replaceWithGalleryDrawView({
     _i16.Key? key,
-    required void Function(_i18.File) onImageReady,
+    required void Function(_i20.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -789,7 +838,7 @@ extension NavigatorStateExtension on _i20.NavigationService {
 
   Future<dynamic> replaceWithInsightsView({
     _i16.Key? key,
-    required List<_i19.RaisonResult> results,
+    required List<_i18.RaisonResult> results,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
