@@ -17,7 +17,14 @@ class RaisonApiService {
 
   final http.Client _client;
 
-  RaisonApiService({http.Client? client}) : _client = client ?? http.Client();
+  /// When created we immediately kick off a schema fetch so later calls
+  /// to [submit] don't block on this network request.
+  RaisonApiService({http.Client? client}) : _client = client ?? http.Client() {
+    _schemaFuture = _fetchSchema();
+  }
+
+  /// Holds the ongoing or completed schema request so it can be reused.
+  Future<Map<String, dynamic>>? _schemaFuture;
 
   /// Retrieves the element/option mapping from the Raison API.
   Future<Map<String, dynamic>> _fetchSchema() async {
@@ -39,8 +46,8 @@ class RaisonApiService {
 
   /// Sends [responses] to the API and returns the list of results.
   Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
-    // 1️⃣ Fetch the schema
-    final schema = await _fetchSchema();
+    // 1️⃣ Use the cached schema; fetch only if it hasn't completed yet.
+    final schema = await (_schemaFuture ??= _fetchSchema());
 
     final elementsRaw = schema['elements'] as List<dynamic>? ?? [];
     final optionsRaw  = schema['options']  as List<dynamic>? ?? [];

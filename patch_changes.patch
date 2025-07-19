@@ -1,5 +1,5 @@
 diff --git a/lib/main.dart b/lib/main.dart
-index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..397ff28310b7c97f22d1365c2773df3d0e3b18cb 100644
+index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..5b89d7374a38c1e322cb2b8e1aed88982a7a7020 100644
 --- a/lib/main.dart
 +++ b/lib/main.dart
 @@ -1,48 +1,51 @@
@@ -27,8 +27,8 @@ index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..397ff28310b7c97f22d1365c2773df3d
      options: DefaultFirebaseOptions.currentPlatform,
    );
    await setupLocator();
-+  // Raison API isn't part of the generated locator so register manually
-+  locator.registerLazySingleton(() => RaisonApiService());
++  // Trigger reasoning schema fetch early for smoother questionnaire flow
++  locator<RaisonApiService>();
    setupDialogUi();
    setupBottomSheetUi();
  
@@ -54,205 +54,274 @@ index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..397ff28310b7c97f22d1365c2773df3d
          onGenerateRoute: StackedRouter().onGenerateRoute,
          navigatorKey: StackedService.navigatorKey,
        ),
-diff --git a/lib/models/raison_result.dart b/lib/models/raison_result.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..7d923a83d8305f7d95534a892c1f54ce353453dd
---- /dev/null
-+++ b/lib/models/raison_result.dart
-@@ -0,0 +1,22 @@
-+class RaisonResult {
-+  const RaisonResult({
-+    required this.label,
-+    required this.explanation,
-+    required this.isSolution,
-+  });
-+
-+  final String label;
-+  final List<String> explanation;
-+  final bool isSolution;
-+
-+  factory RaisonResult.fromJson(Map<String, dynamic> json) {
-+    final option = json['option'] as Map<String, dynamic>? ?? {};
-+    return RaisonResult(
-+      label: option['label'] as String? ?? '',
-+      explanation: (json['explanation'] as List<dynamic>? ?? [])
-+          .map((e) => e.toString())
-+          .toList(),
-+      isSolution: json['isSolution'] as bool? ?? false,
-+    );
-+  }
-+}
 diff --git a/lib/services/raison_api_service.dart b/lib/services/raison_api_service.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..209da3cf4afc859a1d414532fca99be0e0b5f0a3
---- /dev/null
+index cb12f9e87a070f8ed4d5b2265d3bc10ba65dd126..d0b278cd943689e78490f304a2aa93e283a123a8 100644
+--- a/lib/services/raison_api_service.dart
 +++ b/lib/services/raison_api_service.dart
-@@ -0,0 +1,75 @@
-+import 'dart:convert';
-+import 'package:http/http.dart' as http;
-+
-+import '../models/raison_result.dart';
-+
-+/// Handles communication with the Raison reasoning API.
-+class RaisonApiService {
-+  /// Base URL of the API.
-+  static const String _baseUrl = 'https://api.ai-raison.com';
-+
-+  /// API key header value. Replace with the real key in production.
-+  static const String _key = '<YOUR_API_KEY>';
-+
-+  /// App and version identifiers used by the API.
-+  static const String _app = 'PRJ27475';
-+  static const String _ver = 'latest';
-+
-+  final http.Client _client;
-+
-+  RaisonApiService({http.Client? client}) : _client = client ?? http.Client();
-+
-+  /// Retrieves the element/option mapping from the Raison API.
-+  Future<Map<String, dynamic>> _fetchSchema() async {
-+    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
-+    final res = await _client.get(uri, headers: {'x-api-key': _key});
-+    if (res.statusCode != 200) {
-+      throw Exception('Failed to load schema: ${res.statusCode}');
-+    }
-+    return jsonDecode(res.body) as Map<String, dynamic>;
+@@ -1,68 +1,75 @@
+ import 'dart:convert';
+ import 'package:http/http.dart' as http;
+ 
+ import '../models/raison_result.dart';
+ 
+ /// Handles communication with the Raison reasoning API.
+ class RaisonApiService {
+   /// Base URL of the API.
+   static const String _baseUrl = 'https://api.ai-raison.com';
+ 
+   /// API key header value. Replace with the real key in production.
+   static const String _key = 'EjlvnSfdDa3eftd9eux0h7D1LKRPsPEW5jbUq8rw';
+ 
+   /// App and version identifiers used by the API.
+   static const String _app = 'PRJ27475';
+   static const String _ver = 'latest';
+ 
+   final http.Client _client;
+ 
+-  RaisonApiService({http.Client? client}) : _client = client ?? http.Client();
++  /// When created we immediately kick off a schema fetch so later calls
++  /// to [submit] don't block on this network request.
++  RaisonApiService({http.Client? client}) : _client = client ?? http.Client() {
++    _schemaFuture = _fetchSchema();
 +  }
 +
-+  /// Sends [responses] to the API and returns the list of results.
-+  Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
-+    final schema = await _fetchSchema();
-+
-+    final elementsRaw = schema['elements'] as List<dynamic>? ?? [];
-+    final optionsRaw = schema['options'] as List<dynamic>? ?? [];
-+
-+    final List<Map<String, dynamic>> elementPayload = [];
-+
-+    // Map boolean responses to element ids using the returned labels.
-+    for (final e in elementsRaw) {
-+      final label = e['label'];
-+      if (label != null && responses[label] == true) {
-+        elementPayload.add({'id': e['id'], 'parameters': e['parameters'] ?? []});
-+      }
-+    }
-+
-+    final List<Map<String, String>> optionPayload = [
-+      for (final o in optionsRaw) {'id': o['id'] as String}
-+    ];
-+
-+    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
-+    final res = await _client.post(
-+      uri,
-+      headers: {
-+        'x-api-key': _key,
-+        'Content-Type': 'application/json',
-+      },
-+      body: jsonEncode({
-+        'elements': elementPayload,
-+        'options': optionPayload,
-+      }),
-+    );
-+
-+    if (res.statusCode != 200) {
-+      throw Exception('Execution failed: ${res.statusCode}');
-+    }
-+
-+    final data = jsonDecode(res.body) as List<dynamic>;
-+    return data
-+        .map((e) => RaisonResult.fromJson(e as Map<String, dynamic>))
-+        .toList();
-+  }
-+}
-diff --git a/lib/ui/views/insights/insights_view.dart b/lib/ui/views/insights/insights_view.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..f1dfbf7a94ab1a7d60ddaf356fa1f040249a8c80
---- /dev/null
-+++ b/lib/ui/views/insights/insights_view.dart
-@@ -0,0 +1,54 @@
-+import 'package:flutter/material.dart';
-+import 'package:stacked/stacked.dart';
-+
++  /// Holds the ongoing or completed schema request so it can be reused.
++  Future<Map<String, dynamic>>? _schemaFuture;
+ 
+   /// Retrieves the element/option mapping from the Raison API.
+   Future<Map<String, dynamic>> _fetchSchema() async {
+     final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
+     final res = await _client.get(
+       uri,
+       headers: {
+         'x-api-key': _key,            // ← add your key here
+         'Content-Type': 'application/json',
+       },
+     );
+     print('🔍 [Raison API] SCHEMA GET → ${res.statusCode}\n'
+           'Response: ${res.body}');
+     if (res.statusCode != 200) {
+       throw Exception('Failed to load schema: ${res.statusCode}');
+     }
+     return jsonDecode(res.body) as Map<String, dynamic>;
+   }
+ 
+   /// Sends [responses] to the API and returns the list of results.
+   Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
+-    // 1️⃣ Fetch the schema
+-    final schema = await _fetchSchema();
++    // 1️⃣ Use the cached schema; fetch only if it hasn't completed yet.
++    final schema = await (_schemaFuture ??= _fetchSchema());
+ 
+     final elementsRaw = schema['elements'] as List<dynamic>? ?? [];
+     final optionsRaw  = schema['options']  as List<dynamic>? ?? [];
+ 
+     // 2️⃣ Build the element payload
+     final List<Map<String, dynamic>> elementPayload = [];
+     for (final e in elementsRaw) {
+       final label = e['label'] as String?;
+       if (label != null && responses[label] == true) {
+         elementPayload.add({
+           'id': e['id'],
+           'parameters': (e['parameters'] as List<dynamic>?)?.cast<String>() ?? [],
+ 
+         });
+       }
+     }
+ 
+     // 3️⃣ Build the option payload
+     final List<Map<String, String>> optionPayload = [
+       for (final o in optionsRaw) {'id': o['id'] as String}
+     ];
+ 
+     // 4️⃣ Prepare & send the POST
+     final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
+     final requestBody = jsonEncode({
+diff --git a/lib/ui/views/patience/patience_view.dart b/lib/ui/views/patience/patience_view.dart
+index a91a854a62e60ebbdc01a10513e87169ed18f4b9..41f909925ec635de3763fc95395416fed31af4b8 100644
+--- a/lib/ui/views/patience/patience_view.dart
++++ b/lib/ui/views/patience/patience_view.dart
+@@ -1,59 +1,69 @@
+ import 'package:flutter/material.dart';
+ import 'package:parkinsondetetion/app/app.router.dart';
+ import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
+ import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:fl_chart/fl_chart.dart';
+ 
+ import 'patience_viewmodel.dart';
+ import '../../../models/test_type.dart';
+ import '../../../models/test_result.dart';
+ import '../camera_test/camera_test_view.dart';
+ import '../questionnaire/questionnaire_view.dart';
+ import '../voice_test/voice_test_view.dart';
+ import '../../../app/app.locator.dart';
+ import 'package:stacked_services/stacked_services.dart';
+ import '../../../models/app_user.dart';
 +import '../../../models/raison_result.dart';
-+import 'insights_viewmodel.dart';
+ 
+ class PatienceView extends StackedView<PatienceViewModel> {
+-  const PatienceView({Key? key}) : super(key: key);
++  const PatienceView({Key? key, this.initialTab = 0, this.resultsFuture})
++      : super(key: key);
 +
-+/// Displays solutions returned by the Raison API.
-+class InsightsView extends StackedView<InsightsViewModel> {
-+  const InsightsView({super.key, required this.results});
++  /// Index of the tab to display when the view opens.
++  final int initialTab;
 +
-+  final List<RaisonResult> results;
-+
-+  @override
-+  Widget builder(
-+      BuildContext context, InsightsViewModel viewModel, Widget? child) {
-+    return Scaffold(
-+      appBar: AppBar(title: const Text('Insights')),
-+      body: ListView.builder(
-+        padding: const EdgeInsets.all(16),
-+        itemCount: viewModel.results.length,
-+        itemBuilder: (_, index) {
-+          final item = viewModel.results[index];
-+          return Card(
-+            margin: const EdgeInsets.symmetric(vertical: 8),
-+            child: Padding(
-+              padding: const EdgeInsets.all(12),
-+              child: Column(
-+                crossAxisAlignment: CrossAxisAlignment.start,
-+                children: [
-+                  Text(item.label,
-+                      style: Theme.of(context).textTheme.titleMedium),
-+                  const SizedBox(height: 8),
-+                  ...item.explanation.map(
-+                    (e) => Row(
-+                      crossAxisAlignment: CrossAxisAlignment.start,
-+                      children: [
-+                        const Text('• '),
-+                        Expanded(child: Text(e)),
-+                      ],
-+                    ),
-+                  ),
-+                ],
-+              ),
-+            ),
-+          );
-+        },
-+      ),
-+    );
-+  }
-+
-+  @override
-+  InsightsViewModel viewModelBuilder(BuildContext context) =>
-+      InsightsViewModel(results);
-+}
-diff --git a/lib/ui/views/insights/insights_viewmodel.dart b/lib/ui/views/insights/insights_viewmodel.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..c22c44c7021fc4dafa3b60b55440ae4dc7353744
---- /dev/null
-+++ b/lib/ui/views/insights/insights_viewmodel.dart
-@@ -0,0 +1,10 @@
-+import 'package:stacked/stacked.dart';
-+
-+import '../../../models/raison_result.dart';
-+
-+/// Simple ViewModel that just holds the insight results.
-+class InsightsViewModel extends BaseViewModel {
-+  InsightsViewModel(this.results);
-+
-+  final List<RaisonResult> results;
-+}
++  /// Future resolving to reasoning results; shown in the Insights tab.
++  final Future<List<RaisonResult>>? resultsFuture;
+ 
+   @override
+   Widget builder(
+     BuildContext context,
+     PatienceViewModel viewModel,
+     Widget? child,
+   ) {
+     final ThemeData theme = Theme.of(context);
+ 
+     if (viewModel.isBusy) {
+       return const Center(child: CircularProgressIndicator());
+     }
+ 
+     return DefaultTabController(
+       length: 6,
++      // Show the requested tab without waiting for computation
++      initialIndex: initialTab,
+       child: Scaffold(
+         appBar: AppBar(     
+           toolbarHeight: 0,   
+           bottom: TabBar(
+             isScrollable: true,
+             tabs: [
+               Tab(text: 'Profile', icon: Icon(Icons.person)),
+               Tab(text: 'Tests', icon: Icon(Icons.science)),
+               //Tab(text: 'History', icon: Icon(Icons.history)),
+               Tab(text: 'Results', icon: Icon(Icons.assessment)),
+               Tab(text: 'Insights', icon: Icon(Icons.insights)),
+               Tab(text: 'Doctor', icon: Icon(Icons.medical_information)),
+               Tab(text: 'Community', icon: Icon(Icons.diversity_1)),
+             ],
+             indicatorColor: const Color.fromARGB(255, 8, 5, 60),
+             labelPadding: EdgeInsets.symmetric(horizontal:07),
+           ),
+         ),
+         
+         body: TabBarView(
+           children: [
+             _buildProfileTab(context, viewModel, theme),
+             _buildTestsTab(context, viewModel, theme),
+             //_buildHistoryTab(viewModel, theme),
+             _buildResultsTab(viewModel, theme),
+@@ -750,54 +760,90 @@ class PatienceView extends StackedView<PatienceViewModel> {
+         Card(
+           child: ListTile(
+             leading: const Text('🧠', style: TextStyle(fontSize: 28)),
+             title: const Text('Overall AI Summary'),
+             subtitle: const Text(
+                 'Low risk – more advanced analytics will appear here.'),
+           ),
+         ),
+         const SizedBox(height: 16),
+         Card(
+           child: ListTile(
+             title: const Text('Test-by-Test Breakdown'),
+             subtitle: const Text(
+                 'Charts of tapping, tremor and other tests will be added.'),
+           ),
+         ),
+         const SizedBox(height: 16),
+         Card(
+           child: ListTile(
+             title: const Text('Risk Alerts or Anomalies'),
+             subtitle: const Text('No alerts detected recently.'),
+           ),
+         ),
+         const SizedBox(height: 16),
+         Card(
+-          child: ListTile(
+-            title: const Text('Argumentation (Coming Soon)'),
+-            subtitle: const Text(
+-                'Future versions will explain the reasoning behind alerts.'),
++          child: FutureBuilder<List<RaisonResult>>(
++            // Display reasoning results once the POST completes
++            future: resultsFuture,
++            builder: (context, snapshot) {
++              if (!snapshot.hasData) {
++                return const ListTile(
++                  title: Text('Argumentation'),
++                  subtitle: Text('Loading reasoning...'),
++                );
++              }
++              final results = snapshot.data!;
++              if (results.isEmpty) {
++                return const ListTile(
++                  title: Text('Argumentation'),
++                  subtitle: Text('No recommendations returned'),
++                );
++              }
++              return Padding(
++                padding: const EdgeInsets.all(12),
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    const Text('Argumentation',
++                        style: TextStyle(fontWeight: FontWeight.bold)),
++                    const SizedBox(height: 8),
++                    for (final r in results) ...[
++                      Text(r.label, style: theme.textTheme.titleMedium),
++                      const SizedBox(height: 4),
++                      ...r.explanation.map(
++                        (e) => Padding(
++                          padding: const EdgeInsets.only(left: 16, bottom: 2),
++                          child: Text('• $e'),
++                        ),
++                      ),
++                      const SizedBox(height: 12),
++                    ]
++                  ],
++                ),
++              );
++            },
+           ),
+         ),
+         const SizedBox(height: 16),
+         Card(
+           child: ListTile(
+             title: const Text('AI Test Suggestions'),
+             subtitle: const Text(
+                 'Please retake the Tremor Test – last result was inconclusive.'),
+           ),
+         ),
+       ],
+     );
+   }
+ 
+   @override
+   PatienceViewModel viewModelBuilder(BuildContext context) =>
+       PatienceViewModel();
+ 
+   @override
+   void onViewModelReady(PatienceViewModel viewModel) {
+     viewModel.init();
+     super.onViewModelReady(viewModel);
+   }
+ 
+   void _onSendResultsPressed(BuildContext rootContext, PatienceViewModel vm) {
 diff --git a/lib/ui/views/questionnaire/questionnaire_viewmodel.dart b/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
-index 1b7166962c0d2e5264f3c32b5f1755f80de2060b..90246bb68db145ce8ed6d209595d317e13fd4d1f 100644
+index 3ba4094b46cdd83d1522292f128bc72ec264b7e0..05bc5beb1712943ae9b63bedb4ce1bba39a53ea7 100644
 --- a/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
 +++ b/lib/ui/views/questionnaire/questionnaire_viewmodel.dart
-@@ -1,37 +1,43 @@
+@@ -1,33 +1,32 @@
  import 'package:stacked/stacked.dart';
  
  import '../../../app/app.locator.dart';
  import '../../../services/test_service.dart';
  import '../../../services/authentication_service.dart';
-+import '../../../services/raison_api_service.dart';
-+import '../../../models/raison_result.dart';
-+import '../../../ui/views/insights/insights_view.dart';
-+import 'package:stacked_services/stacked_services.dart';
+ import '../../../services/raison_api_service.dart';
+-import '../../../models/raison_result.dart';
+-import '../../../ui/views/insights/insights_view.dart';
++import '../patience/patience_view.dart';
+ import 'package:stacked_services/stacked_services.dart';
  import '../../../models/test_result.dart';
  import '../../../models/test_type.dart';
  
@@ -260,40 +329,29 @@ index 1b7166962c0d2e5264f3c32b5f1755f80de2060b..90246bb68db145ce8ed6d209595d317e
  class QuestionnaireViewModel extends BaseViewModel {
    final TestService _tests = locator<TestService>();
    final AuthenticationService _auth = locator<AuthenticationService>();
-+  final RaisonApiService _raison = locator<RaisonApiService>();
-+  final NavigationService _nav = locator<NavigationService>();
+   final RaisonApiService _raison = locator<RaisonApiService>();
+   final NavigationService _nav = locator<NavigationService>();
  
    /// Submits and enriches the user responses before saving.
    Future<void> submitQuestionnaire(Map<String, dynamic> responses) async {
      setBusy(true);
- 
-     // Make a mutable copy to add derived flags
-     final computed = Map<String, dynamic>.from(responses);
- 
      // Composite symptom flags:
+     // assume `responses['AA']` is one of "AA1", "AA2", or "AA3"
+     responses['AA1'] = responses['AA'] == 'AA1';
+     responses['AA2'] = responses['AA'] == 'AA2';
+     responses['AA3'] = responses['AA'] == 'AA3';
      // A4 = A1 && A2
-     computed['A4'] = (responses['A1'] == true && responses['A2'] == true);
+     responses['A4'] = (responses['A1'] == true && responses['A2'] == true);
  
      // A5 = (A2 && A3) || (A1 && A3)
-     computed['A5'] = ((responses['A2'] == true && responses['A3'] == true)
+     responses['A5'] = ((responses['A2'] == true && responses['A3'] == true)
          || (responses['A1'] == true && responses['A3'] == true));
- 
-     //A6 (requires A5 and a REM sleep flag 'REM')
-       computed['A6'] = (computed['A5'] == true && (responses['RBD_study_positive'] == true || responses['RBD_q'] == 'true'));
-     //A7 = A5 && Memory_Disorder && Urgent_Urination
-     computed['A7'] = (computed['A5'] == true &&
-         responses['Memory_Disorder'] == true &&
-         responses['Urgent_Urination'] == true);
-     
-     // A8 = Memory_Disorder && Exec_Language_Disorder && A5
-     computed['A8'] = (responses['Memory_Disorder'] == true &&
-@@ -169,28 +175,39 @@ class QuestionnaireViewModel extends BaseViewModel {
-     var scopaTotal = 0;
+@@ -177,40 +176,36 @@ class QuestionnaireViewModel extends BaseViewModel {
      for (final key in scopaKeys) {
        scopaTotal += int.tryParse(responses[key] as String? ?? '0')!;
      }
-     computed['SCOPA_total'] = scopaTotal;
-     computed['SCOPA>3'] = scopaTotal >= 3;
+     responses['SCOPA_total'] = scopaTotal;
+     responses['SCOPA>3'] = scopaTotal >= 3;
  
      // Authentication check
      final uid = _auth.currentUser?.uid;
@@ -309,21 +367,30 @@ index 1b7166962c0d2e5264f3c32b5f1755f80de2060b..90246bb68db145ce8ed6d209595d317e
        type: TestType.questionnaire,
        performedAt: DateTime.now(),
        score: 0,
-       data: computed,
+       data: responses,
      );
  
      await _tests.setQuestionnaireResult(result);
-+
-+    List<RaisonResult> solutions = [];
-+    try {
-+      final res = await _raison.submit(computed);
-+      solutions = res.where((r) => r.isSolution).toList();
-+    } catch (_) {
-+      // Ignore API errors but continue
-+    }
-+
+ 
+-    List<RaisonResult> solutions = [];
+-    try {
+-      final all = await _raison.submit(responses);
+-      solutions = all.where((r) => r.isSolution).toList();
+-    } catch (e) {
+-      // Log but don’t block the flow
+-      print('⚠️ [QVM] Raison API error: $e');
+-    }
++    // Kick off the reasoning call now but don't wait for it so navigation is fast.
++    final futureSolutions = _raison.submit(responses);
+ 
      setBusy(false);
+-    
+-    print('🚀 [QVM] navigating to InsightsView with ${solutions.length} solutions');
+-    await _nav.navigateToView(InsightsView(results: solutions));
 +
-+    await _nav.navigateToView(InsightsView(results: solutions));
++    // Open the Insights tab immediately; results will appear when ready.
++    await _nav.navigateToView(
++      PatienceView(initialTab: 3, resultsFuture: futureSolutions),
++    );
    }
  }

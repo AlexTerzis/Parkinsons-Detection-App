@@ -14,9 +14,17 @@ import '../voice_test/voice_test_view.dart';
 import '../../../app/app.locator.dart';
 import 'package:stacked_services/stacked_services.dart';
 import '../../../models/app_user.dart';
+import '../../../models/raison_result.dart';
 
 class PatienceView extends StackedView<PatienceViewModel> {
-  const PatienceView({Key? key}) : super(key: key);
+  const PatienceView({Key? key, this.initialTab = 0, this.resultsFuture})
+      : super(key: key);
+
+  /// Index of the tab to display when the view opens.
+  final int initialTab;
+
+  /// Future resolving to reasoning results; shown in the Insights tab.
+  final Future<List<RaisonResult>>? resultsFuture;
 
   @override
   Widget builder(
@@ -32,6 +40,8 @@ class PatienceView extends StackedView<PatienceViewModel> {
 
     return DefaultTabController(
       length: 6,
+      // Show the requested tab without waiting for computation
+      initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(     
           toolbarHeight: 0,   
@@ -772,10 +782,46 @@ class PatienceView extends StackedView<PatienceViewModel> {
         ),
         const SizedBox(height: 16),
         Card(
-          child: ListTile(
-            title: const Text('Argumentation (Coming Soon)'),
-            subtitle: const Text(
-                'Future versions will explain the reasoning behind alerts.'),
+          child: FutureBuilder<List<RaisonResult>>(
+            // Display reasoning results once the POST completes
+            future: resultsFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const ListTile(
+                  title: Text('Argumentation'),
+                  subtitle: Text('Loading reasoning...'),
+                );
+              }
+              final results = snapshot.data!;
+              if (results.isEmpty) {
+                return const ListTile(
+                  title: Text('Argumentation'),
+                  subtitle: Text('No recommendations returned'),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Argumentation',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    for (final r in results) ...[
+                      Text(r.label, style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      ...r.explanation.map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 2),
+                          child: Text('• $e'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ]
+                  ],
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 16),

@@ -4,8 +4,7 @@ import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/raison_api_service.dart';
-import '../../../models/raison_result.dart';
-import '../../../ui/views/insights/insights_view.dart';
+import '../patience/patience_view.dart';
 import 'package:stacked_services/stacked_services.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
@@ -199,18 +198,14 @@ class QuestionnaireViewModel extends BaseViewModel {
 
     await _tests.setQuestionnaireResult(result);
 
-    List<RaisonResult> solutions = [];
-    try {
-      final all = await _raison.submit(responses);
-      solutions = all.where((r) => r.isSolution).toList();
-    } catch (e) {
-      // Log but don’t block the flow
-      print('⚠️ [QVM] Raison API error: $e');
-    }
+    // Kick off the reasoning call now but don't wait for it so navigation is fast.
+    final futureSolutions = _raison.submit(responses);
 
     setBusy(false);
-    
-    print('🚀 [QVM] navigating to InsightsView with ${solutions.length} solutions');
-    await _nav.navigateToView(InsightsView(results: solutions));
+
+    // Open the Insights tab immediately; results will appear when ready.
+    await _nav.navigateToView(
+      PatienceView(initialTab: 3, resultsFuture: futureSolutions),
+    );
   }
 }
