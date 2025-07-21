@@ -15,6 +15,7 @@ import '../services/authentication_service.dart';
 import '../services/hand_metrics.dart';
 import '../services/raison_api_service.dart';
 import '../services/reports_service.dart';
+import '../services/storage_service.dart';
 import '../services/test_service.dart';
 import '../services/voice_api_service.dart';
 
@@ -38,4 +39,5 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => VoiceApiService());
   locator.registerLazySingleton(() => RaisonApiService());
   locator.registerLazySingleton(() => HandMetrics());
+  locator.registerLazySingleton(() => StorageService());
 }

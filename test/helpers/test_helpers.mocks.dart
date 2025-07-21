@@ -4,18 +4,21 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i6;
+import 'dart:io' as _i12;
+import 'dart:typed_data' as _i11;
 import 'dart:ui' as _i7;
 
 import 'package:firebase_auth/firebase_auth.dart' as _i2;
 import 'package:flutter/material.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i4;
-import 'package:parkinsondetetion/models/app_user.dart' as _i12;
-import 'package:parkinsondetetion/models/doctor_note.dart' as _i14;
-import 'package:parkinsondetetion/models/patient_report.dart' as _i13;
+import 'package:parkinsondetetion/models/app_user.dart' as _i14;
+import 'package:parkinsondetetion/models/doctor_note.dart' as _i16;
+import 'package:parkinsondetetion/models/patient_report.dart' as _i15;
 import 'package:parkinsondetetion/models/test_result.dart' as _i10;
 import 'package:parkinsondetetion/services/authentication_service.dart' as _i8;
-import 'package:parkinsondetetion/services/reports_service.dart' as _i11;
+import 'package:parkinsondetetion/services/reports_service.dart' as _i13;
+import 'package:parkinsondetetion/services/storage_service.dart' as _i17;
 import 'package:parkinsondetetion/services/test_service.dart' as _i9;
 import 'package:stacked_services/stacked_services.dart' as _i3;
 
@@ -876,10 +879,22 @@ class MockTestService extends _i1.Mock implements _i9.TestService {
       ) as _i6.Stream<List<_i10.TestResult>>);
 
   @override
-  _i6.Future<void> addResult(_i10.TestResult? result) => (super.noSuchMethod(
+  _i6.Future<void> addResult({
+    required _i10.TestResult? result,
+    _i11.Uint8List? drawingPng,
+    _i12.File? audioWav,
+    Map<String, dynamic>? sensorData,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #addResult,
-          [result],
+          [],
+          {
+            #result: result,
+            #drawingPng: drawingPng,
+            #audioWav: audioWav,
+            #sensorData: sensorData,
+          },
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
@@ -911,27 +926,27 @@ class MockTestService extends _i1.Mock implements _i9.TestService {
 /// A class which mocks [ReportsService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockReportsService extends _i1.Mock implements _i11.ReportsService {
+class MockReportsService extends _i1.Mock implements _i13.ReportsService {
   @override
-  _i6.Future<List<_i12.AppUser>> fetchAllDoctors() => (super.noSuchMethod(
+  _i6.Future<List<_i14.AppUser>> fetchAllDoctors() => (super.noSuchMethod(
         Invocation.method(
           #fetchAllDoctors,
           [],
         ),
-        returnValue: _i6.Future<List<_i12.AppUser>>.value(<_i12.AppUser>[]),
+        returnValue: _i6.Future<List<_i14.AppUser>>.value(<_i14.AppUser>[]),
         returnValueForMissingStub:
-            _i6.Future<List<_i12.AppUser>>.value(<_i12.AppUser>[]),
-      ) as _i6.Future<List<_i12.AppUser>>);
+            _i6.Future<List<_i14.AppUser>>.value(<_i14.AppUser>[]),
+      ) as _i6.Future<List<_i14.AppUser>>);
 
   @override
-  _i6.Future<_i12.AppUser?> fetchUserById(String? uid) => (super.noSuchMethod(
+  _i6.Future<_i14.AppUser?> fetchUserById(String? uid) => (super.noSuchMethod(
         Invocation.method(
           #fetchUserById,
           [uid],
         ),
-        returnValue: _i6.Future<_i12.AppUser?>.value(),
-        returnValueForMissingStub: _i6.Future<_i12.AppUser?>.value(),
-      ) as _i6.Future<_i12.AppUser?>);
+        returnValue: _i6.Future<_i14.AppUser?>.value(),
+        returnValueForMissingStub: _i6.Future<_i14.AppUser?>.value(),
+      ) as _i6.Future<_i14.AppUser?>);
 
   @override
   _i6.Future<void> sendResultsToDoctor({
@@ -954,33 +969,33 @@ class MockReportsService extends _i1.Mock implements _i11.ReportsService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Stream<List<_i13.PatientReport>> watchReportsForPatient(
+  _i6.Stream<List<_i15.PatientReport>> watchReportsForPatient(
           String? patientId) =>
       (super.noSuchMethod(
         Invocation.method(
           #watchReportsForPatient,
           [patientId],
         ),
-        returnValue: _i6.Stream<List<_i13.PatientReport>>.empty(),
-        returnValueForMissingStub: _i6.Stream<List<_i13.PatientReport>>.empty(),
-      ) as _i6.Stream<List<_i13.PatientReport>>);
+        returnValue: _i6.Stream<List<_i15.PatientReport>>.empty(),
+        returnValueForMissingStub: _i6.Stream<List<_i15.PatientReport>>.empty(),
+      ) as _i6.Stream<List<_i15.PatientReport>>);
 
   @override
-  _i6.Stream<List<_i13.PatientReport>> watchReportsForDoctor(
+  _i6.Stream<List<_i15.PatientReport>> watchReportsForDoctor(
           String? doctorId) =>
       (super.noSuchMethod(
         Invocation.method(
           #watchReportsForDoctor,
           [doctorId],
         ),
-        returnValue: _i6.Stream<List<_i13.PatientReport>>.empty(),
-        returnValueForMissingStub: _i6.Stream<List<_i13.PatientReport>>.empty(),
-      ) as _i6.Stream<List<_i13.PatientReport>>);
+        returnValue: _i6.Stream<List<_i15.PatientReport>>.empty(),
+        returnValueForMissingStub: _i6.Stream<List<_i15.PatientReport>>.empty(),
+      ) as _i6.Stream<List<_i15.PatientReport>>);
 
   @override
   _i6.Future<void> addNoteToReport({
     required String? reportId,
-    required _i14.DoctorNote? note,
+    required _i16.DoctorNote? note,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -990,6 +1005,70 @@ class MockReportsService extends _i1.Mock implements _i11.ReportsService {
             #reportId: reportId,
             #note: note,
           },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+}
+
+/// A class which mocks [StorageService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockStorageService extends _i1.Mock implements _i17.StorageService {
+  @override
+  _i6.Future<void> uploadDrawing(
+    _i11.Uint8List? pngBytes,
+    String? userId,
+    String? testId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadDrawing,
+          [
+            pngBytes,
+            userId,
+            testId,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> uploadAudio(
+    _i12.File? wavFile,
+    String? userId,
+    String? testId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadAudio,
+          [
+            wavFile,
+            userId,
+            testId,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> uploadCompressedJson(
+    Map<String, dynamic>? rawData,
+    String? userId,
+    String? testType,
+    String? testId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadCompressedJson,
+          [
+            rawData,
+            userId,
+            testType,
+            testId,
+          ],
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),

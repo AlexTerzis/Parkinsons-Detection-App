@@ -25,6 +25,10 @@ class TremorTestViewModel extends BaseViewModel {
   List<double> gyroY = [];
   List<double> gyroZ = [];
 
+  // Raw sensor capture for upload
+  final List<List<double>> _accData = [];
+  final List<List<double>> _gyroData = [];
+
   List<double> spectrumX1 = [];
   List<double> spectrumY1 = [];
   List<double> spectrumZ1 = [];
@@ -72,6 +76,8 @@ class TremorTestViewModel extends BaseViewModel {
     _score2 = 0.0;
     tremorStatus = 'Starting test...';
     _phase = 0;
+    _accData.clear();
+    _gyroData.clear();
     isTesting = true;
     notifyListeners();
   }
@@ -134,6 +140,7 @@ class TremorTestViewModel extends BaseViewModel {
       accX.add(event.x);
       accY.add(event.y);
       accZ.add(event.z);
+      _accData.add([event.x, event.y, event.z]);
       notifyListeners();
     });
 
@@ -144,6 +151,7 @@ class TremorTestViewModel extends BaseViewModel {
       gyroX.add(event.x);
       gyroY.add(event.y);
       gyroZ.add(event.z);
+      _gyroData.add([event.x, event.y, event.z]);
     });
   }
 
@@ -232,7 +240,13 @@ class TremorTestViewModel extends BaseViewModel {
       performedAt: DateTime.now(),
       score: score.clamp(0, 1),
     );
-    await _tests.addResult(result);
+    await _tests.addResult(
+      result: result,
+      sensorData: {
+        'accelerometer': _accData,
+        'gyroscope': _gyroData,
+      },
+    );
   }
   
   @override

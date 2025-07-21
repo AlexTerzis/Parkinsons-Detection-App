@@ -5,9 +5,9 @@ import 'package:stacked_services/stacked_services.dart';
 import 'package:parkinsondetetion/services/authentication_service.dart';
 import 'package:parkinsondetetion/services/test_service.dart';
 import 'package:parkinsondetetion/services/reports_service.dart';
-// @stacked-import
-
+import 'package:parkinsondetetion/services/storage_service.dart';
 import 'test_helpers.mocks.dart';
+// @stacked-import
 
 @GenerateMocks(
   [],
@@ -18,6 +18,7 @@ import 'test_helpers.mocks.dart';
     MockSpec<AuthenticationService>(onMissingStub: OnMissingStub.returnDefault),
     MockSpec<TestService>(onMissingStub: OnMissingStub.returnDefault),
     MockSpec<ReportsService>(onMissingStub: OnMissingStub.returnDefault),
+    MockSpec<StorageService>(onMissingStub: OnMissingStub.returnDefault),
 // @stacked-mock-spec
   ],
 )
@@ -28,6 +29,7 @@ void registerServices() {
   getAndRegisterAuthenticationService();
   getAndRegisterTestService();
   getAndRegisterReportsService();
+  getAndRegisterStorageService();
 // @stacked-mock-register
 }
 
@@ -103,6 +105,13 @@ MockReportsService getAndRegisterReportsService() {
   _removeRegistrationIfExists<ReportsService>();
   final service = MockReportsService();
   locator.registerSingleton<ReportsService>(service);
+  return service;
+}
+
+MockStorageService getAndRegisterStorageService() {
+  _removeRegistrationIfExists<StorageService>();
+  final service = MockStorageService();
+  locator.registerSingleton<StorageService>(service);
   return service;
 }
 // @stacked-mock-create

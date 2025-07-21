@@ -29,7 +29,8 @@ class TapTestViewModel extends BaseViewModel {
   Timer? _timer;
   final List<DateTime> _tapTimes = [];
   final List<Map<String, DateTime>> _tapPairs = [];
-
+  final List<Map<String, DateTime>> _historyHand1 = [];
+  final List<Map<String, DateTime>> _historyHand2 = [];
   late final Interpreter _interpreter;
   bool _modelLoaded = false;
 
@@ -72,6 +73,8 @@ class TapTestViewModel extends BaseViewModel {
   void _reset() {
     resultHand1 = '';
     resultHand2 = '';
+    _historyHand1.clear();
+    _historyHand2.clear();
     _score1 = 0.0;
     _score2 = 0.0;
     status = 'Starting test...';
@@ -93,6 +96,7 @@ class TapTestViewModel extends BaseViewModel {
         List.of(_tapPairs),
         storeInHand1: true,
       );
+      _historyHand1.addAll(List.of(_tapPairs));
       _startPause();
     });
   }
@@ -120,6 +124,7 @@ class TapTestViewModel extends BaseViewModel {
         List.of(_tapPairs),
         storeInHand1: false,
       );
+      _historyHand2.addAll(List.of(_tapPairs));
       status = 'Test completed';
       isTesting = false;
       _phase = 3;
@@ -226,7 +231,23 @@ class TapTestViewModel extends BaseViewModel {
       performedAt: DateTime.now(),
       score: score.clamp(0, 1),
     );
-    await _tests.addResult(result);
+    final hand1 = _historyHand1
+        .map((p) => {
+              'down': p['down']?.millisecondsSinceEpoch,
+              'up': p['up']?.millisecondsSinceEpoch,
+            })
+        .toList();
+    final hand2 = _historyHand2
+        .map((p) => {
+              'down': p['down']?.millisecondsSinceEpoch,
+              'up': p['up']?.millisecondsSinceEpoch,
+            })
+        .toList();
+
+    await _tests.addResult(
+      result: result,
+      sensorData: {'hand1': hand1, 'hand2': hand2},
+    );
   }
 
   void stopTest() {

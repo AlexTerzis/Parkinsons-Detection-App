@@ -1,15 +1,23 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/test_result.dart';
 import '../models/test_type.dart';
+import 'storage_service.dart';
 
 class TestService {
   final FirebaseFirestore _firestore;
+  final StorageService _storage;
 
-  TestService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  TestService({
+    FirebaseFirestore? firestore,
+    StorageService? storage,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _storage = storage ?? StorageService();
 
   /// Returns the collection for a specific test type under a user's responses
   /// substructure. The new layout stores each category under
@@ -39,7 +47,7 @@ class TestService {
   /// Watches the patient's response collection for live updates.
   Stream<List<TestResult>> watchResultsForPatient(String patientId) {
     final controller = StreamController<List<TestResult>>();
-    final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+        final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
 
     void emit() async {
       final list = await fetchResultsForPatient(patientId);
@@ -64,9 +72,58 @@ class TestService {
     return controller.stream;
   }
 
-  /// Saves a new [TestResult] document under the current user's collection.
-  Future<void> addResult(TestResult result) {
-    return _categoryCol(result.patientId, result.type).add(result.toJson());
+  /// Saves a new [TestResult] document along with optional raw data assets.
+  Future<void> addResult({
+    required TestResult result,
+    Uint8List? drawingPng,
+    File? audioWav,
+    Map<String, dynamic>? sensorData,
+  }) async {
+    final colRef = _categoryCol(result.patientId, result.type);
+    final docRef = colRef.doc();
+    final testId = docRef.id;
+
+    // Upload any provided raw asset first so failures don't create dangling docs.
+    switch (result.type) {
+      case TestType.drawing:
+        if (drawingPng != null) {
+          await _storage.uploadDrawing(drawingPng, result.patientId, testId);
+        }
+        break;
+      case TestType.voice:
+        if (audioWav != null) {
+          await _storage.uploadAudio(audioWav, result.patientId, testId);
+          try {
+            await audioWav.delete();
+          } catch (_) {}
+        }
+        break;
+      case TestType.tremor:
+      case TestType.tap:
+        if (sensorData != null) {
+          await _storage.uploadCompressedJson(
+            sensorData,
+            result.patientId,
+            result.type.name,
+            testId,
+          );
+        }
+        break;
+      case TestType.cameraDetection:
+        if (sensorData != null) {
+          await _storage.uploadCompressedJson(
+            sensorData,
+            result.patientId,
+            result.type.name,
+            testId,
+          );
+        }
+        break;
+      case TestType.questionnaire:
+        break;
+    }
+
+    await docRef.set(result.toJson());
   }
   /// Creates or updates the questionnaire result for a patient.
   ///

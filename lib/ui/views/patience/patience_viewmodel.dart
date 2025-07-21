@@ -239,7 +239,7 @@ class PatienceViewModel extends BaseViewModel {
       score: (DateTime.now().millisecondsSinceEpoch % 100) / 100.0,
     );
 
-    await _testService.addResult(res);
+    await _testService.addResult(result: res);
   }
 
   /// Update the number of days used for the moving average
@@ -323,6 +323,12 @@ class PatienceViewModel extends BaseViewModel {
     // Persist the confidence score so it appears in history.
     final uid = _authService.currentUser?.uid;
     if (uid != null) {
+      final pngBytes = source is ui.Image
+          ? (await source
+                  .toByteData(format: ui.ImageByteFormat.png))!
+              .buffer
+              .asUint8List()
+          : await (source as File).readAsBytes();
       final result = TestResult(
         id: '',
         patientId: uid,
@@ -331,7 +337,15 @@ class PatienceViewModel extends BaseViewModel {
         score: prediction.confidence.clamp(0, 1),
         data: {'label': prediction.label},
       );
-      await _testService.addResult(result);
+      await _testService.addResult(
+        result: result,
+        drawingPng: pngBytes,
+      );
+      if (source is File) {
+        try {
+          await source.delete();
+        } catch (_) {}
+      }
     }
 
      final ctx = locator<NavigationService>().navigatorKey!.currentContext;

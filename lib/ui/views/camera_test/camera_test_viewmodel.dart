@@ -54,7 +54,7 @@ class CameraTestViewModel extends BaseViewModel {
 
     final Map<String, dynamic> metrics = _analyzeFrames();
     final double score = metrics['parkinson_probability'] as double;
-
+    final raw = _collectLandmarks();
     final result = TestResult(
       id: '',
       patientId: _auth.currentUser!.uid,
@@ -63,8 +63,10 @@ class CameraTestViewModel extends BaseViewModel {
       score: score,
       data: metrics,
     );
-
-    await _tests.addResult(result);
+    await _tests.addResult(
+      result: result,
+      sensorData: raw,
+    );
     setBusy(false);
     locator<NavigationService>().back(result: true);
   }
@@ -125,5 +127,23 @@ class CameraTestViewModel extends BaseViewModel {
       'asymmetry': asymmetry,
       'parkinson_probability': probability.clamp(0, 1),
     };
+  }
+   /// Converts [_frames] into a simple JSON structure for upload.
+  Map<String, dynamic> _collectLandmarks() {
+    final left = <List<double>>[];
+    final right = <List<double>>[];
+    for (final frame in _frames) {
+      for (final hand in frame.hands) {
+        for (final lm in hand.landmarks) {
+          final triple = [lm.x, lm.y, lm.z];
+          if (hand.handedness == 'Left') {
+            left.add(triple);
+          } else if (hand.handedness == 'Right') {
+            right.add(triple);
+          }
+        }
+      }
+    }
+    return {'leftHand': left, 'rightHand': right};
   }
 }

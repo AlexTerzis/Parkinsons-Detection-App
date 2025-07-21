@@ -52,7 +52,7 @@ class VoiceTestViewModel extends BaseViewModel {
     await _recorder.start(config, path: path);
 
     secondsLeft = 5;
-    isRecording = true;
+       isRecording = true;
     status = 'Recording...';
     notifyListeners();
 
@@ -77,7 +77,8 @@ class VoiceTestViewModel extends BaseViewModel {
 
     if (path != null) {
       // Send the audio to the backend and retrieve the PD probability
-      final pdScore = await _api.predict(File(path));
+      final wavFile = File(path);
+      final pdScore = await _api.predict(wavFile);
 
       _result = (pdScore * 100).toStringAsFixed(1);
 
@@ -86,7 +87,7 @@ class VoiceTestViewModel extends BaseViewModel {
           : '✅ Normal voice ($_result%)';
 
       notifyListeners();
-      await _saveResult(pdScore); // persist probability to Firestore
+      await _saveResult(pdScore, wavFile); // persist probability and audio
     } else {
       status = 'Recording failed';
       notifyListeners();
@@ -94,7 +95,7 @@ class VoiceTestViewModel extends BaseViewModel {
   }
 
   /// Saves the test result to Firebase
-  Future<void> _saveResult(double score) async {
+  Future<void> _saveResult(double score, File wavFile) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
@@ -106,7 +107,7 @@ class VoiceTestViewModel extends BaseViewModel {
       score: score.clamp(0, 1),
     );
 
-    await _tests.addResult(result);
+    await _tests.addResult(result: result, audioWav: wavFile);
   }
 
   @override
