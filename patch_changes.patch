@@ -1,1124 +1,187 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/app/app.locator.dart b/lib/app/app.locator.dart
-index 00956e35bbb3fdb5a4365ad48264fd2c0fcc78be..66a7fd51d02c4936e38d62701c963b7e715751e0 100644
---- a/lib/app/app.locator.dart
-+++ b/lib/app/app.locator.dart
-@@ -1,39 +1,41 @@
- // GENERATED CODE - DO NOT MODIFY BY HAND
+diff --git a/firestore.rules b/firestore.rules
+index ad0251137cb4bc6f9e3555baf8a890c78b624946..1f338f02ff1e41531c3ad1cb2d9890d07c012383 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -1,15 +1,16 @@
+ rules_version = '2';
+ service cloud.firestore {
+   match /databases/{database}/documents {
+-    // Each user has a private `responses` subcollection under their UID.
+-    // Only the authenticated owner can read or write within this path.
+-    match /users/{userId}/responses/{respId} {
++    // Each user has private response collections separated by category under
++    // `/users/{uid}/responses/<category>/<docId>`. Only the authenticated owner
++    // may read or write within their own tree.
++    match /users/{userId}/responses/{category}/{docId} {
+       allow read, write: if request.auth != null && request.auth.uid == userId;
+     }
  
- // **************************************************************************
- // StackedLocatorGenerator
- // **************************************************************************
- 
- // ignore_for_file: public_member_api_docs, implementation_imports, depend_on_referenced_packages
- 
- import 'package:stacked_services/src/bottom_sheet/bottom_sheet_service.dart';
- import 'package:stacked_services/src/dialog/dialog_service.dart';
- import 'package:stacked_services/src/navigation/navigation_service.dart';
- import 'package:stacked_shared/stacked_shared.dart';
- 
- import '../services/authentication_service.dart';
- import '../services/raison_api_service.dart';
- import '../services/reports_service.dart';
- import '../services/test_service.dart';
- import '../services/voice_api_service.dart';
-+import '../services/hand_metrics.dart';
- 
- final locator = StackedLocator.instance;
- 
- Future<void> setupLocator({
-   String? environment,
-   EnvironmentFilter? environmentFilter,
- }) async {
- // Register environments
-   locator.registerEnvironment(
-       environment: environment, environmentFilter: environmentFilter);
- 
- // Register dependencies
-   locator.registerLazySingleton(() => BottomSheetService());
-   locator.registerLazySingleton(() => DialogService());
-   locator.registerLazySingleton(() => NavigationService());
-   locator.registerLazySingleton(() => AuthenticationService());
-   locator.registerLazySingleton(() => TestService());
-   locator.registerLazySingleton(() => ReportsService());
-   locator.registerLazySingleton(() => VoiceApiService());
-   locator.registerLazySingleton(() => RaisonApiService());
-+  locator.registerLazySingleton(() => HandMetrics(speedVarScale: 12.0, accelVarScale: 8.0, jerkVarScale: 5.0));
+     // Deny all other access by default to keep the database locked down.
+     match /{document=**} {
+       allow read, write: if false;
+     }
+   }
  }
-diff --git a/lib/models/landmark_point.dart b/lib/models/landmark_point.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..906cc7eb2e17326f398fdbf464e0ddc3ae377184
---- /dev/null
-+++ b/lib/models/landmark_point.dart
-@@ -0,0 +1,20 @@
-+/// Simple container for a single landmark coordinate.
-+/// All values are expected to be normalized (0-1 range) as produced by
-+/// MediaPipe.
-+class LandmarkPoint {
-+  /// Horizontal position.
-+  final double x;
-+  /// Vertical position.
-+  final double y;
-+  /// Depth coordinate.
-+  final double z;
-+  /// Optional confidence score from the detector.
-+  final double score;
+\ No newline at end of file
+diff --git a/lib/services/test_service.dart b/lib/services/test_service.dart
+index 968001872c3d495e5a6e546325301dd3ce7ab81f..53e7fe148302ae51ffa9844d6b242ef3f62120ab 100644
+--- a/lib/services/test_service.dart
++++ b/lib/services/test_service.dart
+@@ -1,88 +1,134 @@
++import 'dart:async';
 +
-+  const LandmarkPoint({
-+    required this.x,
-+    required this.y,
-+    required this.z,
-+    this.score = 0,
-+  });
-+}
-diff --git a/lib/services/hand_metrics.dart b/lib/services/hand_metrics.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..8f1e289e9fe912f484aae1c8ca440129110aea1c
---- /dev/null
-+++ b/lib/services/hand_metrics.dart
-@@ -0,0 +1,181 @@
-+import 'dart:math' as math;
-+
-+import '../models/landmark_point.dart';
-+
-+/// Helper class for analyzing sequences of hand landmarks.
-+///
-+/// The landmark data expected by these utilities is a list where each entry
-+/// represents one landmark (e.g. thumb tip) tracked over time. Every landmark
-+/// is itself a list of [LandmarkPoint]s containing `x`, `y` and `z` coordinates recorded
-+/// for each frame:
-+///
-+/// ```
-+/// [
-+///   [LandmarkPoint(x: 0.1, y: 0.2, z: 0.0), LandmarkPoint(x: 0.1, y: 0.21, z: 0.02)],
-+///   [LandmarkPoint(x: 0.5, y: 0.4, z: -0.1), ...],
-+///   ... // one list per landmark
-+/// ]
-+/// ```
-+///
-+/// This mirrors the structure assembled in `CameraTestViewModel` and
-+/// `HandLandmarkerScreen` where the same landmark is tracked across multiple
-+/// frames.
-+class HandMetrics {
-+  /// Scale factors applied to variance metrics so the resulting values roughly
-+  /// map into a 0-1 range. They can be tuned per instance when the service is
-+  /// registered.
-+  final double speedVarScale;
-+  final double accelVarScale;
-+  final double jerkVarScale;
-+
-+  const HandMetrics({
-+    this.speedVarScale = 10.0,
-+    this.accelVarScale = 10.0,
-+    this.jerkVarScale = 10.0,
-+  });
-+
-+  /// 3D distance between two landmark points.
-+  double _distance(LandmarkPoint a, LandmarkPoint b) {
-+    final dx = a.x - b.x;
-+    final dy = a.y - b.y;
-+    final dz = a.z - b.z;
-+    return math.sqrt(dx * dx + dy * dy + dz * dz);
-+  }
-+
-+  /// Returns the variance of [data] or `0` if not enough samples are present.
-+  double _variance(List<double> data) {
-+    if (data.length < 2) return 0;
-+    final mean = data.reduce((a, b) => a + b) / data.length;
-+    final sqSum = data.map((d) => (d - mean) * (d - mean)).reduce((a, b) => a + b);
-+    return sqSum / data.length;
-+  }
-+
-+  /// Calculates speed variance across all provided landmark trajectories.
-+  /// The resulting value is scaled to roughly fall within 0-1.
-+  double speedVarianceAll(List<List<LandmarkPoint>> landmarks) {
-+    final List<double> displacements = [];
-+    for (final points in landmarks) {
-+      for (int i = 1; i < points.length; i++) {
-+        displacements.add(_distance(points[i], points[i - 1]));
-+      }
-+    }
-+    return _variance(displacements) * speedVarScale;
-+  }
-+
-+  /// Calculates acceleration variance across all trajectories.
-+  ///
-+  /// Acceleration is approximated by the difference between consecutive
-+  /// displacements and therefore assumes roughly constant frame intervals.
-+  double accelerationVarianceAll(List<List<LandmarkPoint>> landmarks) {
-+    final List<double> accels = [];
-+    for (final points in landmarks) {
-+      if (points.length < 3) continue;
-+      final List<double> displacements = [];
-+      for (int i = 1; i < points.length; i++) {
-+        displacements.add(_distance(points[i], points[i - 1]));
-+      }
-+      for (int i = 1; i < displacements.length; i++) {
-+        accels.add(displacements[i] - displacements[i - 1]);
-+      }
-+    }
-+    return _variance(accels) * accelVarScale;
-+  }
-+
-+  /// Calculates jerk variance across all trajectories.
-+  ///
-+  /// Jerk is derived from the change in acceleration, again assuming
-+  /// a constant sampling rate between frames.
-+  double jerkVarianceAll(List<List<LandmarkPoint>> landmarks) {
-+    final List<double> jerks = [];
-+    for (final points in landmarks) {
-+      if (points.length < 4) continue;
-+      final List<double> displacements = [];
-+      for (int i = 1; i < points.length; i++) {
-+        displacements.add(_distance(points[i], points[i - 1]));
-+      }
-+      final List<double> accels = [];
-+      for (int i = 1; i < displacements.length; i++) {
-+        accels.add(displacements[i] - displacements[i - 1]);
-+      }
-+      for (int i = 1; i < accels.length; i++) {
-+        jerks.add(accels[i] - accels[i - 1]);
-+      }
-+    }
-+    return _variance(jerks) * jerkVarScale;
-+  }
-+
-+  /// Calculates tremor by averaging the standard deviation of x, y and z
-+  /// coordinates for each landmark trajectory.
-+  double tremorAll(List<List<LandmarkPoint>> landmarks) {
-+    final List<double> stdDevs = [];
-+    for (final points in landmarks) {
-+      if (points.length < 3) continue;
-+      final xs = points.map((p) => p.x).toList();
-+      final ys = points.map((p) => p.y).toList();
-+      final zs = points.map((p) => p.z).toList();
-+
-+      final stdX = math.sqrt(_variance(xs));
-+      final stdY = math.sqrt(_variance(ys));
-+      final stdZ = math.sqrt(_variance(zs));
-+
-+      stdDevs.add((stdX + stdY + stdZ) / 3);
-+    }
-+    if (stdDevs.isEmpty) return 0;
-+    return stdDevs.reduce((a, b) => a + b) / stdDevs.length;
-+  }
-+
-+  /// Computes the average distance between the index fingertip (8) and
-+  /// pinky fingertip (20) across all frames. Returns `0` if data is missing.
-+  double fingerSpread(List<List<LandmarkPoint>> landmarks) {
-+    if (landmarks.length <= 20) return 0;
-+    final indexPoints = landmarks[8];
-+    final pinkyPoints = landmarks[20];
-+    final int len = math.min(indexPoints.length, pinkyPoints.length);
-+    if (len == 0) return 0;
-+    double total = 0;
-+    for (int i = 0; i < len; i++) {
-+      total += _distance(indexPoints[i], pinkyPoints[i]);
-+    }
-+    return total / len;
-+  }
-+
-+  /// Returns a map from handedness ("Left" or "Right") to that hand's landmark list.
-+  Map<String, List<LandmarkPoint>> parseRawHands(List<dynamic> raw) {
-+    final out = <String, List<LandmarkPoint>>{};
-+    for (final handRaw in raw) {
-+      if (handRaw is Map) {
-+        final map = Map<String, dynamic>.from(handRaw);
-+        final side = map['handedness'] as String? ?? 'Unknown';
-+        final lms = map['landmarks'] as List?;
-+        if (lms != null) {
-+          final points = lms.map((lm) {
-+            final m = Map<String, dynamic>.from(lm as Map);
-+            return LandmarkPoint(
-+              x: (m['x'] ?? 0).toDouble(),
-+              y: (m['y'] ?? 0).toDouble(),
-+              z: (m['z'] ?? 0).toDouble(),
-+              score: (m['score'] ?? 0).toDouble(),
-+            );
-+          }).toList();
-+          out[side] = points;
-+        }
-+      }
-+    }
-+    return out;
-+  }
-+
-+  /// Utility to build a single landmark trajectory from frame history. Frames
-+  /// where the landmark is missing are skipped.
-+  List<LandmarkPoint> extractTrajectory(
-+      List<List<LandmarkPoint>?> history, int landmarkIndex) {
-+    final List<LandmarkPoint> points = [];
-+    for (final frame in history) {
-+      if (frame != null && frame.length > landmarkIndex) {
-+        final LandmarkPoint p = frame[landmarkIndex];
-+        points.add(p);
-+      }
-+    }
-+    return points;
-+  }
-+}
-+
-diff --git a/lib/services/parkinson_config.dart b/lib/services/parkinson_config.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..c4d7bb5adac1ffbdf8050a4af3601a5a480aec78
---- /dev/null
-+++ b/lib/services/parkinson_config.dart
-@@ -0,0 +1,9 @@
-+class ParkinsonConfig {
-+  static const double symptomThreshold = 0.6;
-+  static const double wSpeed = 0.20;
-+  static const double wTremor = 0.20;
-+  static const double wAccel = 0.15;
-+  static const double wJerk = 0.15;
-+  static const double wSpread = 0.10;
-+  static const double wAsym = 0.20;
-+}
-diff --git a/lib/ui/views/camera_test/camera_test_viewmodel.dart b/lib/ui/views/camera_test/camera_test_viewmodel.dart
-index 6136d809da0bbd54c98682a50a5e60ff475590e4..25000c7cb473dca67d2cce2bed3a16295c58813f 100644
---- a/lib/ui/views/camera_test/camera_test_viewmodel.dart
-+++ b/lib/ui/views/camera_test/camera_test_viewmodel.dart
-@@ -1,41 +1,46 @@
- import 'dart:async';
- import 'dart:math' as math;
+ import 'package:cloud_firestore/cloud_firestore.dart';
  
-+import '../../../services/hand_metrics.dart';
-+import '../../../models/landmark_point.dart';
-+import '../../../services/parkinson_config.dart';
+ import '../models/test_result.dart';
+ import '../models/test_type.dart';
+ 
+ class TestService {
+   final FirebaseFirestore _firestore;
+ 
+   TestService({FirebaseFirestore? firestore})
+       : _firestore = firestore ?? FirebaseFirestore.instance;
+ 
+-  /// Returns a reference to the questionnaire responses collection for a
+-  /// specific user. The path is `/users/{uid}/responses` so that security rules
+-  /// can restrict access on a per-user basis.
+-  CollectionReference<Map<String, dynamic>> _responsesCol(String uid) =>
+-      _firestore.collection('users').doc(uid).collection('responses');
++  /// Returns the collection for a specific test type under a user's responses
++  /// substructure. The new layout stores each category under
++  /// `/users/{uid}/responses/<category>`.
++  CollectionReference<Map<String, dynamic>> _categoryCol(
++          String uid, TestType type) =>
++      _firestore
++          .collection('users')
++          .doc(uid)
++          .collection('responses')
++          .collection(_typeToPath(type));
+ 
+   /// Loads all results for the given patient ordered by date. Each document is
+   /// converted to a [TestResult] model.
+   Future<List<TestResult>> fetchResultsForPatient(String patientId) async {
+-    final QuerySnapshot<Map<String, dynamic>> snap = await _responsesCol(patientId)
+-        .orderBy('performedAt', descending: true)
+-        .get();
+-
+-    return snap.docs
+-        .map((doc) => TestResult.fromJson(doc.data(), doc.id))
+-        .toList();
++    final List<TestResult> results = [];
++    for (final type in TestType.values) {
++      final snap = await _categoryCol(patientId, type)
++          .orderBy('performedAt', descending: true)
++          .get();
++      results.addAll(
++          snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
++    }
++    results.sort((a, b) => b.performedAt.compareTo(a.performedAt));
++    return results;
+   }
+ 
+   /// Watches the patient's response collection for live updates.
+   Stream<List<TestResult>> watchResultsForPatient(String patientId) {
+-    return _responsesCol(patientId)
+-        .orderBy('performedAt', descending: true)
+-        .snapshots()
+-        .map((snap) =>
+-            snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
++    final controller = StreamController<List<TestResult>>();
++    final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
 +
- import 'package:stacked/stacked.dart';
- import 'package:stacked_services/stacked_services.dart';
++    void emit() async {
++      final list = await fetchResultsForPatient(patientId);
++      if (!controller.isClosed) controller.add(list);
++    }
++
++    for (final type in TestType.values) {
++      final sub = _categoryCol(patientId, type)
++          .orderBy('performedAt', descending: true)
++          .snapshots()
++          .listen((_) => emit());
++      subs.add(sub);
++    }
++
++    controller.onCancel = () {
++      for (final s in subs) {
++        s.cancel();
++      }
++    };
++
++    emit();
++    return controller.stream;
+   }
  
- import '../../../app/app.locator.dart';
- import '../../../services/test_service.dart';
- import '../../../services/authentication_service.dart';
- import '../../../models/test_result.dart';
- import '../../../models/test_type.dart';
- import '../patience/hand_landmarker_screen.dart';
+   /// Saves a new [TestResult] document under the current user's collection.
+   Future<void> addResult(TestResult result) {
+-    return _responsesCol(result.patientId).add(result.toJson());
++    return _categoryCol(result.patientId, result.type).add(result.toJson());
+   }
+   /// Creates or updates the questionnaire result for a patient.
+   ///
+   /// Each user only keeps a single questionnaire document identified by the
+   /// fixed id `questionnaire`. When a questionnaire is submitted again the
+   /// previous data is overwritten instead of creating another document. This
+   /// allows the UI to simply render the most recent answers without cluttering
+   /// the collection with historical entries.
+   Future<void> setQuestionnaireResult(TestResult result) {
+-    return _responsesCol(result.patientId)
++    return _categoryCol(result.patientId, result.type)
+         .doc('questionnaire')
+         .set(result.toJson());
+   }
+   Map<String, double> computeSummary(List<TestResult> results) {
+     if (results.isEmpty) return {};
  
- class CameraTestViewModel extends BaseViewModel {
-   final TestService _tests = locator<TestService>();
-   final AuthenticationService _auth = locator<AuthenticationService>();
-+  final HandMetrics _metrics = locator<HandMetrics>();
+     final Map<TestType, List<TestResult>> grouped = {};
+     for (var r in results) {
+       grouped.putIfAbsent(r.type, () => []).add(r);
+     }
  
-   int countdown = 29;
-   late Timer _timer;
-   final List<FrameData> _frames = [];
-   bool _handsDetected = false;
- 
-   void start() {
-     countdown = 29;
-     _frames.clear();
-     _handsDetected = false;
- 
-     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-       countdown--;
-       notifyListeners();
-       if (countdown == 0) {
-         t.cancel();
-         _finish();
-       }
+     final Map<String, double> summary = {};
+     grouped.forEach((type, list) {
+       final double avg =
+           list.map((e) => e.score).reduce((a, b) => a + b) / list.length;
+       summary[_typeToLabel(type)] = avg;
      });
+     return summary;
    }
  
-   void onFrame(FrameData frame) {
-     _frames.add(frame);
-     if (frame.hands.isNotEmpty) _handsDetected = true;
-   }
-@@ -43,120 +48,82 @@ class CameraTestViewModel extends BaseViewModel {
-   Future<void> _finish() async {
-     if (!_handsDetected) {
-       setBusy(false);
-       locator<NavigationService>().back(result: false);
-       return;
+   String _typeToLabel(TestType type) {
+     switch (type) {
+       case TestType.drawing:
+         return 'Drawing';
+       case TestType.questionnaire:
+         return 'Questionnaire';
+       case TestType.tremor:
+         return 'Tremor';
+       case TestType.tap:
+         return 'Tap';
+       case TestType.voice:
+         return 'Voice';
+       case TestType.cameraDetection:
+         return 'Camera';
      }
- 
-     final Map<String, dynamic> metrics = _analyzeFrames();
-     final double score = metrics['parkinson_probability'] as double;
- 
-     final result = TestResult(
-       id: '',
-       patientId: _auth.currentUser!.uid,
-       type: TestType.cameraDetection,
-       performedAt: DateTime.now(),
-       score: score,
-       data: metrics,
-     );
- 
-     await _tests.addResult(result);
-     setBusy(false);
-     locator<NavigationService>().back(result: true);
    }
- 
-   Map<String, dynamic> _analyzeFrames() {
--    // Prepare data structures for 21 landmarks for each hand over all frames
--    final leftHandLandmarks = List.generate(21, (_) => <Map<String, double>>[]);
--    final rightHandLandmarks = List.generate(21, (_) => <Map<String, double>>[]);
-+    final leftHandLandmarks = List.generate(21, (_) => <LandmarkPoint>[]);
-+    final rightHandLandmarks = List.generate(21, (_) => <LandmarkPoint>[]);
- 
-     for (final frame in _frames) {
-       for (final hand in frame.hands) {
-         for (int i = 0; i < 21; i++) {
-           if (i < hand.landmarks.length) {
-             if (hand.handedness == 'Left') {
-               leftHandLandmarks[i].add(hand.landmarks[i]);
-             } else if (hand.handedness == 'Right') {
-               rightHandLandmarks[i].add(hand.landmarks[i]);
-             }
-           }
-         }
-       }
-     }
- 
--    double speedVarL = _computeSpeedVariance3D(leftHandLandmarks);
--    double speedVarR = _computeSpeedVariance3D(rightHandLandmarks);
--
--    double tremorL = _computeTremor3D(leftHandLandmarks);
--    double tremorR = _computeTremor3D(rightHandLandmarks);
-+    double speedVarL = _metrics.speedVarianceAll(leftHandLandmarks);
-+    double speedVarR = _metrics.speedVarianceAll(rightHandLandmarks);
-+    double accelL = _metrics.accelerationVarianceAll(leftHandLandmarks);
-+    double accelR = _metrics.accelerationVarianceAll(rightHandLandmarks);
-+    double jerkL = _metrics.jerkVarianceAll(leftHandLandmarks);
-+    double jerkR = _metrics.jerkVarianceAll(rightHandLandmarks);
-+    double spreadL = _metrics.fingerSpread(leftHandLandmarks);
-+    double spreadR = _metrics.fingerSpread(rightHandLandmarks);
-+    double tremorL = _metrics.tremorAll(leftHandLandmarks);
-+    double tremorR = _metrics.tremorAll(rightHandLandmarks);
- 
-     double asymmetry = (speedVarL - speedVarR).abs();
- 
--    final double probability = ((speedVarL + speedVarR) / 2 * 0.4) +
--        ((tremorL + tremorR) / 2 * 0.4) +
--        (asymmetry * 0.2);
-+    double avg(double a, double b) => (a + b) / 2;
-+    final double probability =
-+        ParkinsonConfig.wSpeed * avg(speedVarL, speedVarR) +
-+        ParkinsonConfig.wTremor * avg(tremorL, tremorR) +
-+        ParkinsonConfig.wAccel * avg(accelL, accelR) +
-+        ParkinsonConfig.wJerk * avg(jerkL, jerkR) +
-+        ParkinsonConfig.wSpread * avg(spreadL, spreadR) +
-+        ParkinsonConfig.wAsym * asymmetry;
- 
-     return {
-       'frames': _frames.length,
-       'hands_detected_frames': _frames.where((f) => f.hands.isNotEmpty).length,
-       'speed_variance_left': speedVarL,
-       'speed_variance_right': speedVarR,
-+      'accel_variance_left': accelL,
-+      'accel_variance_right': accelR,
-+      'jerk_variance_left': jerkL,
-+      'jerk_variance_right': jerkR,
-+      'finger_spread_left': spreadL,
-+      'finger_spread_right': spreadR,
-       'tremor_left': tremorL,
-       'tremor_right': tremorR,
-       'asymmetry': asymmetry,
-       'parkinson_probability': probability.clamp(0, 1),
-     };
-   }
--
--  // 3D distance between two points
--  double _distance3D(Map<String, double> a, Map<String, double> b) {
--    final dx = (a['x'] ?? 0) - (b['x'] ?? 0);
--    final dy = (a['y'] ?? 0) - (b['y'] ?? 0);
--    final dz = (a['z'] ?? 0) - (b['z'] ?? 0);
--    return math.sqrt(dx * dx + dy * dy + dz * dz);
--  }
--
--  // Compute speed variance across all landmarks in 3D
--  double _computeSpeedVariance3D(List<List<Map<String, double>>> landmarks) {
--    List<double> allDisplacements = [];
--
--    for (final positions in landmarks) {
--      if (positions.length < 2) continue;
--      for (int i = 1; i < positions.length; i++) {
--        allDisplacements.add(_distance3D(positions[i], positions[i - 1]));
--      }
--    }
--    return _variance(allDisplacements) * 10; // scale factor
--  }
--
--  // Compute tremor as average standard deviation of x,y,z across all landmarks
--  double _computeTremor3D(List<List<Map<String, double>>> landmarks) {
--    List<double> stdDevs = [];
--
--    for (final positions in landmarks) {
--      if (positions.length < 3) continue;
--      final xs = positions.map((p) => p['x'] ?? 0).toList();
--      final ys = positions.map((p) => p['y'] ?? 0).toList();
--      final zs = positions.map((p) => p['z'] ?? 0).toList();
--
--      final stdX = math.sqrt(_variance(xs));
--      final stdY = math.sqrt(_variance(ys));
--      final stdZ = math.sqrt(_variance(zs));
--
--      // Average std dev for this landmark
--      stdDevs.add((stdX + stdY + stdZ) / 3);
--    }
--
--    if (stdDevs.isEmpty) return 0;
--
--    // Average tremor metric over all landmarks
--    return stdDevs.reduce((a, b) => a + b) / stdDevs.length;
--  }
--
--  // Variance helper
--  double _variance(List<double> data) {
--    if (data.length < 2) return 0;
--    final mean = data.reduce((a, b) => a + b) / data.length;
--    final sqSum = data.map((d) => (d - mean) * (d - mean)).reduce((a, b) => a + b);
--    return sqSum / data.length;
--  }
++
++  String _typeToPath(TestType type) {
++    switch (type) {
++      case TestType.drawing:
++        return 'drawing';
++      case TestType.questionnaire:
++        return 'questionnaire';
++      case TestType.tremor:
++        return 'tremor';
++      case TestType.tap:
++        return 'tapping';
++      case TestType.voice:
++        return 'voice';
++      case TestType.cameraDetection:
++        return 'camera';
++    }
++  }
  }
-diff --git a/lib/ui/views/patience/hand_landmarker_screen.dart b/lib/ui/views/patience/hand_landmarker_screen.dart
-index 5e29418cdce6c0a9e60616b9e8dceda429f12602..0a442724ac3783ab5917db39f81874a28de1a07b 100644
---- a/lib/ui/views/patience/hand_landmarker_screen.dart
-+++ b/lib/ui/views/patience/hand_landmarker_screen.dart
-@@ -1,364 +1,291 @@
- // --- Data Structures ---
- import 'package:flutter/material.dart';
- import 'package:flutter/services.dart';
- import 'package:permission_handler/permission_handler.dart';
- import 'dart:math' as math;
- 
-+import '../../services/hand_metrics.dart';
-+import '../../models/landmark_point.dart';
-+
-+import "../../app/app.locator.dart";
-+import "../../services/parkinson_config.dart";
- class LandmarkData {
-   final String handedness; // 'Left', 'Right', or 'Unknown'
--  final List<Map<String, double>> landmarks;
-+  final List<LandmarkPoint> landmarks;
- 
-   LandmarkData({required this.handedness, required this.landmarks});
- }
- 
- class FrameData {
-   final int timestamp;
-   final List<LandmarkData> hands;
- 
-   FrameData({required this.timestamp, required this.hands});
- }
- 
- class MyApp extends StatelessWidget {
-   const MyApp({super.key});
- 
-   @override
-   Widget build(BuildContext context) {
-     return MaterialApp(
-       title: 'Parkinson\'s Detection',
-       theme: ThemeData(
-         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-         useMaterial3: true,
-       ),
-       home: const HandLandmarkerScreen(),
-     );
-   }
- }
- 
- class HandLandmarkerScreen extends StatefulWidget {
-   final void Function(FrameData)? onFrame;
- 
-   const HandLandmarkerScreen({super.key, this.onFrame});
- 
-   @override
-   State<HandLandmarkerScreen> createState() => _HandLandmarkerScreenState();
- }
- 
- class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
-   List<dynamic> _landmarks = [];
-   bool _hasPermission = false;
- 
-   // --- Parkinson's Detection State ---
-   final List<FrameData> _landmarkHistory = [];
--  final int _historyLength = 30; // Number of frames for analysis
--  final int _tremorWindowSize = 10; // Frames for tremor calculation
--  final double _symptomThreshold = 0.6; // Example threshold for indication
-+  static const int _historyLength = 30; // frames kept for analysis
-+  static const int _tremorWindowSize = 10; // window size for tremor metric
-+  static const double _symptomThreshold = ParkinsonConfig.symptomThreshold; // threshold for demo alerts
- 
-   double _speedVarianceLeft = 0.0, _speedVarianceRight = 0.0;
-   double _tremorScoreLeft = 0.0, _tremorScoreRight = 0.0;
-+  double _accelVarianceLeft = 0.0, _accelVarianceRight = 0.0;
-+  double _jerkVarianceLeft = 0.0, _jerkVarianceRight = 0.0;
-+  double _spreadLeft = 0.0, _spreadRight = 0.0;
-   double _asymmetryScore = 0.0; // Overall asymmetry score
-   bool _potentialSymptomsDetected = false;
-+  final HandMetrics _metrics = locator<HandMetrics>();
- 
-   // Landmark indices (refer to MediaPipe documentation)
-   final int _thumbTipIndex = 4;
-   final int _wristIndex = 0; //TODO mallon remove
- 
-   // --- Lifecycle Methods ---
-   @override
-   void initState() {
-     super.initState();
-     _checkCameraPermission();
-   }
- 
-   Future<void> _checkCameraPermission() async {
-     final PermissionStatus status = await Permission.camera.request();
-     if (mounted) {
-       setState(() {
-         _hasPermission = status == PermissionStatus.granted;
-       });
-     }
-   }
- 
-   // --- Landmark Processing Callback ---
-   void _onLandmarksDetected(List<dynamic> detectedHandsData) {
-     if (!mounted) return;
- 
-     final int timestamp = DateTime.now().millisecondsSinceEpoch;
-     final List<LandmarkData> currentHands = [];
- 
-     // Parse data from native code
--    for (var handDataRaw in detectedHandsData) {
--      if (handDataRaw is Map) {
--        final Map<String, dynamic> handData =
--            Map<String, dynamic>.from(handDataRaw);
--        final String handedness =
--            handData['handedness'] as String? ?? 'Unknown';
--        final List<dynamic>? landmarksRaw = handData['landmarks'] as List?;
--
--        if (landmarksRaw != null) {
--          // Basic validation: Ensure it's a List and contains Maps
--          if (landmarksRaw is List &&
--              landmarksRaw.isNotEmpty &&
--              landmarksRaw.first is Map) {
--            try {
--              final List<Map<String, double>> landmarks = landmarksRaw
--                  .map((lm) => Map<String, double>.from(lm as Map))
--                  .toList();
--              // Check if expected landmarks exist (e.g., thumb tip)
--              if (landmarks.length > _thumbTipIndex &&
--                  landmarks[_thumbTipIndex].containsKey('x')) {
--                currentHands.add(
--                    LandmarkData(handedness: handedness, landmarks: landmarks));
--              } else {
--                print(
--                    "Warning: Landmark data format unexpected or missing thumb tip.");
--              }
--            } catch (e) {
--              print("Error casting landmark data: $e");
--            }
--          } else if (landmarksRaw.isNotEmpty) {
--            print(
--                "Warning: Landmark list item format unexpected: ${landmarksRaw.first.runtimeType}");
--          }
--        }
-+    final parsed = _metrics.parseRawHands(detectedHandsData);
-+    parsed.forEach((side, points) {
-+      if (points.length > _thumbTipIndex) {
-+        currentHands.add(LandmarkData(handedness: side, landmarks: points));
-       } else {
--        print(
--            "Warning: Hand data format unexpected: ${handDataRaw.runtimeType}");
-+        print("Warning: Landmark data format unexpected or missing thumb tip.");
-       }
--    }
-+    });
- 
-     setState(() {
-       // Keep raw data for text display if needed
-       _landmarks = detectedHandsData;
- 
-       // Update history and calculate metrics
-       if (currentHands.isNotEmpty) {
-         _landmarkHistory
-             .add(FrameData(timestamp: timestamp, hands: currentHands));
-         if (_landmarkHistory.length > _historyLength) {
-           _landmarkHistory.removeAt(0);
-         }
-         _updateSymptomMetrics();
-         widget.onFrame?.call(FrameData(timestamp: timestamp, hands: currentHands));
-       } else {
-       
-       }
-     });
-   }
- 
-   // --- Symptom Metric Calculation ---
-   void _updateSymptomMetrics() {
-     if (_landmarkHistory.length < _tremorWindowSize)
-       return; // Need minimum data
- 
--    List<List<Map<String, double>>?> leftHistory = _getHandHistory('Left');
--    List<List<Map<String, double>>?> rightHistory = _getHandHistory('Right');
-+    List<List<LandmarkPoint>?> leftHistory = _getHandHistory('Left');
-+    List<List<LandmarkPoint>?> rightHistory = _getHandHistory('Right');
- 
-     // Check if hands were actually present recently enough for calculation
-     bool leftHandPresent = leftHistory.any((h) => h != null);
-     bool rightHandPresent = rightHistory.any((h) => h != null);
- 
--    _speedVarianceLeft = leftHandPresent
--        ? _calculateSpeedVariance(leftHistory, _thumbTipIndex)
--        : 0.0;
--    _speedVarianceRight = rightHandPresent
--        ? _calculateSpeedVariance(rightHistory, _thumbTipIndex)
--        : 0.0;
--
--    _tremorScoreLeft = leftHandPresent
--        ? _calculateTremorScore(leftHistory, _thumbTipIndex, _tremorWindowSize)
--        : 0.0;
--    _tremorScoreRight = rightHandPresent
--        ? _calculateTremorScore(rightHistory, _thumbTipIndex, _tremorWindowSize)
--        : 0.0;
--
--    // Simple asymmetry: average difference normalized (0-1)
-+    final allLeftTrajectories =
-+        List.generate(21, (i) => _metrics.extractTrajectory(leftHistory, i));
-+    final allRightTrajectories =
-+        List.generate(21, (i) => _metrics.extractTrajectory(rightHistory, i));
-+
-+    _speedVarianceLeft =
-+        leftHandPresent ? _metrics.speedVarianceAll(allLeftTrajectories) : 0.0;
-+    _speedVarianceRight =
-+        rightHandPresent ? _metrics.speedVarianceAll(allRightTrajectories) : 0.0;
-+    _accelVarianceLeft =
-+        leftHandPresent ? _metrics.accelerationVarianceAll(allLeftTrajectories) : 0.0;
-+    _accelVarianceRight =
-+        rightHandPresent ? _metrics.accelerationVarianceAll(allRightTrajectories) : 0.0;
-+    _jerkVarianceLeft =
-+        leftHandPresent ? _metrics.jerkVarianceAll(allLeftTrajectories) : 0.0;
-+    _jerkVarianceRight =
-+        rightHandPresent ? _metrics.jerkVarianceAll(allRightTrajectories) : 0.0;
-+    _spreadLeft = leftHandPresent ? _metrics.fingerSpread(allLeftTrajectories) : 0.0;
-+    _spreadRight = rightHandPresent ? _metrics.fingerSpread(allRightTrajectories) : 0.0;
-+
-+    final trimmedLeft =
-+        allLeftTrajectories.map((t) => t.length > _tremorWindowSize
-+            ? t.sublist(t.length - _tremorWindowSize)
-+            : t).toList();
-+    final trimmedRight =
-+        allRightTrajectories.map((t) => t.length > _tremorWindowSize
-+            ? t.sublist(t.length - _tremorWindowSize)
-+            : t).toList();
-+
-+    _tremorScoreLeft =
-+        leftHandPresent ? _metrics.tremorAll(trimmedLeft) : 0.0;
-+    _tremorScoreRight =
-+        rightHandPresent ? _metrics.tremorAll(trimmedRight) : 0.0;
-+
-+    // Simple asymmetry across all metrics (normalized 0-1)
-     if (leftHandPresent && rightHandPresent) {
--      double diffSpeed = (_speedVarianceLeft - _speedVarianceRight).abs();
--      double diffTremor = (_tremorScoreLeft - _tremorScoreRight).abs();
--      // Normalize roughly, assuming max difference could be around 1.0 for each metric's scale
--      _asymmetryScore = ((diffSpeed + diffTremor) / 2.0).clamp(0.0, 1.0);
-+      final diffs = [
-+        (_speedVarianceLeft - _speedVarianceRight).abs(),
-+        (_tremorScoreLeft - _tremorScoreRight).abs(),
-+        (_accelVarianceLeft - _accelVarianceRight).abs(),
-+        (_jerkVarianceLeft - _jerkVarianceRight).abs(),
-+        (_spreadLeft - _spreadRight).abs(),
-+      ];
-+      final meanDiff = diffs.reduce((a, b) => a + b) / diffs.length;
-+      _asymmetryScore = meanDiff.clamp(0.0, 1.0);
-     } else {
-       _asymmetryScore = 0.0; // No asymmetry if only one hand is present
-     }
- 
-     // Simple Indication Logic
-     int highMetricsCount = 0;
-     if (_speedVarianceLeft > _symptomThreshold && leftHandPresent)
-       highMetricsCount++;
-     if (_speedVarianceRight > _symptomThreshold && rightHandPresent)
-       highMetricsCount++;
-     if (_tremorScoreLeft > _symptomThreshold && leftHandPresent)
-       highMetricsCount++;
-     if (_tremorScoreRight > _symptomThreshold && rightHandPresent)
-       highMetricsCount++;
-+    if (_accelVarianceLeft > _symptomThreshold && leftHandPresent)
-+      highMetricsCount++;
-+    if (_accelVarianceRight > _symptomThreshold && rightHandPresent)
-+      highMetricsCount++;
-+    if (_jerkVarianceLeft > _symptomThreshold && leftHandPresent)
-+      highMetricsCount++;
-+    if (_jerkVarianceRight > _symptomThreshold && rightHandPresent)
-+      highMetricsCount++;
-     if (_asymmetryScore > _symptomThreshold &&
-         leftHandPresent &&
-         rightHandPresent) {
-       highMetricsCount++;
-     }
- 
-     _potentialSymptomsDetected =
-         highMetricsCount >= 2; // Example: 2 or more metrics are high
-   }
- 
-   // Helper to extract history for a specific hand
--  List<List<Map<String, double>>?> _getHandHistory(String handedness) {
--    List<List<Map<String, double>>?> history = [];
-+  List<List<LandmarkPoint>?> _getHandHistory(String handedness) {
-+    List<List<LandmarkPoint>?> history = [];
-     for (var frame in _landmarkHistory) {
-       LandmarkData handData = frame.hands.firstWhere(
-           (h) => h.handedness == handedness,
-           orElse: () => LandmarkData(
-               handedness: 'None', landmarks: []) // Placeholder if not found
-           );
-       if (handData.handedness == handedness && handData.landmarks.isNotEmpty) {
-         history.add(handData.landmarks);
-       } else {
-         history.add(
-             null); // Add null to indicate the hand wasn't present in this frame
-       }
-     }
-     return history;
-   }
- 
-   // --- Calculation Helpers ---
--
--  // Calculate distance between two points (null safe)
--  double _calculateDistance(Map<String, double>? p1, Map<String, double>? p2) {
--    if (p1 == null || p2 == null) return 0.0;
--    double dx = (p1['x'] ?? 0.0) - (p2['x'] ?? 0.0);
--    double dy = (p1['y'] ?? 0.0) - (p2['y'] ?? 0.0);
--    // Ignore Z for simplicity
--    return math.sqrt(dx * dx + dy * dy);
--  }
--
--  // Calculate speed variance for a landmark index (null safe)
--  double _calculateSpeedVariance(
--      List<List<Map<String, double>>?> history, int landmarkIndex) {
--    List<double> displacements = [];
--    for (int i = 1; i < history.length; i++) {
--      final List<Map<String, double>>? prevFrameLms = history[i - 1];
--      final List<Map<String, double>>? currFrameLms = history[i];
--
--      // Ensure both frames and the landmark exist
--      if (prevFrameLms != null &&
--          currFrameLms != null &&
--          prevFrameLms.length > landmarkIndex &&
--          currFrameLms.length > landmarkIndex) {
--        final Map<String, double>? prevPoint = prevFrameLms[landmarkIndex];
--        final Map<String, double>? currPoint = currFrameLms[landmarkIndex];
--        // Check points are not null before calculating distance
--        if (prevPoint != null && currPoint != null) {
--          displacements.add(_calculateDistance(prevPoint, currPoint));
--        }
--      }
--    }
--    if (displacements.length < 2) return 0.0;
--    return _calculateVariance(
--        displacements); // Variance calc handles normalization
--  }
--
--  // Calculate tremor score (std dev of position in a window) (null safe)
--  double _calculateTremorScore(List<List<Map<String, double>>?> history,
--      int landmarkIndex, int windowSize) {
--    if (history.length < windowSize) return 0.0;
--
--    List<double> xCoords = [];
--    List<double> yCoords = [];
--    // Use the last 'windowSize' frames
--    int start = history.length - windowSize;
--    for (int i = start; i < history.length; i++) {
--      final List<Map<String, double>>? frameLms = history[i];
--      // Check frame and landmark exist
--      if (frameLms != null && frameLms.length > landmarkIndex) {
--        final Map<String, double>? point = frameLms[landmarkIndex];
--        // Check point is not null before accessing coordinates
--        if (point != null) {
--          xCoords.add(point['x'] ?? 0.0);
--          yCoords.add(point['y'] ?? 0.0);
--        }
--      }
--    }
--
--    if (xCoords.length < 2 || yCoords.length < 2) return 0.0;
--
--    double stdDevX = _calculateStdDev(xCoords);
--    double stdDevY = _calculateStdDev(yCoords);
--
--    // Combine std dev and normalize (heuristic) - requires tuning
--    // Factor adjusted based on typical coordinate range (0-1)
--    return ((stdDevX + stdDevY) / 2.0 * 15.0).clamp(0.0, 1.0); // Tuned factor
--  }
--
--  // Basic variance calculation with normalization
--  double _calculateVariance(List<double> data) {
--    if (data.length < 2) return 0.0;
--    double mean = data.reduce((a, b) => a + b) / data.length;
--    double sumOfSquares = data
--        .map((x) => math.pow(x - mean, 2).toDouble())
--        .reduce((a, b) => a + b);
--    double variance = sumOfSquares / data.length;
--    // Normalize heuristically - variance of displacements (0-1 range)
--    // Max expected variance might be around 0.01 if movement is large+fast? Tune this.
--    return (variance / 0.01).clamp(0.0, 1.0);
--  }
--
--  // Basic standard deviation calculation
--  double _calculateStdDev(List<double> data) {
--    if (data.length < 2) return 0.0;
--    double mean = data.reduce((a, b) => a + b) / data.length;
--    double sumOfSquares = data
--        .map((x) => math.pow(x - mean, 2).toDouble())
--        .reduce((a, b) => a + b);
--    double variance = sumOfSquares / data.length;
--    return math.sqrt(variance);
--  }
-+  // Detailed metric implementations reside in [HandMetrics].
- 
-   // --- UI Building ---
- 
-   // Builds the symptom bars widget
-   Widget _buildSymptomBars() {
-     return Container(
-       padding: const EdgeInsets.all(10.0),
-       decoration: BoxDecoration(
-         color: Colors.black.withOpacity(0.7),
-         borderRadius: BorderRadius.circular(8.0),
-       ),
-       child: Column(
-         mainAxisSize: MainAxisSize.min,
-         crossAxisAlignment: CrossAxisAlignment.start,
-         children: [
-           const Text("Symptom Indicators (Demo)",
-               style: TextStyle(
-                   color: Colors.white,
-                   fontWeight: FontWeight.bold,
-                   fontSize: 14)),
-           const SizedBox(height: 8),
-           _buildBar("Speed Var (L)", _speedVarianceLeft),
-           _buildBar("Speed Var (R)", _speedVarianceRight),
-           _buildBar("Tremor (L)", _tremorScoreLeft),
-           _buildBar("Tremor (R)", _tremorScoreRight),
-+          _buildBar("Accel Var (L)", _accelVarianceLeft),
-+          _buildBar("Accel Var (R)", _accelVarianceRight),
-+          _buildBar("Jerk Var (L)", _jerkVarianceLeft),
-+          _buildBar("Jerk Var (R)", _jerkVarianceRight),
-+          _buildBar("Spread (L)", _spreadLeft),
-+          _buildBar("Spread (R)", _spreadRight),
-           _buildBar("Asymmetry", _asymmetryScore),
-           const SizedBox(height: 8),
-           Center(
-             // Center the chip
-             child: Chip(
-               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-               label: Text(
-                   _potentialSymptomsDetected
-                       ? "Potential Symptoms Detected"
-                       : "No Significant Symptoms Detected",
-                   style: const TextStyle(fontWeight: FontWeight.bold)),
-               backgroundColor: _potentialSymptomsDetected
-                   ? Colors.orangeAccent
-                   : Colors.green[300],
-               labelStyle: const TextStyle(
-                   color: Colors.black87), // Ensure text is visible
-             ),
-           ),
-           const SizedBox(height: 4),
-           const Center(
-             child: Text(
-               "",
-               style: TextStyle(color: Colors.grey, fontSize: 10),
-             ),
-           ),
-@@ -415,102 +342,51 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
-     }
-     int handCount = 0;
-     int pointsPerHand = 0;
-     try {
-       // Assumes _landmarks is List<Map<String, dynamic>> as sent by native now
-       handCount = landmarks.length;
-       if (handCount > 0 && landmarks[0] is Map) {
-         final handData = landmarks[0] as Map;
-         if (handData.containsKey('landmarks') &&
-             handData['landmarks'] is List) {
-           final landmarkList = handData['landmarks'] as List;
-           if (landmarkList.isNotEmpty) {
-             pointsPerHand = landmarkList.length;
-           }
-         }
-       }
-     } catch (e) {
-       print("Error parsing summary data: $e");
-       // Fallback or default values?
-       handCount = landmarks.length; // Best guess
-       pointsPerHand = 0;
-     }
-     return 'Detected $handCount hand(s), $pointsPerHand points/hand.'; // Simplified text
-   }
- 
--  String _formatLandmarks(List<dynamic> landmarks) {
--    if (landmarks.isEmpty) {
--      return 'No landmark data.';
--    }
--    final StringBuffer buffer = StringBuffer();
--    for (int i = 0; i < landmarks.length; i++) {
--      final dynamic handDataRaw = landmarks[i];
--      if (handDataRaw is Map) {
--        // Defensive casting
--        final Map<String, dynamic> handData =
--            Map<String, dynamic>.from(handDataRaw);
--        final String handedness =
--            handData['handedness'] as String? ?? 'Unknown';
--        final List<dynamic>? landmarkListRaw = handData['landmarks'] as List?;
--
--        buffer.writeln('Hand ${i + 1} ($handedness):');
--
--        if (landmarkListRaw != null && landmarkListRaw is List) {
--          for (int j = 0; j < landmarkListRaw.length; j++) {
--            final dynamic landmarkDataRaw = landmarkListRaw[j];
--            if (landmarkDataRaw is Map) {
--              try {
--                final Map<String, double> landmarkData =
--                    Map<String, double>.from(landmarkDataRaw);
--                final double? x = landmarkData['x'];
--                final double? y = landmarkData['y'];
--                final double? z = landmarkData['z'];
--                buffer.writeln(
--                    '  Lm $j: (x: ${x?.toStringAsFixed(2) ?? 'N/A'}, ' // Shorter format
--                    'y: ${y?.toStringAsFixed(2) ?? 'N/A'}, '
--                    'z: ${z?.toStringAsFixed(2) ?? 'N/A'})');
--              } catch (e) {
--                buffer.writeln('  Lm $j: Error casting coords');
--              }
--            } else {
--              buffer.writeln(
--                  '  Lm $j: Invalid format ${landmarkDataRaw.runtimeType}');
--            }
--          }
--        } else {
--          buffer.writeln('  Landmark list format error or missing.');
--        }
--      } else {
--        buffer.writeln(
--            'Hand ${i + 1}: Invalid data format ${handDataRaw.runtimeType}');
--      }
--      if (i < landmarks.length - 1) {
--        buffer.writeln(); // Add space between hands
--      }
--    }
--    return buffer.toString();
--  }
-+  
- 
-   @override
-   Widget build(BuildContext context) {
-     return Scaffold(
-       appBar: AppBar(
-         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-         title: const Text('Parkinson\'s Detection'),
-       ),
-       body: _hasPermission
-           ? Stack(
-               // Use Stack for overlaying
-               children: [
-                 // Camera View + Native Overlay
-                 HandLandmarkerView(
-                   onLandmarksDetected:
-                       _onLandmarksDetected, // Use the updated callback
-                 ),
- 
-                 // Symptom Indicator Overlay (Top Right)
-                 Align(
-                   alignment: Alignment.topRight,
-                   child: Padding(
-                     padding: const EdgeInsets.all(10.0),
-                     child: ConstrainedBox(
-                       // Constrain width of symptom box
-@@ -527,57 +403,50 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
-                 Align(
-                   alignment: Alignment.bottomCenter,
-                   child: Container(
-                     constraints: BoxConstraints(
-                       maxHeight: MediaQuery.of(context).size.height / 4,
-                     ),
-                     padding: const EdgeInsets.all(12.0),
-                     margin: const EdgeInsets.all(10.0),
-                     decoration: BoxDecoration(
-                       color: Colors.black.withOpacity(0.6),
-                       borderRadius: BorderRadius.circular(10.0),
-                     ),
-                     child: SingleChildScrollView(
-                       child: Column(
-                         mainAxisSize: MainAxisSize.min,
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text(
-                             _generateSummaryText(_landmarks), // Updated summary
-                             style: const TextStyle(
-                                 fontSize: 14, // Adjusted size
-                                 fontWeight: FontWeight.bold,
-                                 color: Colors.white),
-                           ),
-                           const SizedBox(height: 8),
--                          Text(
--                            _formatLandmarks(_landmarks), // Updated formatting
--                            style: const TextStyle(
--                                fontSize: 10, // Adjusted size
--                                fontFamily: 'monospace',
--                                color: Colors.white),
--                          ),
-                         ],
-                       ),
-                     ),
-                   ),
-                 ),
-               ],
-             )
-           : Center(
-               // Permission not granted view
-               child: Column(
-                 mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-                   const Text("Camera permission needed to run this demo."),
-                   const SizedBox(height: 10),
-                   ElevatedButton(
-                     onPressed: _checkCameraPermission,
-                     child: const Text("Grant Permission"),
-                   ),
-                 ],
-               ),
-             ),
-     );
-   }
- 
-   @override
-diff --git a/test/services/hand_metrics_test.dart b/test/services/hand_metrics_test.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..f71569efe89ed6a6e7f72886811e85d86107e9eb
---- /dev/null
-+++ b/test/services/hand_metrics_test.dart
-@@ -0,0 +1,29 @@
-+import 'package:flutter_test/flutter_test.dart';
-+import 'package:parkinsondetetion/services/hand_metrics.dart';
-+import 'package:parkinsondetetion/models/landmark_point.dart';
-+
-+void main() {
-+  final metrics = HandMetrics();
-+  group('HandMetrics', () {
-+    test('speed variance near zero for stationary trajectory', () {
-+      final frames = [
-+        [
-+          const LandmarkPoint(x: 0, y: 0, z: 0),
-+          const LandmarkPoint(x: 0, y: 0, z: 0),
-+          const LandmarkPoint(x: 0, y: 0, z: 0),
-+        ]
-+      ];
-+      final result = metrics.speedVarianceAll(frames);
-+      expect(result, closeTo(0, 1e-6));
-+    });
-+
-+    test('tremor detects oscillation', () {
-+      final points = List<LandmarkPoint>.generate(20, (i) {
-+        final x = (i % 2 == 0) ? 0.0 : 1.0;
-+        return LandmarkPoint(x: x, y: 0, z: 0);
-+      });
-+      final tremor = metrics.tremorAll([points]);
-+      expect(tremor, greaterThan(0.2));
-+    });
-+  });
-+}
  
 EOF
 )
