@@ -48,6 +48,9 @@ class HandLandmarkerScreen extends StatefulWidget {
 class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   List<dynamic> _landmarks = [];
   bool _hasPermission = false;
+  // When true the metric overlay is fully expanded. A tap toggles this flag
+  // so the user can collapse the bars for an unobstructed view.
+  bool _metricsExpanded = true;
 
   // --- Parkinson's Detection State ---
   final List<FrameData> _landmarkHistory = [];
@@ -72,6 +75,13 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   @override
   void initState() {
     super.initState();
+    // Unlock orientation so the preview rotates with the device while this
+    // screen is visible. Restored in dispose.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _checkCameraPermission();
   }
 
@@ -233,60 +243,63 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
 
   // --- UI Building ---
 
-  // Builds the symptom bars widget
+  // Builds the symptom bars widget. Wrapped in a GestureDetector so tapping
+  // anywhere on the box toggles between expanded and collapsed states.
   Widget _buildSymptomBars() {
-    return Container(
-      padding: const EdgeInsets.all(10.0),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Symptom Indicators (Demo)",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
-          const SizedBox(height: 8),
-          _buildBar("Speed Var (L)", _speedVarianceLeft),
-          _buildBar("Speed Var (R)", _speedVarianceRight),
-          _buildBar("Tremor (L)", _tremorScoreLeft),
-          _buildBar("Tremor (R)", _tremorScoreRight),
-          _buildBar("Accel Var (L)", _accelVarianceLeft),
-          _buildBar("Accel Var (R)", _accelVarianceRight),
-          _buildBar("Jerk Var (L)", _jerkVarianceLeft),
-          _buildBar("Jerk Var (R)", _jerkVarianceRight),
-          _buildBar("Spread (L)", _spreadLeft),
-          _buildBar("Spread (R)", _spreadRight),
-          _buildBar("Asymmetry", _asymmetryScore),
-          const SizedBox(height: 8),
-          Center(
-            // Center the chip
-            child: Chip(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              label: Text(
-                  _potentialSymptomsDetected
-                      ? "Potential Symptoms Detected"
-                      : "No Significant Symptoms Detected",
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              backgroundColor: _potentialSymptomsDetected
-                  ? Colors.orangeAccent
-                  : Colors.green[300],
-              labelStyle: const TextStyle(
-                  color: Colors.black87), // Ensure text is visible
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Center(
-            child: Text(
-              "",
-              style: TextStyle(color: Colors.grey, fontSize: 10),
-            ),
-          ),
-        ],
+    return GestureDetector(
+      // Collapse or expand the metrics when the overlay is tapped.
+      onTap: () => setState(() => _metricsExpanded = !_metricsExpanded),
+      child: Container(
+        padding: const EdgeInsets.all(10.0),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: _metricsExpanded
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Symptom Indicators (Demo)",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildBar("Speed Var (L)", _speedVarianceLeft),
+                  _buildBar("Speed Var (R)", _speedVarianceRight),
+                  _buildBar("Tremor (L)", _tremorScoreLeft),
+                  _buildBar("Tremor (R)", _tremorScoreRight),
+                  _buildBar("Accel Var (L)", _accelVarianceLeft),
+                  _buildBar("Accel Var (R)", _accelVarianceRight),
+                  _buildBar("Jerk Var (L)", _jerkVarianceLeft),
+                  _buildBar("Jerk Var (R)", _jerkVarianceRight),
+                  _buildBar("Spread (L)", _spreadLeft),
+                  _buildBar("Spread (R)", _spreadRight),
+                  _buildBar("Asymmetry", _asymmetryScore),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Chip(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      label: Text(
+                        _potentialSymptomsDetected
+                            ? "Potential Symptoms Detected"
+                            : "No Significant Symptoms Detected",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: _potentialSymptomsDetected
+                          ? Colors.orangeAccent
+                          : Colors.green[300],
+                      labelStyle: const TextStyle(color: Colors.black87),
+                    ),
+                  ),
+                ],
+              )
+            // When collapsed show a simple icon instead of all the bars.
+            : const Icon(Icons.bar_chart, color: Colors.white),
       ),
     );
   }
@@ -366,19 +379,21 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Parkinson\'s Detection'),
-      ),
-      body: _hasPermission
-          ? Stack(
-              // Use Stack for overlaying
-              children: [
-                // Camera View + Native Overlay
-                HandLandmarkerView(
-                  onLandmarksDetected:
-                      _onLandmarksDetected, // Use the updated callback
-                ),
+      appBar: null,
+      body: OrientationBuilder(
+        // Rebuild when the device rotates so the preview can be turned.
+        builder: (context, orientation) {
+          // The Android view is always portrait, so rotate the Flutter layer
+          // when the phone is turned sideways.
+          final turns = orientation == Orientation.landscape ? 1 : 0;
+          final content = _hasPermission
+              ? Stack(
+                  children: [
+                    // Camera View + Native Overlay
+                    HandLandmarkerView(
+                      onLandmarksDetected:
+                          _onLandmarksDetected, // Use the updated callback
+                    ),
 
                 // Symptom Indicator Overlay (Top Right)
                 Align(
@@ -427,28 +442,34 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
                     ),
                   ),
                 ),
-              ],
-            )
-          : Center(
-              // Permission not granted view
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Camera permission needed to run this demo."),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: _checkCameraPermission,
-                    child: const Text("Grant Permission"),
+                  ],
+                )
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Camera permission needed to run this demo."),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _checkCameraPermission,
+                        child: const Text("Grant Permission"),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                );
+          // Rotate everything inside the Scaffold so the native camera feed and
+          // Flutter overlays remain aligned with the device orientation.
+          return RotatedBox(quarterTurns: turns, child: content);
+        },
+      ),
     );
   }
 
   @override
   void dispose() {
     _landmarkHistory.clear(); // Clear history on dispose
+    // Return orientation back to portrait-only after leaving the screen.
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 }
