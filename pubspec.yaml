@@ -23,7 +23,6 @@ dependencies:
   fl_chart: ^0.64.0
   tflite_flutter: ^0.11.0
   shared_preferences: ^2.2.2
-  signature: ^6.1.0
   image_picker: ^1.0.4
   image: ^4.0.17
   record: ^6.0.0
@@ -31,6 +30,9 @@ dependencies:
   share_plus: ^11.0.0
   http: ^1.1.0
   archive: ^4.0.7
+  cognition_package: ^1.7.0
+  research_package: ^2.0.0
+  signature: ^5.5.0
 
 
 dev_dependencies:

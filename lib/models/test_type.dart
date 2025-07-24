@@ -5,4 +5,5 @@ enum TestType {
   tremor,
   tap,
   voice,
+  neuro
 }

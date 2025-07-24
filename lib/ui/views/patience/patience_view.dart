@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
+import 'package:parkinsondetetion/ui/views/neuro_test/neuro_test_view.dart';
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:stacked/stacked.dart';
@@ -219,6 +220,11 @@ class PatienceView extends StackedView<PatienceViewModel> {
         'icon': Icons.mic,
         'type': TestType.voice,
       },
+      {
+        'title': 'Neuropsychological Test',
+        'icon': Icons.psychology,
+        'type': TestType.neuro,
+      },
     ];
 
     return Padding(
@@ -265,6 +271,9 @@ class PatienceView extends StackedView<PatienceViewModel> {
                       } else if (type == TestType.voice) {
                         await locator<NavigationService>()
                             .navigateToView(const VoiceTestView());
+                      }else if (type == TestType.neuro) {
+                        await locator<NavigationService>()
+                            .navigateToView(const NeuroTestView());
                       } else {
                         await viewModel.recordDemoResult(type);
                         ScaffoldMessenger.of(rootContext).showSnackBar(

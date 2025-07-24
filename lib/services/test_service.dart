@@ -121,6 +121,9 @@ class TestService {
         break;
       case TestType.questionnaire:
         break;
+      case TestType.neuro:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
 
     await docRef.set(result.toJson());
@@ -168,6 +171,8 @@ class TestService {
         return 'Voice';
       case TestType.cameraDetection:
         return 'Camera';
+      case TestType.neuro:
+        return 'neuropsychological'; 
     }
   }
 
@@ -185,6 +190,8 @@ class TestService {
         return 'voice';
       case TestType.cameraDetection:
         return 'camera';
+      case TestType.neuro:
+        return 'neuropsychological';  
     }
   }
 }
