@@ -63,33 +63,29 @@ class _NeuroStep3State extends State<NeuroStep3> {
   }
 
   void handlePointTap(int index) {
-    // Determine what will happen
-    bool addedWrong = false;
-    bool addedRight = false;
-    bool finished = false;
+    final messenger = ScaffoldMessenger.of(context);
 
+    // 1) select / deselect dots
     if (selectedPoint == null) {
-      setState(() {
-        selectedPoint = index;
-      });
+      setState(() => selectedPoint = index);
       return;
     }
-
     if (selectedPoint == index) {
-      setState(() {
-        selectedPoint = null;
-      });
+      setState(() => selectedPoint = null);
       return;
     }
 
-    // Two distinct taps: form the key
-    final pair = [selectedPoint!, index]..sort();
+    // 2) two distinct taps → form key
+    final a = selectedPoint!;
+    final b = index;
+    final pair = [a, b]..sort();
     final key = '${pair[0]}-${pair[1]}';
     final isExpected = expectedEdges.contains(key);
 
-    // 1) update the model
+    bool justWrong = false;
+
+    // 3) update state
     setState(() {
-      // toggle off if already drawn
       if (connectedPairs.contains(key)) {
         connectedPairs.remove(key);
         incorrectPairs.remove(key);
@@ -97,44 +93,47 @@ class _NeuroStep3State extends State<NeuroStep3> {
         connectedPairs.add(key);
         if (!isExpected) {
           incorrectPairs.add(key);
-          addedWrong = true;
-        } else {
-          addedRight = true;
+          justWrong = true;
         }
       }
       selectedPoint = null;
-
-      if (_hasCompletedCube() && !testCompleted) {
-        testCompleted = true;
-        timeoutTimer.cancel();
-        finished = true;
-      }
     });
 
-    // 2) show feedback AFTER the repaint
-    if (addedRight) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Σωστή γραμμή')),
-      );
-    }
-    if (addedWrong) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    // clear any existing snackbars immediately
+    messenger.hideCurrentSnackBar();
+
+    // 4) wrong-line feedback
+    if (justWrong) {
+      messenger.showSnackBar(
         const SnackBar(content: Text('Λάθος γραμμή')),
       );
     }
-    if (finished) {
-      ScaffoldMessenger.of(context).showSnackBar(
+
+    // 5) check for completion
+    final hasAll = expectedEdges.every(connectedPairs.contains);
+    final hasSomeWrong = incorrectPairs.isNotEmpty;
+
+    if (hasAll && !hasSomeWrong && !testCompleted) {
+      // perfect completion
+      testCompleted = true;
+      timeoutTimer.cancel();
+      messenger.showSnackBar(
         const SnackBar(content: Text('Σωστή απάντηση!')),
       );
       Future.delayed(const Duration(seconds: 2), () {
         widget.onScored(1);
         widget.onNext();
       });
+    } else if (hasAll && hasSomeWrong) {
+      // almost there—red lines still present
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Σχεδόν εκεί—διαγράψτε τις κόκκινες γραμμές')),
+      );
     }
   }
 
-  bool _hasCompletedCube() {
-    return expectedEdges.every((edge) => connectedPairs.contains(edge));
+  bool _hasCompletedCubePerfectly() {
+    return expectedEdges.every(connectedPairs.contains) && incorrectPairs.isEmpty;
   }
 
   void triggerHint() {
@@ -167,7 +166,7 @@ class _NeuroStep3State extends State<NeuroStep3> {
             ),
           ),
 
-          // Full-screen painter
+          // Full‑screen painter
           Positioned.fill(
             child: CustomPaint(
               painter: LinePainter(
@@ -197,8 +196,7 @@ class _NeuroStep3State extends State<NeuroStep3> {
                         ? Colors.blue.withOpacity(0.3)
                         : Colors.white,
                     border: Border.all(
-                      color:
-                          selectedPoint == idx ? Colors.blue : Colors.black,
+                      color: selectedPoint == idx ? Colors.blue : Colors.black,
                       width: 2,
                     ),
                     shape: BoxShape.circle,
@@ -274,7 +272,7 @@ class LinePainter extends CustomPainter {
       ..color = Colors.blue.withOpacity(0.4)
       ..strokeWidth = 2;
 
-    // Draw each connection
+    // Draw confirmed connections
     for (final key in connections) {
       final idx = key.split('-').map(int.parse).toList();
       final p1 = points[idx[0]];

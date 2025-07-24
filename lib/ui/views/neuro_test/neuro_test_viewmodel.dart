@@ -4,6 +4,8 @@ import 'package:stacked/stacked.dart';
 import 'steps/step_1.dart';
 import 'steps/step_2.dart';
 import 'steps/step_3.dart';
+import 'steps/step_4.dart';
+import 'steps/step_5.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
@@ -26,6 +28,18 @@ class NeuroTestViewModel extends BaseViewModel {
       NeuroStep3(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
+      NeuroStep4(
+        onNext: nextStep,
+        onScored: (num score) {
+          totalMocaScore += score.toInt(); // or however you wish to handle it
+        },
+      ),
+      NeuroStep5(
+        onNext: nextStep,
+        onScored: (num score) {
+          totalMocaScore += score.toInt(); // or however you wish to handle it
+        },
+      ),
       // Add more here...
     ];
   }
