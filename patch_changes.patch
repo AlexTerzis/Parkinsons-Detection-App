@@ -1,424 +1,645 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/ui/views/patience/hand_landmarker_screen.dart b/lib/ui/views/patience/hand_landmarker_screen.dart
-index d24dca28dfebfc0c9459b440ed4d75230551fa2c..19735151ab75a5851b08aa045d1eac646d10906b 100644
---- a/lib/ui/views/patience/hand_landmarker_screen.dart
-+++ b/lib/ui/views/patience/hand_landmarker_screen.dart
-@@ -26,74 +26,84 @@ class MyApp extends StatelessWidget {
-   @override
-   Widget build(BuildContext context) {
-     return MaterialApp(
-       title: 'Parkinson\'s Detection',
-       theme: ThemeData(
-         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-         useMaterial3: true,
+diff --git a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+index 7388c57789b422757a9ea1d0e74e76fd1d683399..7460bbfbe0fb3f14a891bbfa94de162ba22b4a08 100644
+--- a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
++++ b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+@@ -1,60 +1,89 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
+ 
+ import 'steps/step_1.dart';
+ import 'steps/step_2.dart';
+ import 'steps/step_3.dart';
+ import 'steps/step_4.dart';
+ import 'steps/step_5.dart';
++import 'steps/step_6.dart';
++import 'steps/step_7.dart';
++import 'steps/step_8.dart';
++import 'steps/step_9.dart';
++import 'steps/step_10.dart';
++import 'steps/step_11.dart';
+ 
+ class NeuroTestViewModel extends BaseViewModel {
+   int _currentStep = 0;
+   int totalMocaScore = 0;
+   late List<Widget> _steps;
+ 
+   // ✅ Constructor: define the steps
+   NeuroTestViewModel() {
+     _steps = [
+       NeuroStep1(
+         onNext: nextStep,
+         onScored: (score) {
+           totalMocaScore += score;
+           
+         },
        ),
-       home: const HandLandmarkerScreen(),
-     );
-   }
- }
- 
- class HandLandmarkerScreen extends StatefulWidget {
-   final void Function(FrameData)? onFrame;
- 
-   const HandLandmarkerScreen({super.key, this.onFrame});
- 
-   @override
-   State<HandLandmarkerScreen> createState() => _HandLandmarkerScreenState();
- }
- 
- class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
-   List<dynamic> _landmarks = [];
-   bool _hasPermission = false;
-+  // When true the metric overlay is fully expanded. A tap toggles this flag
-+  // so the user can collapse the bars for an unobstructed view.
-+  bool _metricsExpanded = true;
- 
-   // --- Parkinson's Detection State ---
-   final List<FrameData> _landmarkHistory = [];
-   static const int _historyLength = 30; // frames kept for analysis
-   static const int _tremorWindowSize = 10; // window size for tremor metric
-   static const double _symptomThreshold = ParkinsonConfig.symptomThreshold; // threshold for demo alerts
- 
-   double _speedVarianceLeft = 0.0, _speedVarianceRight = 0.0;
-   double _tremorScoreLeft = 0.0, _tremorScoreRight = 0.0;
-   double _accelVarianceLeft = 0.0, _accelVarianceRight = 0.0;
-   double _jerkVarianceLeft = 0.0, _jerkVarianceRight = 0.0;
-   double _spreadLeft = 0.0, _spreadRight = 0.0;
-   double _asymmetryScore = 0.0; // Overall asymmetry score
-   bool _potentialSymptomsDetected = false;
-   final HandMetrics _metrics = locator<HandMetrics>();
- 
-   // Landmark indices (refer to MediaPipe documentation)
-   final int _thumbTipIndex = 4;
-   final int _wristIndex = 0; //TODO mallon remove
- 
-   // --- Lifecycle Methods ---
-   @override
-   void initState() {
-     super.initState();
-+    // Unlock orientation so the preview rotates with the device while this
-+    // screen is visible. Restored in dispose.
-+    SystemChrome.setPreferredOrientations([
-+      DeviceOrientation.portraitUp,
-+      DeviceOrientation.landscapeLeft,
-+      DeviceOrientation.landscapeRight,
-+    ]);
-     _checkCameraPermission();
-   }
- 
-   Future<void> _checkCameraPermission() async {
-     final PermissionStatus status = await Permission.camera.request();
-     if (mounted) {
-       setState(() {
-         _hasPermission = status == PermissionStatus.granted;
-       });
-     }
-   }
- 
-   // --- Landmark Processing Callback ---
-   void _onLandmarksDetected(List<dynamic> detectedHandsData) {
-     if (!mounted) return;
- 
-     final int timestamp = DateTime.now().millisecondsSinceEpoch;
-     final List<LandmarkData> currentHands = [];
- 
-     // Parse data from native code
-     final parsed = _metrics.parseRawHands(detectedHandsData);
-     parsed.forEach((side, points) {
-       if (points.length > _thumbTipIndex) {
-         currentHands.add(LandmarkData(handedness: side, landmarks: points));
-       } else {
-@@ -211,104 +221,107 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
- 
-   // Helper to extract history for a specific hand
-   List<List<LandmarkPoint>?> _getHandHistory(String handedness) {
-     List<List<LandmarkPoint>?> history = [];
-     for (var frame in _landmarkHistory) {
-       LandmarkData handData = frame.hands.firstWhere(
-           (h) => h.handedness == handedness,
-           orElse: () => LandmarkData(
-               handedness: 'None', landmarks: []) // Placeholder if not found
-           );
-       if (handData.handedness == handedness && handData.landmarks.isNotEmpty) {
-         history.add(handData.landmarks);
-       } else {
-         history.add(
-             null); // Add null to indicate the hand wasn't present in this frame
-       }
-     }
-     return history;
-   }
- 
-   // --- Calculation Helpers ---
-   // Detailed metric implementations reside in [HandMetrics].
- 
-   // --- UI Building ---
- 
--  // Builds the symptom bars widget
-+  // Builds the symptom bars widget. Wrapped in a GestureDetector so tapping
-+  // anywhere on the box toggles between expanded and collapsed states.
-   Widget _buildSymptomBars() {
--    return Container(
--      padding: const EdgeInsets.all(10.0),
--      decoration: BoxDecoration(
--        color: Colors.black.withOpacity(0.7),
--        borderRadius: BorderRadius.circular(8.0),
--      ),
--      child: Column(
--        mainAxisSize: MainAxisSize.min,
--        crossAxisAlignment: CrossAxisAlignment.start,
--        children: [
--          const Text("Symptom Indicators (Demo)",
--              style: TextStyle(
--                  color: Colors.white,
--                  fontWeight: FontWeight.bold,
--                  fontSize: 14)),
--          const SizedBox(height: 8),
--          _buildBar("Speed Var (L)", _speedVarianceLeft),
--          _buildBar("Speed Var (R)", _speedVarianceRight),
--          _buildBar("Tremor (L)", _tremorScoreLeft),
--          _buildBar("Tremor (R)", _tremorScoreRight),
--          _buildBar("Accel Var (L)", _accelVarianceLeft),
--          _buildBar("Accel Var (R)", _accelVarianceRight),
--          _buildBar("Jerk Var (L)", _jerkVarianceLeft),
--          _buildBar("Jerk Var (R)", _jerkVarianceRight),
--          _buildBar("Spread (L)", _spreadLeft),
--          _buildBar("Spread (R)", _spreadRight),
--          _buildBar("Asymmetry", _asymmetryScore),
--          const SizedBox(height: 8),
--          Center(
--            // Center the chip
--            child: Chip(
--              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
--              label: Text(
--                  _potentialSymptomsDetected
--                      ? "Potential Symptoms Detected"
--                      : "No Significant Symptoms Detected",
--                  style: const TextStyle(fontWeight: FontWeight.bold)),
--              backgroundColor: _potentialSymptomsDetected
--                  ? Colors.orangeAccent
--                  : Colors.green[300],
--              labelStyle: const TextStyle(
--                  color: Colors.black87), // Ensure text is visible
--            ),
--          ),
--          const SizedBox(height: 4),
--          const Center(
--            child: Text(
--              "",
--              style: TextStyle(color: Colors.grey, fontSize: 10),
--            ),
--          ),
--        ],
-+    return GestureDetector(
-+      // Collapse or expand the metrics when the overlay is tapped.
-+      onTap: () => setState(() => _metricsExpanded = !_metricsExpanded),
-+      child: Container(
-+        padding: const EdgeInsets.all(10.0),
-+        decoration: BoxDecoration(
-+          color: Colors.black.withOpacity(0.7),
-+          borderRadius: BorderRadius.circular(8.0),
-+        ),
-+        child: _metricsExpanded
-+            ? Column(
-+                mainAxisSize: MainAxisSize.min,
-+                crossAxisAlignment: CrossAxisAlignment.start,
-+                children: [
-+                  const Text(
-+                    "Symptom Indicators (Demo)",
-+                    style: TextStyle(
-+                        color: Colors.white,
-+                        fontWeight: FontWeight.bold,
-+                        fontSize: 14),
-+                  ),
-+                  const SizedBox(height: 8),
-+                  _buildBar("Speed Var (L)", _speedVarianceLeft),
-+                  _buildBar("Speed Var (R)", _speedVarianceRight),
-+                  _buildBar("Tremor (L)", _tremorScoreLeft),
-+                  _buildBar("Tremor (R)", _tremorScoreRight),
-+                  _buildBar("Accel Var (L)", _accelVarianceLeft),
-+                  _buildBar("Accel Var (R)", _accelVarianceRight),
-+                  _buildBar("Jerk Var (L)", _jerkVarianceLeft),
-+                  _buildBar("Jerk Var (R)", _jerkVarianceRight),
-+                  _buildBar("Spread (L)", _spreadLeft),
-+                  _buildBar("Spread (R)", _spreadRight),
-+                  _buildBar("Asymmetry", _asymmetryScore),
-+                  const SizedBox(height: 8),
-+                  Center(
-+                    child: Chip(
-+                      padding: const EdgeInsets.symmetric(
-+                          horizontal: 12, vertical: 8),
-+                      label: Text(
-+                        _potentialSymptomsDetected
-+                            ? "Potential Symptoms Detected"
-+                            : "No Significant Symptoms Detected",
-+                        style: const TextStyle(fontWeight: FontWeight.bold),
-+                      ),
-+                      backgroundColor: _potentialSymptomsDetected
-+                          ? Colors.orangeAccent
-+                          : Colors.green[300],
-+                      labelStyle: const TextStyle(color: Colors.black87),
-+                    ),
-+                  ),
-+                ],
-+              )
-+            // When collapsed show a simple icon instead of all the bars.
-+            : const Icon(Icons.bar_chart, color: Colors.white),
+       NeuroStep2(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+         },),
+       NeuroStep3(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+         },),
+       NeuroStep4(
+         onNext: nextStep,
+         onScored: (num score) {
+           totalMocaScore += score.toInt(); // or however you wish to handle it
+         },
        ),
-     );
-   }
- 
-   // Helper to build a single indicator bar row
-   Widget _buildBar(String label, double value) {
-     Color barColor = Colors.green;
-     if (value > 0.7)
-       barColor = Colors.red;
-     else if (value > 0.4) barColor = Colors.orange;
- 
-     return Padding(
-       padding: const EdgeInsets.symmetric(vertical: 3.0), // Adjusted padding
-       child: Row(
-         // mainAxisSize: MainAxisSize.min, // Removed for Expanded to work
-         children: [
-           SizedBox(
-             width: 95, // Adjusted width
-             child: Text(label,
-                 style: const TextStyle(color: Colors.white, fontSize: 12)),
-           ),
-           const SizedBox(width: 5), // Reduced space
-           Expanded(
-             child: LinearProgressIndicator(
-               value: value.clamp(0.0, 1.0),
-@@ -344,133 +357,141 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
-       handCount = landmarks.length;
-       if (handCount > 0 && landmarks[0] is Map) {
-         final handData = landmarks[0] as Map;
-         if (handData.containsKey('landmarks') &&
-             handData['landmarks'] is List) {
-           final landmarkList = handData['landmarks'] as List;
-           if (landmarkList.isNotEmpty) {
-             pointsPerHand = landmarkList.length;
-           }
-         }
-       }
-     } catch (e) {
-       print("Error parsing summary data: $e");
-       // Fallback or default values?
-       handCount = landmarks.length; // Best guess
-       pointsPerHand = 0;
-     }
-     return 'Detected $handCount hand(s), $pointsPerHand points/hand.'; // Simplified text
-   }
- 
-   
- 
-   @override
-   Widget build(BuildContext context) {
-     return Scaffold(
--      appBar: AppBar(
--        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
--        title: const Text('Parkinson\'s Detection'),
--      ),
--      body: _hasPermission
--          ? Stack(
--              // Use Stack for overlaying
--              children: [
--                // Camera View + Native Overlay
--                HandLandmarkerView(
--                  onLandmarksDetected:
--                      _onLandmarksDetected, // Use the updated callback
--                ),
-+      appBar: null,
-+      body: OrientationBuilder(
-+        // Rebuild when the device rotates so the preview can be turned.
-+        builder: (context, orientation) {
-+          // The Android view is always portrait, so rotate the Flutter layer
-+          // when the phone is turned sideways.
-+          final turns = orientation == Orientation.landscape ? 1 : 0;
-+          final content = _hasPermission
-+              ? Stack(
-+                  children: [
-+                    // Camera View + Native Overlay
-+                    HandLandmarkerView(
-+                      onLandmarksDetected:
-+                          _onLandmarksDetected, // Use the updated callback
-+                    ),
- 
-                 // Symptom Indicator Overlay (Top Right)
-                 Align(
-                   alignment: Alignment.topRight,
-                   child: Padding(
-                     padding: const EdgeInsets.all(10.0),
-                     child: ConstrainedBox(
-                       // Constrain width of symptom box
-                       constraints: BoxConstraints(
-                         maxWidth: MediaQuery.of(context).size.width *
-                             0.6, // Max 60% of screen width
-                       ),
-                       child: _buildSymptomBars(),
-                     ),
-                   ),
-                 ),
- 
-                 // Original Text data overlay positioned at the bottom (Optional)
-                 Align(
-                   alignment: Alignment.bottomCenter,
-                   child: Container(
-                     constraints: BoxConstraints(
-                       maxHeight: MediaQuery.of(context).size.height / 4,
-                     ),
-                     padding: const EdgeInsets.all(12.0),
-                     margin: const EdgeInsets.all(10.0),
-                     decoration: BoxDecoration(
-                       color: Colors.black.withOpacity(0.6),
-                       borderRadius: BorderRadius.circular(10.0),
-                     ),
-                     child: SingleChildScrollView(
-                       child: Column(
-                         mainAxisSize: MainAxisSize.min,
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text(
-                             _generateSummaryText(_landmarks), // Updated summary
-                             style: const TextStyle(
-                                 fontSize: 14, // Adjusted size
-                                 fontWeight: FontWeight.bold,
-                                 color: Colors.white),
-                           ),
-                           const SizedBox(height: 8),
-                         ],
-                       ),
-                     ),
-                   ),
-                 ),
--              ],
--            )
--          : Center(
--              // Permission not granted view
--              child: Column(
--                mainAxisAlignment: MainAxisAlignment.center,
--                children: [
--                  const Text("Camera permission needed to run this demo."),
--                  const SizedBox(height: 10),
--                  ElevatedButton(
--                    onPressed: _checkCameraPermission,
--                    child: const Text("Grant Permission"),
-+                  ],
-+                )
-+              : Center(
-+                  child: Column(
-+                    mainAxisAlignment: MainAxisAlignment.center,
-+                    children: [
-+                      const Text("Camera permission needed to run this demo."),
-+                      const SizedBox(height: 10),
-+                      ElevatedButton(
-+                        onPressed: _checkCameraPermission,
-+                        child: const Text("Grant Permission"),
-+                      ),
-+                    ],
-                   ),
--                ],
--              ),
--            ),
-+                );
-+          // Rotate everything inside the Scaffold so the native camera feed and
-+          // Flutter overlays remain aligned with the device orientation.
-+          return RotatedBox(quarterTurns: turns, child: content);
-+        },
+       NeuroStep5(
+         onNext: nextStep,
+         onScored: (num score) {
+           totalMocaScore += score.toInt(); // or however you wish to handle it
+         },
+       ),
+-      // Add more here...
++      NeuroStep6(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
 +      ),
-     );
++      NeuroStep7(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
++      NeuroStep8(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
++      NeuroStep9(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
++      NeuroStep10(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
++      NeuroStep11(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
+     ];
    }
  
-   @override
-   void dispose() {
-     _landmarkHistory.clear(); // Clear history on dispose
-+    // Return orientation back to portrait-only after leaving the screen.
-+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-     super.dispose();
+   // ✅ Getter to expose current step
+   Widget get currentStepWidget => _steps[_currentStep];
+ 
+   // ✅ Move to the next step
+   void nextStep() {
+     if (_currentStep < _steps.length - 1) {
+       _currentStep++;
+       notifyListeners();
+     } else {
+       // End of test
+       print('Test complete!');
+     }
    }
  }
- 
- // --- HandLandmarkerView Widget ---
- // (This remains largely the same as before, just ensure the MethodChannel name matches)
- class HandLandmarkerView extends StatefulWidget {
-   final Function(List<dynamic>) onLandmarksDetected;
- 
-   const HandLandmarkerView({super.key, required this.onLandmarksDetected});
- 
-   @override
-   State<HandLandmarkerView> createState() => _HandLandmarkerViewState();
- }
- 
- class _HandLandmarkerViewState extends State<HandLandmarkerView> {
-   MethodChannel? _channel;
- 
-   @override
-   Widget build(BuildContext context) {
-     // Use a unique identifier for the viewType if multiple instances are possible
-     const String viewType = 'hand_landmarker_view';
- 
-     return AndroidView(
-       viewType: viewType,
+diff --git a/lib/ui/views/neuro_test/steps/step_10.dart b/lib/ui/views/neuro_test/steps/step_10.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..3afc3d19eff62709def3e6e638b83fa0cd7f3a88
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_10.dart
+@@ -0,0 +1,81 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 10 - Abstract thinking with two pair questions.
++class NeuroStep10 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep10({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep10> createState() => _NeuroStep10State();
++}
++
++class _NeuroStep10State extends State<NeuroStep10> {
++  final _c1 = TextEditingController();
++  final _c2 = TextEditingController();
++  Timer? _timeout;
++
++  @override
++  void initState() {
++    super.initState();
++    _timeout = Timer(const Duration(minutes: 2), _submit);
++  }
++
++  @override
++  void dispose() {
++    _timeout?.cancel();
++    _c1.dispose();
++    _c2.dispose();
++    super.dispose();
++  }
++
++  void _submit() {
++    _timeout?.cancel();
++    int score = 0;
++    final a1 = _c1.text.toLowerCase();
++    final a2 = _c2.text.toLowerCase();
++    if (a1.contains('μεταφορ') || a1.contains('οχη')) score++;
++    if (a2.contains('μετρ') || a2.contains('χρον') || a2.contains('μηκος')) score++;
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Αφαιρετική σκέψη')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            const Text(
++              'Τι κοινό έχουν τα ζεύγη: \n1) τρένο – ποδήλατο\n2) ρολόι – χάρακας\n',
++              textAlign: TextAlign.center,
++            ),
++            const SizedBox(height: 12),
++            TextField(
++              controller: _c1,
++              textInputAction: TextInputAction.next,
++              decoration: const InputDecoration(
++                labelText: 'Απάντηση για ζεύγος 1',
++                border: OutlineInputBorder(),
++              ),
++            ),
++            const SizedBox(height: 12),
++            TextField(
++              controller: _c2,
++              decoration: const InputDecoration(
++                labelText: 'Απάντηση για ζεύγος 2',
++                border: OutlineInputBorder(),
++              ),
++            ),
++            const SizedBox(height: 20),
++            ElevatedButton(onPressed: _submit, child: const Text('Επόμενο')),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/step_11.dart b/lib/ui/views/neuro_test/steps/step_11.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..b2eb96fdd989e4e5f7cae53e2d14139957ee6dd0
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_11.dart
+@@ -0,0 +1,109 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 11 - Orientation in time and place.
++class NeuroStep11 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep11({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep11> createState() => _NeuroStep11State();
++}
++
++class _NeuroStep11State extends State<NeuroStep11> {
++  final _date = TextEditingController();
++  final _month = TextEditingController();
++  final _year = TextEditingController();
++  final _day = TextEditingController();
++  final _place = TextEditingController();
++  final _city = TextEditingController();
++  Timer? _timeout;
++
++  @override
++  void initState() {
++    super.initState();
++    _timeout = Timer(const Duration(minutes: 2), _submit);
++  }
++
++  @override
++  void dispose() {
++    _timeout?.cancel();
++    _date.dispose();
++    _month.dispose();
++    _year.dispose();
++    _day.dispose();
++    _place.dispose();
++    _city.dispose();
++    super.dispose();
++  }
++
++  void _submit() {
++    _timeout?.cancel();
++    int score = 0;
++    final now = DateTime.now();
++    if (_date.text.trim() == '${now.day}') score++;
++    if (_month.text.trim().toLowerCase() == _monthName(now.month)) score++;
++    if (_year.text.trim() == '${now.year}') score++;
++    if (_day.text.trim().toLowerCase() == _weekdayName(now.weekday)) score++;
++    if (_place.text.trim().isNotEmpty) score++;
++    if (_city.text.trim().isNotEmpty) score++;
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  String _monthName(int m) {
++    const names = [
++      'ιανουαριος','φεβρουαριος','μαρτιος','απριλιος','μαϊος','ιουνιος',
++      'ιουλιος','αυγουστος','σεπτεμβριος','οκτωβριος','νοεμβριος','δεκεμβριος'
++    ];
++    return names[m-1];
++  }
++
++  String _weekdayName(int d) {
++    const names = [
++      'δευτερα','τριτη','τεταρτη','πεμπτη','παρασκευη','σαββατο','κυριακη'
++    ];
++    return names[d-1];
++  }
++
++  Widget _field(String label, TextEditingController c) {
++    return Padding(
++      padding: const EdgeInsets.symmetric(vertical: 4),
++      child: TextField(
++        controller: c,
++        decoration: InputDecoration(
++          labelText: label,
++          border: const OutlineInputBorder(),
++        ),
++      ),
++    );
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Προσανατολισμός')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: SingleChildScrollView(
++          child: Column(
++            children: [
++              _field('Ημερομηνία', _date),
++              _field('Μήνας', _month),
++              _field('Χρονιά', _year),
++              _field('Ημέρα', _day),
++              _field('Μέρος', _place),
++              _field('Πόλη', _city),
++              const SizedBox(height: 20),
++              ElevatedButton(
++                onPressed: _submit,
++                child: const Text('Ολοκλήρωση'),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/step_6.dart b/lib/ui/views/neuro_test/steps/step_6.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..7fefdd327d9ecf4038816c27d45542f5e90e257b
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_6.dart
+@@ -0,0 +1,75 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 6 - Working memory. User must repeat the shown sequence "2 1 8 5 4".
++class NeuroStep6 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep6({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep6> createState() => _NeuroStep6State();
++}
++
++class _NeuroStep6State extends State<NeuroStep6> {
++  final _controller = TextEditingController();
++  Timer? _timeout;
++
++  @override
++  void initState() {
++    super.initState();
++    // Auto move on after a minute so the test doesn't block.
++    _timeout = Timer(const Duration(minutes: 1), _submit);
++  }
++
++  @override
++  void dispose() {
++    _timeout?.cancel();
++    _controller.dispose();
++    super.dispose();
++  }
++
++  void _submit() {
++    _timeout?.cancel();
++    final answer = _controller.text.replaceAll(' ', '');
++    final score = answer == '21854' ? 1 : 0;
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Εργαζόμενη μνήμη')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            const Text(
++              'Επαναλάβετε με την ίδια σειρά τους αριθμούς 2 – 1 – 8 – 5 – 4',
++              textAlign: TextAlign.center,
++              style: TextStyle(fontSize: 16),
++            ),
++            const SizedBox(height: 20),
++            TextField(
++              controller: _controller,
++              keyboardType: TextInputType.number,
++              textInputAction: TextInputAction.done,
++              decoration: const InputDecoration(
++                border: OutlineInputBorder(),
++                hintText: '2 1 8 5 4',
++              ),
++              onSubmitted: (_) => _submit(),
++            ),
++            const SizedBox(height: 20),
++            ElevatedButton(
++              onPressed: _submit,
++              child: const Text('Επόμενο'),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/step_7.dart b/lib/ui/views/neuro_test/steps/step_7.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..036676f2a83d80952521fffeb230192633c2db5c
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_7.dart
+@@ -0,0 +1,74 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 7 - Backward digit span. User repeats 7‑4‑2 in reverse order.
++class NeuroStep7 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep7({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep7> createState() => _NeuroStep7State();
++}
++
++class _NeuroStep7State extends State<NeuroStep7> {
++  final _controller = TextEditingController();
++  Timer? _timeout;
++
++  @override
++  void initState() {
++    super.initState();
++    _timeout = Timer(const Duration(minutes: 1), _submit);
++  }
++
++  @override
++  void dispose() {
++    _timeout?.cancel();
++    _controller.dispose();
++    super.dispose();
++  }
++
++  void _submit() {
++    _timeout?.cancel();
++    final ans = _controller.text.replaceAll(' ', '');
++    final score = ans == '247' ? 1 : 0;
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Οπισθοχωρητική μνήμη')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            const Text(
++              'Επαναλάβετε με την αντίστροφη σειρά τους αριθμούς 7 – 4 – 2',
++              textAlign: TextAlign.center,
++              style: TextStyle(fontSize: 16),
++            ),
++            const SizedBox(height: 20),
++            TextField(
++              controller: _controller,
++              keyboardType: TextInputType.number,
++              textInputAction: TextInputAction.done,
++              decoration: const InputDecoration(
++                border: OutlineInputBorder(),
++                hintText: '2 4 7',
++              ),
++              onSubmitted: (_) => _submit(),
++            ),
++            const SizedBox(height: 20),
++            ElevatedButton(
++              onPressed: _submit,
++              child: const Text('Επόμενο'),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/step_8.dart b/lib/ui/views/neuro_test/steps/step_8.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..3b94b7232eececa891a6fdb21b857b7343748029
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_8.dart
+@@ -0,0 +1,91 @@
++import 'dart:async';
++import 'dart:math';
++import 'package:flutter/material.dart';
++
++/// Step 8 - Vigilance. Random letters flash every second. Tap when "Α" appears.
++class NeuroStep8 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep8({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep8> createState() => _NeuroStep8State();
++}
++
++class _NeuroStep8State extends State<NeuroStep8> {
++  static const _letters = ['Α','Β','Γ','Δ','Ε'];
++  String _current = '';
++  late Timer _timer;
++  int _correct = 0;
++  int _wrong = 0;
++  int _shown = 0;
++
++  @override
++  void initState() {
++    super.initState();
++    // Show 15 letters total.
++    _nextLetter();
++    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _nextLetter());
++  }
++
++  @override
++  void dispose() {
++    _timer.cancel();
++    super.dispose();
++  }
++
++  void _nextLetter() {
++    setState(() {
++      _current = _letters[Random().nextInt(_letters.length)];
++      _shown++;
++    });
++    if (_shown >= 15) {
++      _timer.cancel();
++    }
++  }
++
++  void _pressed() {
++    if (_current == 'Α') {
++      _correct++;
++    } else {
++      _wrong++;
++    }
++    if (_shown >= 15) _finish();
++  }
++
++  void _finish() {
++    final score = _correct > _wrong ? 1 : 0;
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Εγρήγορση')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Column(
++          mainAxisAlignment: MainAxisAlignment.center,
++          children: [
++            Text(
++              _current,
++              style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold),
++            ),
++            const SizedBox(height: 20),
++            ElevatedButton(
++              onPressed: _pressed,
++              child: const Text('Άκουσα Α'),
++            ),
++            const SizedBox(height: 20),
++            if (_shown >= 15)
++              ElevatedButton(
++                onPressed: _finish,
++                child: const Text('Επόμενο'),
++              ),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/step_9.dart b/lib/ui/views/neuro_test/steps/step_9.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..bebb511016d66ab97ab22bc1981745856c51ce32
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/step_9.dart
+@@ -0,0 +1,80 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 9 - Serial subtraction. User subtracts 7 from 100 five times.
++class NeuroStep9 extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const NeuroStep9({super.key, required this.onNext, required this.onScored});
++
++  @override
++  State<NeuroStep9> createState() => _NeuroStep9State();
++}
++
++class _NeuroStep9State extends State<NeuroStep9> {
++  final _controllers = List.generate(5, (_) => TextEditingController());
++  Timer? _timeout;
++
++  static const _answers = [93, 86, 79, 72, 65];
++
++  @override
++  void initState() {
++    super.initState();
++    _timeout = Timer(const Duration(minutes: 2), _submit);
++  }
++
++  @override
++  void dispose() {
++    _timeout?.cancel();
++    for (final c in _controllers) c.dispose();
++    super.dispose();
++  }
++
++  void _submit() {
++    _timeout?.cancel();
++    int score = 0;
++    for (int i = 0; i < 5; i++) {
++      final val = int.tryParse(_controllers[i].text.trim());
++      if (val == _answers[i]) score++;
++    }
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      appBar: AppBar(title: const Text('Αφαίρεση 7 από το 100')),
++      body: Padding(
++        padding: const EdgeInsets.all(16),
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.start,
++          children: [
++            const Text(
++              'Αφαιρέστε διαδοχικά 7 ξεκινώντας από το 100 (πέντε φορές).',
++              style: TextStyle(fontSize: 16),
++            ),
++            const SizedBox(height: 12),
++            for (int i = 0; i < 5; i++) ...[
++              Text('Βήμα ${i + 1}:'),
++              TextField(
++                controller: _controllers[i],
++                keyboardType: TextInputType.number,
++                textInputAction: TextInputAction.next,
++                decoration: const InputDecoration(border: OutlineInputBorder()),
++              ),
++              const SizedBox(height: 8),
++            ],
++            const SizedBox(height: 12),
++            Center(
++              child: ElevatedButton(
++                onPressed: _submit,
++                child: const Text('Επόμενο'),
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
  
 EOF
 )
