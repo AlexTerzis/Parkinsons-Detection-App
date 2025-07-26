@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: '>=3.0.3 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -33,6 +33,10 @@ dependencies:
   cognition_package: ^1.7.0
   research_package: ^2.0.0
   signature: ^5.5.0
+  speech_to_text: ^7.1.0
+
+dependency_overrides:
+  speech_to_text: 7.1.0
 
 
 dev_dependencies:
