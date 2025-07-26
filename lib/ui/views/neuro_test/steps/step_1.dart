@@ -1,207 +1,323 @@
-import 'package:flutter/material.dart';
-import 'dart:math';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NeuroStep1 extends StatefulWidget {
   final VoidCallback onNext;
-  final Function(int score) onScored;
+  final void Function(int score) onScored;
 
-  const NeuroStep1({super.key, required this.onNext, required this.onScored});
+  const NeuroStep1({
+    Key? key,
+    required this.onNext,
+    required this.onScored,
+  }) : super(key: key);
 
   @override
   State<NeuroStep1> createState() => _NeuroStep1State();
 }
 
 class _NeuroStep1State extends State<NeuroStep1> {
-  final sequence = ['1', 'Α', '2', 'Β', '3', 'Γ', '4', 'Δ', '5', 'Ε'];
-  int currentIndex = 0;
-  List<Offset> drawnLines = [];
-  late Map<String, Offset> anchorPoints;
-
-  final double circleSize = 60;
-  bool testCompleted = false;
-  late Timer timeoutTimer;
+  MethodChannel? _channel;
+  Timer? _timeout;
+  bool _hasPermission = false;
+  bool _askedPermission = false;
+  bool _testStarted = false;
+  bool _testEnded = false;
+  int _thumbsUpCount = 0;
+  final int _threshold = 3;
+  bool _thumbsUpOverlay = false;
+  bool _success = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _generateAnchorPoints(context);
-      timeoutTimer = Timer(const Duration(minutes: 2), () {
-        if (!testCompleted) {
-          widget.onScored(0);
-          widget.onNext();
-        }
-      });
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+      _askedPermission = true;
+    }
+    setState(() {
+      _hasPermission = status.isGranted;
     });
+  }
+
+  void _startTest() {
+    setState(() {
+      _testStarted = true;
+      _testEnded = false;
+      _thumbsUpOverlay = false;
+      _success = false;
+      _thumbsUpCount = 0;
+    });
+    _timeout = Timer(const Duration(minutes: 1), () => _finish(false));
+  }
+
+  void _finish(bool success) {
+    if (_testEnded) return;
+    _testEnded = true;
+    _timeout?.cancel();
+    _timeout = null;
+    widget.onScored(success ? 1 : 0);
+    setState(() {
+      _success = success;
+      _thumbsUpOverlay = false;
+    });
+    if (_channel != null) {
+      _channel!.setMethodCallHandler(null);
+      _channel = null;
+    }
   }
 
   @override
   void dispose() {
-    if (timeoutTimer.isActive) timeoutTimer.cancel();
+    _timeout?.cancel();
+    if (_channel != null) {
+      _channel!.setMethodCallHandler(null);
+      _channel = null;
+    }
     super.dispose();
   }
 
-  void completeTestWithPoint() {
-    if (!testCompleted) {
-      testCompleted = true;
-      timeoutTimer.cancel();
-      widget.onScored(1);
-      widget.onNext();
-    }
-  }
-
-  void _generateAnchorPoints(BuildContext context) {
-  final rand = Random();
-  final size = MediaQuery.of(context).size;
-
-  const double safePadding = 32.0;
-  const double topMargin = 40.0;
-  const double bottomMargin = 400.0;
-  const double minDistance = 100.0;
-
-  final usableWidth = size.width - 2 * safePadding;
-  final usableHeight = size.height - topMargin - bottomMargin;
-
-  final List<Offset> usedPoints = [];
-  final Map<String, Offset> result = {};
-  final Set<String> usedLabels = {};
-
-  for (final label in sequence) {
-    if (usedLabels.contains(label)) continue;
-
-    Offset candidate = const Offset(0, 0);
-    bool overlaps;
-    int attempts = 0;
-
-    do {
-      if (++attempts > 1000) break;
-
-      candidate = Offset(
-        rand.nextDouble() * usableWidth + safePadding,
-        rand.nextDouble() * usableHeight + topMargin,
-      );
-
-      overlaps = usedPoints.any((p) => (p - candidate).distance < minDistance);
-    } while (overlaps);
-
-    usedLabels.add(label);
-    usedPoints.add(candidate);
-    result[label] = candidate;
-  }
-
-  setState(() => anchorPoints = result);
-}
-
-
-  void handleTap(String label) {
-    if (label == sequence[currentIndex]) {
-      setState(() {
-        if (currentIndex > 0) {
-          drawnLines.add(anchorPoints[sequence[currentIndex - 1]]!);
-          drawnLines.add(anchorPoints[label]!);
+  void _onViewCreated(int id) {
+    _channel = MethodChannel('gesture_recognizer_channel_$id');
+    _channel!.setMethodCallHandler((call) async {
+      if (_testEnded) return;
+      if (call.method == 'onGestures') {
+        final List<dynamic> gestures = call.arguments;
+        if (gestures.isNotEmpty && gestures.any((g) => g != null && g != 'None')) {
+          if (gestures.contains('Thumb_Up')) {
+            _thumbsUpCount++;
+            setState(() => _thumbsUpOverlay = true);
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (!_testEnded) setState(() => _thumbsUpOverlay = false);
+            });
+            if (_thumbsUpCount >= _threshold) {
+              _finish(true);
+            }
+          } else {
+            _thumbsUpCount = 0;
+            setState(() => _thumbsUpOverlay = false);
+          }
         }
-        currentIndex++;
-      });
-
-      if (currentIndex == sequence.length) {
-        Future.delayed(const Duration(milliseconds: 500), completeTestWithPoint);
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Λάθος σειρά.')),
-      );
-    }
-  }
-
-  Widget _buildCircle(String label, Offset pos) {
-    return Positioned(
-      left: pos.dx - circleSize / 2,
-      top: pos.dy - circleSize / 2,
-      child: GestureDetector(
-        onTap: () => handleTap(label),
-        child: Container(
-          width: circleSize,
-          height: circleSize,
-          decoration: BoxDecoration(
-            color: sequence.indexOf(label) < currentIndex ? Colors.green : Colors.white,
-            border: Border.all(color: const Color.fromARGB(255, 44, 33, 96), width: 2),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        ),
-      ),
-    );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Οπτικο-Νοητική Ιχνηλάτηση'),
-      automaticallyImplyLeading: true,
-      centerTitle: true,
-      ),
-      
-      // ignore: unnecessary_null_comparison
-      body: anchorPoints == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Οδηγίες:\nΣυνδέστε τα κυκλάκια ξεκινώντας από το 1, έπειτα το Α, μετά το 2, Β, 3, Γ... έως το 5 και Ε.\n'
-                    'Αν κάνετε λάθος, μπορείτε να προσπαθήσετε ξανά. Αν δυσκολεύεστε, πατήστε "Επόμενο". Χρόνος 2 λεπτά.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+    // PERMISSION VIEW
+    if (!_hasPermission) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Κίνηση αντίχειρα')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Απαιτείται πρόσβαση στην κάμερα για να συνεχίσετε.',
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _checkPermission,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  textStyle: const TextStyle(fontSize: 18),
                 ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      CustomPaint(
-                        painter: LinePainter(drawnLines),
-                        child: Container(),
-                      ),
-                      ...anchorPoints.entries.map((e) => _buildCircle(e.key, e.value)).toList(),
-                    ],
-                  ),
-                ),
+                child: const Text('Επανέλεγχος άδειας'),
+              ),
+              if (_askedPermission)
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (!testCompleted) {
-                        timeoutTimer.cancel();
-                        widget.onScored(0);
-                        widget.onNext();
-                      }
-                    },
-                    child: const Text('Επόμενο (παράλειψη)'),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Ελέγξτε τις ρυθμίσεις της εφαρμογής αν το πρόβλημα παραμένει.',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // PRE-TEST VIEW
+    if (!_testStarted) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Κίνηση αντίχειρα')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[800]?.withOpacity(0.90),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Text(
+                  'Όταν πατήσετε "Έναρξη", θα ενεργοποιηθεί η κάμερα για 1 λεπτό.\n\n'
+                  'Δείξτε "thumbs up" στο χέρι σας μπροστά στην κάμερα για να προχωρήσετε.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 19, color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _startTest,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                  textStyle: const TextStyle(fontSize: 21),
+                ),
+                child: const Text('Έναρξη'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // TEST PHASE (camera + overlays, NO gap, instructions always visible)
+    if (!_testEnded) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: AndroidView(
+                viewType: 'gesture_recognizer_view',
+                layoutDirection: TextDirection.ltr,
+                onPlatformViewCreated: _onViewCreated,
+              ),
             ),
+            // Always visible instructions overlay
+            Positioned(
+              left: 24,
+              right: 24,
+              top: kToolbarHeight + MediaQuery.of(context).padding.top + 20,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[800]?.withOpacity(0.93),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Text(
+                  'Δείξτε "thumbs up" στο χέρι σας μπροστά στην κάμερα.\nΈχετε 1 λεπτό για να πετύχετε!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 19, color: Colors.white),
+                ),
+              ),
+            ),
+            // Detected overlay (only for 0.8s when detected, does not hide instructions)
+            if (_thumbsUpOverlay)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                  decoration: BoxDecoration(
+                    color: Colors.green[700]!.withOpacity(0.91),
+                    borderRadius: BorderRadius.circular(34),
+                  ),
+                  child: const Text(
+                    '👍 Detected!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            // Fake AppBar/title (optional, comment out if you want totally immersive!)
+            Positioned(
+              left: 0, right: 0, top: 0,
+              child: Container(
+                height: kToolbarHeight + MediaQuery.of(context).padding.top,
+                color: Colors.black.withOpacity(0.6),
+                alignment: Alignment.centerLeft,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 14),
+                    child: Text(
+                      'Κίνηση αντίχειρα',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white.withOpacity(0.92),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // POST-TEST RESULT (NO camera, just result overlay, styled like intro)
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: _success
+                ? Colors.green[800]?.withOpacity(0.93)
+                : Colors.red[800]?.withOpacity(0.93),
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_success ? Icons.check_circle_outline : Icons.error_outline,
+                  size: 66,
+                  color: Colors.white),
+              const SizedBox(height: 20),
+              Text(
+                _success
+                    ? 'Συγχαρητήρια! Αναγνωρίστηκε "thumbs up".'
+                    : 'Δεν αναγνωρίστηκε "thumbs up" μέσα στο χρονικό όριο.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 28),
+              ElevatedButton(
+                onPressed: widget.onNext,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _success ? Colors.green[900] : Colors.red[900],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 18),
+                  textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+                ),
+                child: const Text('Συνέχεια'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
-}
-
-class LinePainter extends CustomPainter {
-  final List<Offset> points;
-  LinePainter(this.points);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blue
-      ..strokeWidth = 4;
-
-    for (int i = 0; i < points.length - 1; i += 2) {
-      canvas.drawLine(points[i], points[i + 1], paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

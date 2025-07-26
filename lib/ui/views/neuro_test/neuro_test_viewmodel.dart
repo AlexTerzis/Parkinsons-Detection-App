@@ -13,6 +13,7 @@ import 'steps/step_9.dart';
 import 'steps/step_10.dart';
 import 'steps/step_11.dart';
 import 'steps/step_12.dart';
+import 'steps/step_15.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
@@ -24,11 +25,9 @@ class NeuroTestViewModel extends BaseViewModel {
     _steps = [
       NeuroStep1(
         onNext: nextStep,
-        onScored: (score) {
-          totalMocaScore += score;
-          
-        },
-      ),
+        onScored: (num score) {
+          totalMocaScore += score.toInt(); // or however you wish to handle it
+        },),
       NeuroStep2(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
@@ -73,6 +72,11 @@ class NeuroTestViewModel extends BaseViewModel {
       ),
       
       NeuroStep12(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      
+      NeuroStep15(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),

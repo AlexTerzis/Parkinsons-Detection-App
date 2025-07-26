@@ -9,13 +9,16 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        // Register the PlatformView factory, passing the activity as LifecycleOwner
-        flutterEngine
-            .platformViewsController
-            .registry
-            .registerViewFactory(
+        // Register the PlatformView factories, passing the activity as LifecycleOwner
+        flutterEngine.platformViewsController.registry.apply {
+            registerViewFactory(
                 "hand_landmarker_view",
-                HandLandmarkerFactory(flutterEngine.dartExecutor.binaryMessenger, this)
+                HandLandmarkerFactory(flutterEngine.dartExecutor.binaryMessenger, this@MainActivity)
             )
+            registerViewFactory(
+                "gesture_recognizer_view",
+                GestureRecognizerFactory(flutterEngine.dartExecutor.binaryMessenger, this@MainActivity)
+            )
+        }
     }
 }
