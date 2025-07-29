@@ -25,6 +25,9 @@ class GestureRecognizerView(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         )
+        previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        previewView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        frameLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         frameLayout.addView(previewView)
 
         helper.setResultListener { result ->

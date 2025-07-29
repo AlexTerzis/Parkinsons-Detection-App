@@ -28,6 +28,7 @@ class _NeuroStep1State extends State<NeuroStep1> {
   final int _threshold = 3;
   bool _thumbsUpOverlay = false;
   bool _success = false;
+  static const bool _debugOverlay = false;
 
   @override
   void initState() {
@@ -222,6 +223,21 @@ class _NeuroStep1State extends State<NeuroStep1> {
                 ),
               ),
             ),
+            if (_debugOverlay)
+              Positioned(
+                left: 50,
+                top: 50,
+                child: Container(
+                  width: 200,
+                  height: 100,
+                  color: Colors.redAccent.withOpacity(0.7),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'DEBUG',
+                    style: TextStyle(fontSize: 32, color: Colors.white),
+                  ),
+                ),
+              ),
             // Detected overlay (only for 0.8s when detected, does not hide instructions)
             if (_thumbsUpOverlay)
               Center(
