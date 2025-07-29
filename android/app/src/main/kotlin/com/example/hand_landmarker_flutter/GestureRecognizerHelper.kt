@@ -34,6 +34,7 @@ class GestureRecognizerHelper(
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var cameraExecutor: ExecutorService
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraProvider: ProcessCameraProvider? = null  // <-- Add this line
 
     init {
         initRecognizer()
@@ -72,8 +73,8 @@ class GestureRecognizerHelper(
     fun setupCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
-            val provider = cameraProviderFuture.get()
-            bindCameraUseCases(provider)
+            cameraProvider = cameraProviderFuture.get()  // <-- Save reference
+            bindCameraUseCases(cameraProvider!!)
             Log.d(TAG, "Camera setup complete!")
         }, ContextCompat.getMainExecutor(context))
     }
@@ -143,9 +144,11 @@ class GestureRecognizerHelper(
 
     fun shutdown() {
         try {
+            cameraProvider?.unbindAll() // <-- Properly release the camera!
             cameraExecutor.shutdown()
             cameraExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
             recognizer?.close()
+            Log.d(TAG, "Camera properly shut down and resources released.")
         } catch (e: Exception) {
             Log.e(TAG, "Error shutting down: ${e.message}")
         }

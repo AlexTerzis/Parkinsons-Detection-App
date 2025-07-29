@@ -5,7 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class NeuroStep1 extends StatefulWidget {
   final VoidCallback onNext;
-  final void Function(double score) onScored; // score is now double
+  final void Function(double score) onScored;
 
   const NeuroStep1({
     Key? key,
@@ -26,7 +26,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
   bool _testEnded = false;
   bool _success = false;
 
-  // Gesture detection maps
   final Map<String, int> _gestureCounts = {
     'Thumb_Up': 0,
     'Open_Palm': 0,
@@ -39,11 +38,10 @@ class _NeuroStep1State extends State<NeuroStep1> {
     'Pointing_Up': false,
     'Closed_Fist': false,
   };
-  String? _lastDetectedGesture; // For overlay
+  String? _lastDetectedGesture;
+  double _finalScore = 0.0;
 
   static const int _framesNeeded = 4;
-
-  // GESTURE display names for the overlay and instructions
   static const gestureLabels = {
     'Thumb_Up': '👍 Thumbs Up',
     'Open_Palm': '🖐️ Open Palm',
@@ -79,67 +77,28 @@ class _NeuroStep1State extends State<NeuroStep1> {
         _gestureDone[key] = false;
       }
     });
-    _timeout = Timer(const Duration(minutes: 1), () => _finish());
+    _timeout = Timer(const Duration(minutes: 1), _finish);
   }
 
-  void _finish() async {
+  void _finish() {
     if (_testEnded) return;
     _testEnded = true;
     _timeout?.cancel();
     _timeout = null;
 
     final double score = _gestureDone.values.where((v) => v).length * 0.75;
+    _finalScore = score;
     widget.onScored(score);
+
     setState(() {
       _success = score == 3.0;
     });
 
+    // Properly close the channel (releases camera natively)
     if (_channel != null) {
       _channel!.setMethodCallHandler(null);
       _channel = null;
     }
-    // Wait a bit so user sees overlay
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        backgroundColor: _success
-            ? Colors.green[800]?.withOpacity(0.97)
-            : Colors.blueGrey[800]?.withOpacity(0.97),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Row(
-          children: [
-            Icon(
-              _success ? Icons.check_circle_outline : Icons.info_outline,
-              color: Colors.white,
-              size: 42,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _success ? 'Επιτυχία!' : 'Ολοκληρώθηκε',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        content: Text(
-          _success
-              ? 'Συγχαρητήρια! Εντοπίστηκαν όλα τα gestures.\n\nΣκορ: 3.00/3.00'
-              : 'Ολοκληρώθηκε ο χρόνος.\nΣκορ: ${score.toStringAsFixed(2)}/3.00',
-          style: const TextStyle(fontSize: 19, color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              widget.onNext();
-            },
-            child: const Text('Συνέχεια', style: TextStyle(fontSize: 19)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -160,14 +119,13 @@ class _NeuroStep1State extends State<NeuroStep1> {
         final List<dynamic> gestures = call.arguments;
         bool updated = false;
         for (final g in _gestureCounts.keys) {
-          if (_gestureDone[g]!) continue; // skip if already done
+          if (_gestureDone[g]!) continue;
           if (gestures.contains(g)) {
             _gestureCounts[g] = _gestureCounts[g]! + 1;
             if (_gestureCounts[g]! >= _framesNeeded) {
               _gestureDone[g] = true;
               _lastDetectedGesture = g;
               updated = true;
-              // Show overlay for a second when a gesture is done
               setState(() {});
               Future.delayed(const Duration(milliseconds: 900), () {
                 if (!_testEnded) setState(() => _lastDetectedGesture = null);
@@ -177,7 +135,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
             _gestureCounts[g] = 0;
           }
         }
-        // If all gestures are done, finish!
         if (_gestureDone.values.every((v) => v)) {
           _finish();
         } else if (updated) {
@@ -189,7 +146,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
 
   @override
   Widget build(BuildContext context) {
-    // PERMISSION VIEW
     if (!_hasPermission) {
       return Scaffold(
         appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
@@ -229,7 +185,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
       );
     }
 
-    // PRE-TEST VIEW
     if (!_testStarted) {
       return Scaffold(
         appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
@@ -276,13 +231,64 @@ class _NeuroStep1State extends State<NeuroStep1> {
       );
     }
 
-    // TEST PHASE (camera + overlays)
+    if (_testEnded) {
+      // ✅ No camera widget here, so camera closes!
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: _success
+                  ? Colors.green[800]?.withOpacity(0.93)
+                  : Colors.blueGrey[800]?.withOpacity(0.97),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_success ? Icons.check_circle_outline : Icons.info_outline,
+                    size: 66, color: Colors.white),
+                const SizedBox(height: 20),
+                Text(
+                  _success
+                      ? 'Συγχαρητήρια! Εντοπίστηκαν όλα τα gestures.\n\nΣκορ: 3.00/3.00'
+                      : 'Ολοκληρώθηκε ο χρόνος.\nΣκορ: ${_finalScore.toStringAsFixed(2)}/3.00',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton(
+                  onPressed: widget.onNext,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: _success ? Colors.green[900] : Colors.blueGrey[900],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 18),
+                    textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+                  ),
+                  child: const Text('Συνέχεια'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // TEST PHASE
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Fullscreen camera view
           SizedBox.expand(
             child: AndroidView(
               viewType: 'gesture_recognizer_view',
@@ -290,7 +296,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
               onPlatformViewCreated: _onViewCreated,
             ),
           ),
-          // Instructions overlay (always visible, with progress)
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
@@ -305,7 +310,7 @@ class _NeuroStep1State extends State<NeuroStep1> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'Εκτελέστε όλες τις κινήσεις. Κάθε φορά που αναγνωρίζεται μία, θα σημειώνεται παρακάτω.',
+                      'Εκτελέστε όλες τις κινήσεις.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
@@ -336,7 +341,6 @@ class _NeuroStep1State extends State<NeuroStep1> {
               ),
             ),
           ),
-          // Detected overlay (for each gesture)
           if (_lastDetectedGesture != null)
             Center(
               child: Container(
@@ -356,8 +360,7 @@ class _NeuroStep1State extends State<NeuroStep1> {
                 ),
               ),
             ),
-          // Fake AppBar/title (optional)
-          ],
+        ],
       ),
     );
   }
