@@ -5,7 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class NeuroStep1 extends StatefulWidget {
   final VoidCallback onNext;
-  final void Function(int score) onScored;
+  final void Function(double score) onScored; // score is now double
 
   const NeuroStep1({
     Key? key,
@@ -24,11 +24,32 @@ class _NeuroStep1State extends State<NeuroStep1> {
   bool _askedPermission = false;
   bool _testStarted = false;
   bool _testEnded = false;
-  int _thumbsUpCount = 0;
-  final int _threshold = 3;
-  bool _thumbsUpOverlay = false;
   bool _success = false;
-  static const bool _debugOverlay = false;
+
+  // Gesture detection maps
+  final Map<String, int> _gestureCounts = {
+    'Thumb_Up': 0,
+    'Open_Palm': 0,
+    'Pointing_Up': 0,
+    'Closed_Fist': 0,
+  };
+  final Map<String, bool> _gestureDone = {
+    'Thumb_Up': false,
+    'Open_Palm': false,
+    'Pointing_Up': false,
+    'Closed_Fist': false,
+  };
+  String? _lastDetectedGesture; // For overlay
+
+  static const int _framesNeeded = 4;
+
+  // GESTURE display names for the overlay and instructions
+  static const gestureLabels = {
+    'Thumb_Up': '👍 Thumbs Up',
+    'Open_Palm': '🖐️ Open Palm',
+    'Pointing_Up': '☝️ Pointing Up',
+    'Closed_Fist': '✊ Closed Fist',
+  };
 
   @override
   void initState() {
@@ -51,27 +72,74 @@ class _NeuroStep1State extends State<NeuroStep1> {
     setState(() {
       _testStarted = true;
       _testEnded = false;
-      _thumbsUpOverlay = false;
       _success = false;
-      _thumbsUpCount = 0;
+      _lastDetectedGesture = null;
+      for (final key in _gestureCounts.keys) {
+        _gestureCounts[key] = 0;
+        _gestureDone[key] = false;
+      }
     });
-    _timeout = Timer(const Duration(minutes: 1), () => _finish(false));
+    _timeout = Timer(const Duration(minutes: 1), () => _finish());
   }
 
-  void _finish(bool success) {
+  void _finish() async {
     if (_testEnded) return;
     _testEnded = true;
     _timeout?.cancel();
     _timeout = null;
-    widget.onScored(success ? 1 : 0);
+
+    final double score = _gestureDone.values.where((v) => v).length * 0.75;
+    widget.onScored(score);
     setState(() {
-      _success = success;
-      _thumbsUpOverlay = false;
+      _success = score == 3.0;
     });
+
     if (_channel != null) {
       _channel!.setMethodCallHandler(null);
       _channel = null;
     }
+    // Wait a bit so user sees overlay
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: _success
+            ? Colors.green[800]?.withOpacity(0.97)
+            : Colors.blueGrey[800]?.withOpacity(0.97),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Row(
+          children: [
+            Icon(
+              _success ? Icons.check_circle_outline : Icons.info_outline,
+              color: Colors.white,
+              size: 42,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _success ? 'Επιτυχία!' : 'Ολοκληρώθηκε',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          _success
+              ? 'Συγχαρητήρια! Εντοπίστηκαν όλα τα gestures.\n\nΣκορ: 3.00/3.00'
+              : 'Ολοκληρώθηκε ο χρόνος.\nΣκορ: ${score.toStringAsFixed(2)}/3.00',
+          style: const TextStyle(fontSize: 19, color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.onNext();
+            },
+            child: const Text('Συνέχεια', style: TextStyle(fontSize: 19)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -90,20 +158,30 @@ class _NeuroStep1State extends State<NeuroStep1> {
       if (_testEnded) return;
       if (call.method == 'onGestures') {
         final List<dynamic> gestures = call.arguments;
-        if (gestures.isNotEmpty && gestures.any((g) => g != null && g != 'None')) {
-          if (gestures.contains('Thumb_Up')) {
-            _thumbsUpCount++;
-            setState(() => _thumbsUpOverlay = true);
-            Future.delayed(const Duration(milliseconds: 800), () {
-              if (!_testEnded) setState(() => _thumbsUpOverlay = false);
-            });
-            if (_thumbsUpCount >= _threshold) {
-              _finish(true);
+        bool updated = false;
+        for (final g in _gestureCounts.keys) {
+          if (_gestureDone[g]!) continue; // skip if already done
+          if (gestures.contains(g)) {
+            _gestureCounts[g] = _gestureCounts[g]! + 1;
+            if (_gestureCounts[g]! >= _framesNeeded) {
+              _gestureDone[g] = true;
+              _lastDetectedGesture = g;
+              updated = true;
+              // Show overlay for a second when a gesture is done
+              setState(() {});
+              Future.delayed(const Duration(milliseconds: 900), () {
+                if (!_testEnded) setState(() => _lastDetectedGesture = null);
+              });
             }
           } else {
-            _thumbsUpCount = 0;
-            setState(() => _thumbsUpOverlay = false);
+            _gestureCounts[g] = 0;
           }
+        }
+        // If all gestures are done, finish!
+        if (_gestureDone.values.every((v) => v)) {
+          _finish();
+        } else if (updated) {
+          setState(() {});
         }
       }
     });
@@ -114,7 +192,7 @@ class _NeuroStep1State extends State<NeuroStep1> {
     // PERMISSION VIEW
     if (!_hasPermission) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Κίνηση αντίχειρα')),
+        appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -154,7 +232,7 @@ class _NeuroStep1State extends State<NeuroStep1> {
     // PRE-TEST VIEW
     if (!_testStarted) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Κίνηση αντίχειρα')),
+        appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -166,11 +244,18 @@ class _NeuroStep1State extends State<NeuroStep1> {
                   color: Colors.blueGrey[800]?.withOpacity(0.90),
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: const Text(
-                  'Όταν πατήσετε "Έναρξη", θα ενεργοποιηθεί η κάμερα για 1 λεπτό.\n\n'
-                  'Δείξτε "thumbs up" στο χέρι σας μπροστά στην κάμερα για να προχωρήσετε.',
+                child: RichText(
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 19, color: Colors.white),
+                  text: const TextSpan(
+                    style: TextStyle(fontSize: 19, color: Colors.white),
+                    children: [
+                      TextSpan(text: 'Όταν πατήσετε "Έναρξη", θα ενεργοποιηθεί η κάμερα για 1 λεπτό.\n\nΠρέπει να πραγματοποιήσετε τις εξής κινήσεις:\n\n'),
+                      TextSpan(text: '👍 Thumbs Up\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '🖐️ Open Palm\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '☝️ Pointing Up\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '✊ Closed Fist', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
@@ -191,148 +276,88 @@ class _NeuroStep1State extends State<NeuroStep1> {
       );
     }
 
-    // TEST PHASE (camera + overlays, NO gap, instructions always visible)
-    if (!_testEnded) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(
-              child: AndroidView(
-                viewType: 'gesture_recognizer_view',
-                layoutDirection: TextDirection.ltr,
-                onPlatformViewCreated: _onViewCreated,
-              ),
-            ),
-            // Always visible instructions overlay
-            Positioned(
-              left: 24,
-              right: 24,
-              top: kToolbarHeight + MediaQuery.of(context).padding.top + 20,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey[800]?.withOpacity(0.93),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Text(
-                  'Δείξτε "thumbs up" στο χέρι σας μπροστά στην κάμερα.\nΈχετε 1 λεπτό για να πετύχετε!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 19, color: Colors.white),
-                ),
-              ),
-            ),
-            if (_debugOverlay)
-              Positioned(
-                left: 50,
-                top: 50,
-                child: Container(
-                  width: 200,
-                  height: 100,
-                  color: Colors.redAccent.withOpacity(0.7),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'DEBUG',
-                    style: TextStyle(fontSize: 32, color: Colors.white),
-                  ),
-                ),
-              ),
-            // Detected overlay (only for 0.8s when detected, does not hide instructions)
-            if (_thumbsUpOverlay)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-                  decoration: BoxDecoration(
-                    color: Colors.green[700]!.withOpacity(0.91),
-                    borderRadius: BorderRadius.circular(34),
-                  ),
-                  child: const Text(
-                    '👍 Detected!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            // Fake AppBar/title (optional, comment out if you want totally immersive!)
-            Positioned(
-              left: 0, right: 0, top: 0,
-              child: Container(
-                height: kToolbarHeight + MediaQuery.of(context).padding.top,
-                color: Colors.black.withOpacity(0.6),
-                alignment: Alignment.centerLeft,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 14),
-                    child: Text(
-                      'Κίνηση αντίχειρα',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.92),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // POST-TEST RESULT (NO camera, just result overlay, styled like intro)
+    // TEST PHASE (camera + overlays)
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: _success
-                ? Colors.green[800]?.withOpacity(0.93)
-                : Colors.red[800]?.withOpacity(0.93),
-            borderRadius: BorderRadius.circular(32),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Fullscreen camera view
+          SizedBox.expand(
+            child: AndroidView(
+              viewType: 'gesture_recognizer_view',
+              layoutDirection: TextDirection.ltr,
+              onPlatformViewCreated: _onViewCreated,
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(_success ? Icons.check_circle_outline : Icons.error_outline,
-                  size: 66,
-                  color: Colors.white),
-              const SizedBox(height: 20),
-              Text(
-                _success
-                    ? 'Συγχαρητήρια! Αναγνωρίστηκε "thumbs up".'
-                    : 'Δεν αναγνωρίστηκε "thumbs up" μέσα στο χρονικό όριο.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 23,
-                  fontWeight: FontWeight.bold,
+          // Instructions overlay (always visible, with progress)
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.only(top: 18, left: 22, right: 22),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[800]?.withOpacity(0.93),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Εκτελέστε όλες τις κινήσεις. Κάθε φορά που αναγνωρίζεται μία, θα σημειώνεται παρακάτω.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                    const SizedBox(height: 14),
+                    ..._gestureCounts.keys.map((g) {
+                      final done = _gestureDone[g]!;
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            gestureLabels[g]!,
+                            style: TextStyle(
+                              color: done ? Colors.greenAccent : Colors.white,
+                              fontWeight: done ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 19,
+                            ),
+                          ),
+                          if (done)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 10),
+                              child: Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+                            ),
+                        ],
+                      );
+                    }).toList(),
+                  ],
                 ),
               ),
-              const SizedBox(height: 28),
-              ElevatedButton(
-                onPressed: widget.onNext,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _success ? Colors.green[900] : Colors.red[900],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
+            ),
+          ),
+          // Detected overlay (for each gesture)
+          if (_lastDetectedGesture != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.green[700]!.withOpacity(0.91),
+                  borderRadius: BorderRadius.circular(34),
+                ),
+                child: Text(
+                  '${gestureLabels[_lastDetectedGesture!]}\nΑναγνωρίστηκε!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 29,
+                    fontWeight: FontWeight.bold,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 18),
-                  textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
                 ),
-                child: const Text('Συνέχεια'),
               ),
-            ],
-          ),
-        ),
+            ),
+          // Fake AppBar/title (optional)
+          ],
       ),
     );
   }
