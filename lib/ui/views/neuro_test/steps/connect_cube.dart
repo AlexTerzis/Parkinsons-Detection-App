@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-class NeuroStep3 extends StatefulWidget {
+class ConnectCubeStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int) onScored;
 
-  const NeuroStep3({
+  const ConnectCubeStep({
     super.key,
     required this.onNext,
     required this.onScored,
   });
 
   @override
-  State<NeuroStep3> createState() => _NeuroStep3State();
+  State<ConnectCubeStep> createState() => _ConnectCubeStepState();
 }
 
-class _NeuroStep3State extends State<NeuroStep3> {
+class _ConnectCubeStepState extends State<ConnectCubeStep> {
   final List<Offset> points = [
     const Offset(100, 100), // 0
     const Offset(200, 100), // 1

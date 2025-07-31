@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 
-import 'steps/step_1.dart';
-import 'steps/step_2.dart';
-import 'steps/step_3.dart';
-import 'steps/step_4.dart';
-import 'steps/step_5.dart';
-import 'steps/step_6.dart';
-import 'steps/step_7.dart';
-import 'steps/step_8.dart';
-import 'steps/step_9.dart';
-import 'steps/step_10.dart';
-import 'steps/step_11.dart';
-import 'steps/step_12.dart';
-import 'steps/step_15.dart';
+import 'steps/gestures.dart';
+import 'steps/draw_cube.dart';
+import 'steps/connect_cube.dart';
+import 'steps/clock.dart';
+import 'steps/naming.dart';
+import 'steps/digits_forward.dart';
+import 'steps/digits_backward.dart';
+import 'steps/vigilance.dart';
+import 'steps/subtract.dart';
+import 'steps/similarities.dart';
+import 'steps/orientation.dart';
+import 'steps/fluency.dart';
+import 'steps/trails.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
@@ -23,60 +23,60 @@ class NeuroTestViewModel extends BaseViewModel {
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
-      NeuroStep1(
+      GesturesStep(
         onNext: nextStep,
         onScored: (num score) {
           totalMocaScore += score.toInt(); // or however you wish to handle it
         },),
-      NeuroStep2(onNext: nextStep,onScored: (score) {
+      DrawCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
-      NeuroStep3(onNext: nextStep,onScored: (score) {
+      ConnectCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
-      NeuroStep4(
+      ClockStep(
         onNext: nextStep,
         onScored: (num score) {
           totalMocaScore += score.toInt(); // or however you wish to handle it
         },
       ),
-      NeuroStep5(
+      NamingStep(
         onNext: nextStep,
         onScored: (num score) {
           totalMocaScore += score.toInt(); // or however you wish to handle it
         },
       ),
-      NeuroStep6(
+      DigitsForwardStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      NeuroStep7(
+      DigitsBackwardStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      NeuroStep8(
+      VigilanceStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      NeuroStep9(
+      SubtractStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      NeuroStep10(
+      SimilaritiesStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      NeuroStep11(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
-      
-      NeuroStep12(
+      OrientationStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
       
-      NeuroStep15(
+      FluencyStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      
+      TrailsStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
@@ -94,6 +94,8 @@ class NeuroTestViewModel extends BaseViewModel {
     } else {
       // End of test
       print('Test complete!');
+      
+      print('Total MoCA Score: $totalMocaScore');
     }
   }
 }

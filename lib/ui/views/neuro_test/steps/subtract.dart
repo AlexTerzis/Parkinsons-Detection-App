@@ -2,16 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Step 9 - Serial subtraction. User subtracts 7 from 100 five times.
-class NeuroStep9 extends StatefulWidget {
+class SubtractStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep9({super.key, required this.onNext, required this.onScored});
+  const SubtractStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep9> createState() => _NeuroStep9State();
+  State<SubtractStep> createState() => _SubtractStepState();
 }
 
-class _NeuroStep9State extends State<NeuroStep9> {
+class _SubtractStepState extends State<SubtractStep> {
   final _controllers = List.generate(5, (_) => TextEditingController());
   Timer? _timeout;
 

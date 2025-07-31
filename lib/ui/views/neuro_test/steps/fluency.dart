@@ -38,18 +38,18 @@ import 'package:speech_to_text/speech_to_text.dart';
 ///   words yield a score of one, otherwise zero.
 /// * The detected word count is displayed briefly in a [SnackBar] before
 ///   invoking [widget.onScored] and [widget.onNext].
-class NeuroStep12 extends StatefulWidget {
+class FluencyStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(int score) onScored;
 
-  const NeuroStep12({
+  const FluencyStep({
     Key? key,
     required this.onNext,
     required this.onScored,
   }) : super(key: key);
 
   @override
-  State<NeuroStep12> createState() => _NeuroStep12State();
+  State<FluencyStep> createState() => _FluencyStepState();
 }
 
 /// Widget state containing the speech recognition and timer logic.
@@ -57,7 +57,7 @@ class NeuroStep12 extends StatefulWidget {
 /// The boolean fields track microphone availability and whether we are
 /// currently recording.  The recognised text is accumulated into
 /// [_transcript] so it can be displayed live.// ... [imports and docs unchanged] ...
-class _NeuroStep12State extends State<NeuroStep12> {
+class _FluencyStepState extends State<FluencyStep> {
   final SpeechToText _speech = SpeechToText();
   bool _available = false;
   bool _listening = false;

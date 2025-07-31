@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-class NeuroStep5 extends StatefulWidget {
+class NamingStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(int score) onScored;
 
-  const NeuroStep5({
+  const NamingStep({
     Key? key,
     required this.onNext,
     required this.onScored,
   }) : super(key: key);
 
   @override
-  _NeuroStep5State createState() => _NeuroStep5State();
+  _NamingStepState createState() => _NamingStepState();
 }
 
-class _NeuroStep5State extends State<NeuroStep5> {
+class _NamingStepState extends State<NamingStep> {
   final _controllers = List.generate(3, (_) => TextEditingController());
   final _focusNodes  = List.generate(3, (_) => FocusNode());
   Timer? _timeoutTimer;

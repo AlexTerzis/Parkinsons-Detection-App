@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
 
-class NeuroStep15 extends StatefulWidget {
+class TrailsStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
 
-  const NeuroStep15({super.key, required this.onNext, required this.onScored});
+  const TrailsStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep15> createState() => _NeuroStep15State();
+  State<TrailsStep> createState() => _TrailsStepState();
 }
 
-class _NeuroStep15State extends State<NeuroStep15> {
+class _TrailsStepState extends State<TrailsStep> {
   final sequence = ['1', 'Α', '2', 'Β', '3', 'Γ', '4', 'Δ', '5', 'Ε'];
   int currentIndex = 0;
   List<Offset> drawnLines = [];

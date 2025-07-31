@@ -2,23 +2,23 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-class NeuroStep4 extends StatefulWidget {
+class ClockStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(num score) onScored;
 
-  const NeuroStep4({
+  const ClockStep({
     Key? key,
     required this.onNext,
     required this.onScored,
   }) : super(key: key);
 
   @override
-  _NeuroStep4State createState() => _NeuroStep4State();
+  _ClockStepState createState() => _ClockStepState();
 }
 
 enum Hand { hour, minute }
 
-class _NeuroStep4State extends State<NeuroStep4> {
+class _ClockStepState extends State<ClockStep> {
   double _hourAngle = -pi/2;
   double _minuteAngle = -pi/2;
   bool _hourCorrect = false;

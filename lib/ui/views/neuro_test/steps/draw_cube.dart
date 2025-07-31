@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 
-class NeuroStep2 extends StatefulWidget {
+class DrawCubeStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int) onScored;
 
-  const NeuroStep2({
+  const DrawCubeStep({
     super.key,
     required this.onNext,
     required this.onScored,
   });
 
   @override
-  _NeuroStep2State createState() => _NeuroStep2State();
+  _DrawCubeStepState createState() => _DrawCubeStepState();
 }
 
-class _NeuroStep2State extends State<NeuroStep2> {
+class _DrawCubeStepState extends State<DrawCubeStep> {
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.black,

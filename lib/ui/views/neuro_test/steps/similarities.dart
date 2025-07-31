@@ -2,16 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Step 10 - Abstract thinking with two pair questions.
-class NeuroStep10 extends StatefulWidget {
+class SimilaritiesStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep10({super.key, required this.onNext, required this.onScored});
+  const SimilaritiesStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep10> createState() => _NeuroStep10State();
+  State<SimilaritiesStep> createState() => _SimilaritiesStepState();
 }
 
-class _NeuroStep10State extends State<NeuroStep10> {
+class _SimilaritiesStepState extends State<SimilaritiesStep> {
   final _c1 = TextEditingController();
   final _c2 = TextEditingController();
   Timer? _timeout;

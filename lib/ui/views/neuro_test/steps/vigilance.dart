@@ -3,16 +3,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 /// Step 8 - Vigilance. Random letters flash every second. Tap when "Α" appears.
-class NeuroStep8 extends StatefulWidget {
+class VigilanceStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep8({super.key, required this.onNext, required this.onScored});
+  const VigilanceStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep8> createState() => _NeuroStep8State();
+  State<VigilanceStep> createState() => _VigilanceStepState();
 }
 
-class _NeuroStep8State extends State<NeuroStep8> {
+class _VigilanceStepState extends State<VigilanceStep> {
   static const _letters = ['Α','Β','Γ','Δ','Ε'];
   String _current = '';
   late Timer _timer;

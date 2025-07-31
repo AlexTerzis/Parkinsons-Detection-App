@@ -1,180 +1,855 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/android/app/src/main/kotlin/com/example/hand_landmarker_flutter/GestureRecognizerView.kt b/android/app/src/main/kotlin/com/example/hand_landmarker_flutter/GestureRecognizerView.kt
-index 23dce3fa5ec89f0312d119455ff203fc74dc91d4..02c8d893bae4a7009a4a850be77b3bcca6a7421e 100644
---- a/android/app/src/main/kotlin/com/example/hand_landmarker_flutter/GestureRecognizerView.kt
-+++ b/android/app/src/main/kotlin/com/example/hand_landmarker_flutter/GestureRecognizerView.kt
-@@ -3,46 +3,49 @@ package com.example.hand_landmarker_flutter
- import android.content.Context
- import android.util.Log
- import android.widget.FrameLayout
- import androidx.camera.view.PreviewView
- import androidx.lifecycle.LifecycleOwner
- import io.flutter.plugin.common.BinaryMessenger
- import io.flutter.plugin.common.MethodChannel
- import io.flutter.plugin.platform.PlatformView
+diff --git a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+index e24b5e097447b3da3665efdf1e36657e425f3de5..a01d68c57b5a6d08d7939268db4a76bac51ead9f 100644
+--- a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
++++ b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+@@ -1,99 +1,99 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
  
- class GestureRecognizerView(
-     private val context: Context,
-     messenger: BinaryMessenger,
-     id: Int,
-     private val lifecycleOwner: LifecycleOwner
- ) : PlatformView {
-     private val frameLayout = FrameLayout(context)
-     private val previewView = PreviewView(context)
-     private val helper = GestureRecognizerHelper(context, previewView, lifecycleOwner)
-     private val channel = MethodChannel(messenger, "gesture_recognizer_channel_$id")
+-import 'steps/step_1.dart';
+-import 'steps/step_2.dart';
+-import 'steps/step_3.dart';
+-import 'steps/step_4.dart';
+-import 'steps/step_5.dart';
+-import 'steps/step_6.dart';
+-import 'steps/step_7.dart';
+-import 'steps/step_8.dart';
+-import 'steps/step_9.dart';
+-import 'steps/step_10.dart';
+-import 'steps/step_11.dart';
+-import 'steps/step_12.dart';
+-import 'steps/step_15.dart';
++import 'steps/gestures.dart';
++import 'steps/draw_cube.dart';
++import 'steps/connect_cube.dart';
++import 'steps/clock.dart';
++import 'steps/naming.dart';
++import 'steps/digits_forward.dart';
++import 'steps/digits_backward.dart';
++import 'steps/vigilance.dart';
++import 'steps/subtract.dart';
++import 'steps/similarities.dart';
++import 'steps/orientation.dart';
++import 'steps/fluency.dart';
++import 'steps/trails.dart';
  
-     init {
-         previewView.layoutParams = FrameLayout.LayoutParams(
-             FrameLayout.LayoutParams.MATCH_PARENT,
-             FrameLayout.LayoutParams.MATCH_PARENT
-         )
-+        previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-+        previewView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-+        frameLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-         frameLayout.addView(previewView)
+ class NeuroTestViewModel extends BaseViewModel {
+   int _currentStep = 0;
+   int totalMocaScore = 0;
+   late List<Widget> _steps;
  
-         helper.setResultListener { result ->
-             val gestures = result.gestures().mapNotNull { gestureList ->
-                 gestureList.firstOrNull()?.categoryName()
-             }
-             // Only send to Flutter if the gestures are not ["None"] or empty
-             if (gestures.isNotEmpty() && !(gestures.size == 1 && gestures[0] == "None")) {
-                 Log.d("GestureRecognizerView", "Sending gestures to Flutter: $gestures")
-                 channel.invokeMethod("onGestures", gestures)
-             }
-         }
-         helper.setupCamera()
+   // ✅ Constructor: define the steps
+   NeuroTestViewModel() {
+     _steps = [
+-      NeuroStep1(
++      GesturesStep(
+         onNext: nextStep,
+         onScored: (num score) {
+           totalMocaScore += score.toInt(); // or however you wish to handle it
+         },),
+-      NeuroStep2(onNext: nextStep,onScored: (score) {
++      DrawCubeStep(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+         },),
+-      NeuroStep3(onNext: nextStep,onScored: (score) {
++      ConnectCubeStep(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+         },),
+-      NeuroStep4(
++      ClockStep(
+         onNext: nextStep,
+         onScored: (num score) {
+           totalMocaScore += score.toInt(); // or however you wish to handle it
+         },
+       ),
+-      NeuroStep5(
++      NamingStep(
+         onNext: nextStep,
+         onScored: (num score) {
+           totalMocaScore += score.toInt(); // or however you wish to handle it
+         },
+       ),
+-      NeuroStep6(
++      DigitsForwardStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+-      NeuroStep7(
++      DigitsBackwardStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+-      NeuroStep8(
++      VigilanceStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+-      NeuroStep9(
++      SubtractStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+-      NeuroStep10(
++      SimilaritiesStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+-      NeuroStep11(
++      OrientationStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       
+-      NeuroStep12(
++      FluencyStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       
+-      NeuroStep15(
++      TrailsStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+     ];
+   }
+ 
+   // ✅ Getter to expose current step
+   Widget get currentStepWidget => _steps[_currentStep];
+ 
+   // ✅ Move to the next step
+   void nextStep() {
+     if (_currentStep < _steps.length - 1) {
+       _currentStep++;
+       notifyListeners();
+     } else {
+       // End of test
+       print('Test complete!');
      }
- 
-     override fun getView() = frameLayout
- 
-     override fun dispose() {
-         helper.shutdown()
-     }
+   }
  }
-diff --git a/lib/ui/views/neuro_test/steps/step_1.dart b/lib/ui/views/neuro_test/steps/step_1.dart
-index 60cf229ed5b109e664ea61506178a6d60349cd18..5e8b4b9725db7efb3da9c7b3519be735b117965b 100644
---- a/lib/ui/views/neuro_test/steps/step_1.dart
-+++ b/lib/ui/views/neuro_test/steps/step_1.dart
-@@ -6,50 +6,51 @@ import 'package:permission_handler/permission_handler.dart';
- class NeuroStep1 extends StatefulWidget {
-   final VoidCallback onNext;
-   final void Function(int score) onScored;
+diff --git a/lib/ui/views/neuro_test/steps/step_4.dart b/lib/ui/views/neuro_test/steps/clock.dart
+similarity index 97%
+rename from lib/ui/views/neuro_test/steps/step_4.dart
+rename to lib/ui/views/neuro_test/steps/clock.dart
+index 31dce09a7594ce601b4ccab64a9d598f09d1436d..a39accb81ad50eda73664c9a4525979759e016e7 100644
+--- a/lib/ui/views/neuro_test/steps/step_4.dart
++++ b/lib/ui/views/neuro_test/steps/clock.dart
+@@ -1,46 +1,46 @@
+ import 'dart:async';
+ import 'dart:math';
+ import 'package:flutter/material.dart';
  
-   const NeuroStep1({
+-class NeuroStep4 extends StatefulWidget {
++class ClockStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final void Function(num score) onScored;
+ 
+-  const NeuroStep4({
++  const ClockStep({
      Key? key,
      required this.onNext,
      required this.onScored,
    }) : super(key: key);
  
    @override
-   State<NeuroStep1> createState() => _NeuroStep1State();
+-  _NeuroStep4State createState() => _NeuroStep4State();
++  _ClockStepState createState() => _ClockStepState();
  }
  
- class _NeuroStep1State extends State<NeuroStep1> {
+ enum Hand { hour, minute }
+ 
+-class _NeuroStep4State extends State<NeuroStep4> {
++class _ClockStepState extends State<ClockStep> {
+   double _hourAngle = -pi/2;
+   double _minuteAngle = -pi/2;
+   bool _hourCorrect = false;
+   bool _minuteCorrect = false;
+   bool _showHint = false;
+   bool _hintUsed = false;
+   Hand? _activeHand;
+   Timer? _completionTimer, _timeoutTimer, _hintTimer;
+ 
+   // Pre‑shifted targets (canvas 0=3 o'clock)
+   static final _targetHourAngle   = ((11 + 10/60) * 30) * pi/180 - pi/2;
+   static final _targetMinuteAngle = (10 * 6) * pi/180 - pi/2;
+   static const _tolerance = 0.1; // ~6°
+ 
+   @override
+   void initState() {
+     super.initState();
+     // Two‑minute timeout → partial scoring
+     _timeoutTimer = Timer(const Duration(minutes: 2), () {
+       final raw = (_hourCorrect ? 1.5 : 0) + (_minuteCorrect ? 1.5 : 0);
+       final score = raw - (_hintUsed ? 0.5 : 0);
+       widget.onScored(score);
+       widget.onNext();
+     });
+   }
+diff --git a/lib/ui/views/neuro_test/steps/step_3.dart b/lib/ui/views/neuro_test/steps/connect_cube.dart
+similarity index 97%
+rename from lib/ui/views/neuro_test/steps/step_3.dart
+rename to lib/ui/views/neuro_test/steps/connect_cube.dart
+index 67e4180284f05a83259a1cf32cabb7602bb26ab3..52f2286321aded185a60d39604cf8445e44c4e02 100644
+--- a/lib/ui/views/neuro_test/steps/step_3.dart
++++ b/lib/ui/views/neuro_test/steps/connect_cube.dart
+@@ -1,43 +1,43 @@
+ import 'package:flutter/material.dart';
+ import 'dart:async';
+ 
+-class NeuroStep3 extends StatefulWidget {
++class ConnectCubeStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int) onScored;
+ 
+-  const NeuroStep3({
++  const ConnectCubeStep({
+     super.key,
+     required this.onNext,
+     required this.onScored,
+   });
+ 
+   @override
+-  State<NeuroStep3> createState() => _NeuroStep3State();
++  State<ConnectCubeStep> createState() => _ConnectCubeStepState();
+ }
+ 
+-class _NeuroStep3State extends State<NeuroStep3> {
++class _ConnectCubeStepState extends State<ConnectCubeStep> {
+   final List<Offset> points = [
+     const Offset(100, 100), // 0
+     const Offset(200, 100), // 1
+     const Offset(100, 200), // 2
+     const Offset(200, 200), // 3
+     const Offset(140, 140), // 4
+     const Offset(240, 140), // 5
+     const Offset(140, 240), // 6
+     const Offset(240, 240), // 7
+   ];
+ 
+   final Set<String> connectedPairs = {};
+   final Set<String> incorrectPairs = {};
+   int? selectedPoint;
+   bool showHint = true;
+   late Timer hintTimer;
+   late Timer timeoutTimer;
+   bool testCompleted = false;
+ 
+   final Set<String> expectedEdges = {
+     '0-1', '0-2', '1-3', '2-3',
+     '4-5', '4-6', '5-7', '6-7',
+     '0-4', '1-5', '2-6', '3-7'
+   };
+ 
+diff --git a/lib/ui/views/neuro_test/steps/step_7.dart b/lib/ui/views/neuro_test/steps/digits_backward.dart
+similarity index 87%
+rename from lib/ui/views/neuro_test/steps/step_7.dart
+rename to lib/ui/views/neuro_test/steps/digits_backward.dart
+index 036676f2a83d80952521fffeb230192633c2db5c..ce13caebe601536d0deb5f5ec70cdfb7774eae5a 100644
+--- a/lib/ui/views/neuro_test/steps/step_7.dart
++++ b/lib/ui/views/neuro_test/steps/digits_backward.dart
+@@ -1,39 +1,39 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 7 - Backward digit span. User repeats 7‑4‑2 in reverse order.
+-class NeuroStep7 extends StatefulWidget {
++class DigitsBackwardStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep7({super.key, required this.onNext, required this.onScored});
++  const DigitsBackwardStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep7> createState() => _NeuroStep7State();
++  State<DigitsBackwardStep> createState() => _DigitsBackwardStepState();
+ }
+ 
+-class _NeuroStep7State extends State<NeuroStep7> {
++class _DigitsBackwardStepState extends State<DigitsBackwardStep> {
+   final _controller = TextEditingController();
+   Timer? _timeout;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _timeout = Timer(const Duration(minutes: 1), _submit);
+   }
+ 
+   @override
+   void dispose() {
+     _timeout?.cancel();
+     _controller.dispose();
+     super.dispose();
+   }
+ 
+   void _submit() {
+     _timeout?.cancel();
+     final ans = _controller.text.replaceAll(' ', '');
+     final score = ans == '247' ? 1 : 0;
+     widget.onScored(score);
+     widget.onNext();
+   }
+ 
+   @override
+diff --git a/lib/ui/views/neuro_test/steps/step_6.dart b/lib/ui/views/neuro_test/steps/digits_forward.dart
+similarity index 87%
+rename from lib/ui/views/neuro_test/steps/step_6.dart
+rename to lib/ui/views/neuro_test/steps/digits_forward.dart
+index 7fefdd327d9ecf4038816c27d45542f5e90e257b..05bfa33532f1a0821c54c920a3f7f815b574e61a 100644
+--- a/lib/ui/views/neuro_test/steps/step_6.dart
++++ b/lib/ui/views/neuro_test/steps/digits_forward.dart
+@@ -1,39 +1,39 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 6 - Working memory. User must repeat the shown sequence "2 1 8 5 4".
+-class NeuroStep6 extends StatefulWidget {
++class DigitsForwardStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep6({super.key, required this.onNext, required this.onScored});
++  const DigitsForwardStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep6> createState() => _NeuroStep6State();
++  State<DigitsForwardStep> createState() => _DigitsForwardStepState();
+ }
+ 
+-class _NeuroStep6State extends State<NeuroStep6> {
++class _DigitsForwardStepState extends State<DigitsForwardStep> {
+   final _controller = TextEditingController();
+   Timer? _timeout;
+ 
+   @override
+   void initState() {
+     super.initState();
+     // Auto move on after a minute so the test doesn't block.
+     _timeout = Timer(const Duration(minutes: 1), _submit);
+   }
+ 
+   @override
+   void dispose() {
+     _timeout?.cancel();
+     _controller.dispose();
+     super.dispose();
+   }
+ 
+   void _submit() {
+     _timeout?.cancel();
+     final answer = _controller.text.replaceAll(' ', '');
+     final score = answer == '21854' ? 1 : 0;
+     widget.onScored(score);
+     widget.onNext();
+   }
+ 
+diff --git a/lib/ui/views/neuro_test/steps/step_2.dart b/lib/ui/views/neuro_test/steps/draw_cube.dart
+similarity index 92%
+rename from lib/ui/views/neuro_test/steps/step_2.dart
+rename to lib/ui/views/neuro_test/steps/draw_cube.dart
+index 15d83981b1430fa6e345ee1bff07503993895679..4c757b5a74a31b4650452fb937f6cb6b404a9fd1 100644
+--- a/lib/ui/views/neuro_test/steps/step_2.dart
++++ b/lib/ui/views/neuro_test/steps/draw_cube.dart
+@@ -1,43 +1,43 @@
+ import 'package:flutter/material.dart';
+ import 'package:signature/signature.dart';
+ 
+-class NeuroStep2 extends StatefulWidget {
++class DrawCubeStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int) onScored;
+ 
+-  const NeuroStep2({
++  const DrawCubeStep({
+     super.key,
+     required this.onNext,
+     required this.onScored,
+   });
+ 
+   @override
+-  _NeuroStep2State createState() => _NeuroStep2State();
++  _DrawCubeStepState createState() => _DrawCubeStepState();
+ }
+ 
+-class _NeuroStep2State extends State<NeuroStep2> {
++class _DrawCubeStepState extends State<DrawCubeStep> {
+   final SignatureController _controller = SignatureController(
+     penStrokeWidth: 3,
+     penColor: Colors.black,
+     exportBackgroundColor: Colors.white,
+   );
+ 
+   void _handleNext({required int score}) async {
+     if (_controller.isNotEmpty) score = 1;
+     widget.onScored(score);
+     widget.onNext();
+   }
+ 
+   @override
+   void dispose() {
+     _controller.dispose();
+     super.dispose();
+   }
+ 
+   @override
+   Widget build(BuildContext context) {
+     return Scaffold(
+       appBar: AppBar(title: const Text('Οπτικο-Κατασκευαστικές Ικανότητες')),
+       body: Column(
+         children: [
+           const Padding(
+diff --git a/lib/ui/views/neuro_test/steps/step_12.dart b/lib/ui/views/neuro_test/steps/fluency.dart
+similarity index 97%
+rename from lib/ui/views/neuro_test/steps/step_12.dart
+rename to lib/ui/views/neuro_test/steps/fluency.dart
+index 8c090d207c764147859d84bf64bebc76d47cd808..76cab05b75675474b2fe32236c9260d5a2ea2b1d 100644
+--- a/lib/ui/views/neuro_test/steps/step_12.dart
++++ b/lib/ui/views/neuro_test/steps/fluency.dart
+@@ -16,70 +16,70 @@ import 'package:speech_to_text/speech_to_text.dart';
+  *   2. Tapping the button begins listening and starts a 60s timer. Interim
+  *      recognition results are displayed live so the user sees feedback.
+  *   3. Saying "Τέλος" or letting the timer expire ends the test.  The
+  *      transcript is analysed to count distinct "χ" words which are then
+  *      scored.  Results appear in a SnackBar before advancing to the next
+  *      step.
+  */
+ 
+ /// Step 6 – verbal fluency test.
+ ///
+ /// The patient must list as many words as possible beginning with the
+ /// Greek letter "χ" within sixty seconds.  Speech is captured using the
+ /// [`speech_to_text`](https://pub.dev/packages/speech_to_text) plugin.
+ ///
+ /// * The plugin is initialised in [initState] and the test is only
+ ///   enabled once it reports availability.
+ /// * Pressing the microphone floating action button starts listening and
+ ///   begins a 60 second countdown.  Interim recognition results are shown
+ ///   live on screen.
+ /// * Saying "Τέλος" or pressing the button again stops recognition.
+ /// * When time expires or listening stops, words starting with "χ" are
+ ///   extracted, duplicates removed and counted.  Eleven or more distinct
+ ///   words yield a score of one, otherwise zero.
+ /// * The detected word count is displayed briefly in a [SnackBar] before
+ ///   invoking [widget.onScored] and [widget.onNext].
+-class NeuroStep12 extends StatefulWidget {
++class FluencyStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final void Function(int score) onScored;
+ 
+-  const NeuroStep12({
++  const FluencyStep({
+     Key? key,
+     required this.onNext,
+     required this.onScored,
+   }) : super(key: key);
+ 
+   @override
+-  State<NeuroStep12> createState() => _NeuroStep12State();
++  State<FluencyStep> createState() => _FluencyStepState();
+ }
+ 
+ /// Widget state containing the speech recognition and timer logic.
+ ///
+ /// The boolean fields track microphone availability and whether we are
+ /// currently recording.  The recognised text is accumulated into
+ /// [_transcript] so it can be displayed live.// ... [imports and docs unchanged] ...
+-class _NeuroStep12State extends State<NeuroStep12> {
++class _FluencyStepState extends State<FluencyStep> {
+   final SpeechToText _speech = SpeechToText();
+   bool _available = false;
+   bool _listening = false;
+   String _transcript = '';
+   List<String> _allWords = [];  // <-- Store all recognized words in order
+   Timer? _timer;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _initSpeech();
+   }
+ 
+   Future<void> _initSpeech() async {
+     _available = await _speech.initialize();
+     if (mounted) setState(() {});
+   }
+ 
+   void _toggleListening() async {
+     if (!_available) return;
+ 
+     if (_listening) {
+       await _speech.stop();
+       _finish();
+     } else {
+diff --git a/lib/ui/views/neuro_test/steps/step_1.dart b/lib/ui/views/neuro_test/steps/gestures.dart
+similarity index 98%
+rename from lib/ui/views/neuro_test/steps/step_1.dart
+rename to lib/ui/views/neuro_test/steps/gestures.dart
+index 4be4cebe40e48d4d3c2feb35c71199e59dfe18eb..0ba17acfc2a0032fb58f6955a62991026f6bdea7 100644
+--- a/lib/ui/views/neuro_test/steps/step_1.dart
++++ b/lib/ui/views/neuro_test/steps/gestures.dart
+@@ -1,45 +1,45 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ import 'package:flutter/services.dart';
+ import 'package:permission_handler/permission_handler.dart';
+ 
+-class NeuroStep1 extends StatefulWidget {
++class GesturesStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final void Function(double score) onScored;
+ 
+-  const NeuroStep1({
++  const GesturesStep({
+     Key? key,
+     required this.onNext,
+     required this.onScored,
+   }) : super(key: key);
+ 
+   @override
+-  State<NeuroStep1> createState() => _NeuroStep1State();
++  State<GesturesStep> createState() => _GesturesStepState();
+ }
+ 
+-class _NeuroStep1State extends State<NeuroStep1> {
++class _GesturesStepState extends State<GesturesStep> {
    MethodChannel? _channel;
    Timer? _timeout;
    bool _hasPermission = false;
    bool _askedPermission = false;
    bool _testStarted = false;
    bool _testEnded = false;
-   int _thumbsUpCount = 0;
-   final int _threshold = 3;
-   bool _thumbsUpOverlay = false;
    bool _success = false;
-+  static const bool _debugOverlay = false;
+ 
+   final Map<String, int> _gestureCounts = {
+     'Thumb_Up': 0,
+     'Open_Palm': 0,
+     'Pointing_Up': 0,
+     'Closed_Fist': 0,
+   };
+   final Map<String, bool> _gestureDone = {
+     'Thumb_Up': false,
+     'Open_Palm': false,
+     'Pointing_Up': false,
+     'Closed_Fist': false,
+   };
+   String? _lastDetectedGesture;
+   double _finalScore = 0.0;
+ 
+   static const int _framesNeeded = 4;
+   static const gestureLabels = {
+diff --git a/lib/ui/views/neuro_test/steps/step_5.dart b/lib/ui/views/neuro_test/steps/naming.dart
+similarity index 96%
+rename from lib/ui/views/neuro_test/steps/step_5.dart
+rename to lib/ui/views/neuro_test/steps/naming.dart
+index c2f911dabf5313bb3cd2e11c8df5fc0d9c18a11e..17ec76ed7518dc7519f971311d093059c787ccb3 100644
+--- a/lib/ui/views/neuro_test/steps/step_5.dart
++++ b/lib/ui/views/neuro_test/steps/naming.dart
+@@ -1,43 +1,43 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+-class NeuroStep5 extends StatefulWidget {
++class NamingStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final void Function(int score) onScored;
+ 
+-  const NeuroStep5({
++  const NamingStep({
+     Key? key,
+     required this.onNext,
+     required this.onScored,
+   }) : super(key: key);
+ 
+   @override
+-  _NeuroStep5State createState() => _NeuroStep5State();
++  _NamingStepState createState() => _NamingStepState();
+ }
+ 
+-class _NeuroStep5State extends State<NeuroStep5> {
++class _NamingStepState extends State<NamingStep> {
+   final _controllers = List.generate(3, (_) => TextEditingController());
+   final _focusNodes  = List.generate(3, (_) => FocusNode());
+   Timer? _timeoutTimer;
+   int _answeredCount = 0;
+   bool _done = false;
+ 
+   final _names = ['λιοντάρι', 'ρινόκερος', 'καμήλα'];
  
    @override
    void initState() {
      super.initState();
-     _checkPermission();
+     // listen for focus loss on each field
+     for (int i = 0; i < 3; i++) {
+       _focusNodes[i].addListener(() {
+         if (!_focusNodes[i].hasFocus && !_done) {
+           _validateField(i);
+         }
+       });
+     }
+     // 2‑minute timeout auto‑submit
+     _timeoutTimer = Timer(const Duration(minutes: 2), _finish);
    }
  
-   Future<void> _checkPermission() async {
-     var status = await Permission.camera.status;
-     if (!status.isGranted) {
-       status = await Permission.camera.request();
-       _askedPermission = true;
+   @override
+   void dispose() {
+diff --git a/lib/ui/views/neuro_test/steps/step_11.dart b/lib/ui/views/neuro_test/steps/orientation.dart
+similarity index 91%
+rename from lib/ui/views/neuro_test/steps/step_11.dart
+rename to lib/ui/views/neuro_test/steps/orientation.dart
+index b2eb96fdd989e4e5f7cae53e2d14139957ee6dd0..83b369e2e05f1c4d72daf6d89d1c7c931717b731 100644
+--- a/lib/ui/views/neuro_test/steps/step_11.dart
++++ b/lib/ui/views/neuro_test/steps/orientation.dart
+@@ -1,39 +1,39 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 11 - Orientation in time and place.
+-class NeuroStep11 extends StatefulWidget {
++class OrientationStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep11({super.key, required this.onNext, required this.onScored});
++  const OrientationStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep11> createState() => _NeuroStep11State();
++  State<OrientationStep> createState() => _OrientationStepState();
+ }
+ 
+-class _NeuroStep11State extends State<NeuroStep11> {
++class _OrientationStepState extends State<OrientationStep> {
+   final _date = TextEditingController();
+   final _month = TextEditingController();
+   final _year = TextEditingController();
+   final _day = TextEditingController();
+   final _place = TextEditingController();
+   final _city = TextEditingController();
+   Timer? _timeout;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _timeout = Timer(const Duration(minutes: 2), _submit);
+   }
+ 
+   @override
+   void dispose() {
+     _timeout?.cancel();
+     _date.dispose();
+     _month.dispose();
+     _year.dispose();
+     _day.dispose();
+     _place.dispose();
+     _city.dispose();
+     super.dispose();
+   }
+diff --git a/lib/ui/views/neuro_test/steps/step_10.dart b/lib/ui/views/neuro_test/steps/similarities.dart
+similarity index 89%
+rename from lib/ui/views/neuro_test/steps/step_10.dart
+rename to lib/ui/views/neuro_test/steps/similarities.dart
+index 3afc3d19eff62709def3e6e638b83fa0cd7f3a88..fdb62e1cc71b69750af02348cd876fb6f7190f03 100644
+--- a/lib/ui/views/neuro_test/steps/step_10.dart
++++ b/lib/ui/views/neuro_test/steps/similarities.dart
+@@ -1,39 +1,39 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 10 - Abstract thinking with two pair questions.
+-class NeuroStep10 extends StatefulWidget {
++class SimilaritiesStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep10({super.key, required this.onNext, required this.onScored});
++  const SimilaritiesStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep10> createState() => _NeuroStep10State();
++  State<SimilaritiesStep> createState() => _SimilaritiesStepState();
+ }
+ 
+-class _NeuroStep10State extends State<NeuroStep10> {
++class _SimilaritiesStepState extends State<SimilaritiesStep> {
+   final _c1 = TextEditingController();
+   final _c2 = TextEditingController();
+   Timer? _timeout;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _timeout = Timer(const Duration(minutes: 2), _submit);
+   }
+ 
+   @override
+   void dispose() {
+     _timeout?.cancel();
+     _c1.dispose();
+     _c2.dispose();
+     super.dispose();
+   }
+ 
+   void _submit() {
+     _timeout?.cancel();
+     int score = 0;
+     final a1 = _c1.text.toLowerCase();
+     final a2 = _c2.text.toLowerCase();
+     if (a1.contains('μεταφορ') || a1.contains('οχη')) score++;
+     if (a2.contains('μετρ') || a2.contains('χρον') || a2.contains('μηκος')) score++;
+diff --git a/lib/ui/views/neuro_test/steps/step_9.dart b/lib/ui/views/neuro_test/steps/subtract.dart
+similarity index 89%
+rename from lib/ui/views/neuro_test/steps/step_9.dart
+rename to lib/ui/views/neuro_test/steps/subtract.dart
+index bebb511016d66ab97ab22bc1981745856c51ce32..104cae2c2c2130c6da6864edbe118a59e2021cd2 100644
+--- a/lib/ui/views/neuro_test/steps/step_9.dart
++++ b/lib/ui/views/neuro_test/steps/subtract.dart
+@@ -1,39 +1,39 @@
+ import 'dart:async';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 9 - Serial subtraction. User subtracts 7 from 100 five times.
+-class NeuroStep9 extends StatefulWidget {
++class SubtractStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep9({super.key, required this.onNext, required this.onScored});
++  const SubtractStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep9> createState() => _NeuroStep9State();
++  State<SubtractStep> createState() => _SubtractStepState();
+ }
+ 
+-class _NeuroStep9State extends State<NeuroStep9> {
++class _SubtractStepState extends State<SubtractStep> {
+   final _controllers = List.generate(5, (_) => TextEditingController());
+   Timer? _timeout;
+ 
+   static const _answers = [93, 86, 79, 72, 65];
+ 
+   @override
+   void initState() {
+     super.initState();
+     _timeout = Timer(const Duration(minutes: 2), _submit);
+   }
+ 
+   @override
+   void dispose() {
+     _timeout?.cancel();
+     for (final c in _controllers) c.dispose();
+     super.dispose();
+   }
+ 
+   void _submit() {
+     _timeout?.cancel();
+     int score = 0;
+     for (int i = 0; i < 5; i++) {
+       final val = int.tryParse(_controllers[i].text.trim());
+       if (val == _answers[i]) score++;
      }
-     setState(() {
-       _hasPermission = status.isGranted;
+diff --git a/lib/ui/views/neuro_test/steps/step_15.dart b/lib/ui/views/neuro_test/steps/trails.dart
+similarity index 96%
+rename from lib/ui/views/neuro_test/steps/step_15.dart
+rename to lib/ui/views/neuro_test/steps/trails.dart
+index 54fc3011ea6a23bc06283e89fc75d853c35f910c..2d98a18d3e5e2f88223152f6977cac275b31f8d6 100644
+--- a/lib/ui/views/neuro_test/steps/step_15.dart
++++ b/lib/ui/views/neuro_test/steps/trails.dart
+@@ -1,40 +1,40 @@
+ import 'package:flutter/material.dart';
+ import 'dart:math';
+ import 'dart:async';
+ 
+-class NeuroStep15 extends StatefulWidget {
++class TrailsStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+ 
+-  const NeuroStep15({super.key, required this.onNext, required this.onScored});
++  const TrailsStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep15> createState() => _NeuroStep15State();
++  State<TrailsStep> createState() => _TrailsStepState();
+ }
+ 
+-class _NeuroStep15State extends State<NeuroStep15> {
++class _TrailsStepState extends State<TrailsStep> {
+   final sequence = ['1', 'Α', '2', 'Β', '3', 'Γ', '4', 'Δ', '5', 'Ε'];
+   int currentIndex = 0;
+   List<Offset> drawnLines = [];
+   late Map<String, Offset> anchorPoints;
+ 
+   final double circleSize = 60;
+   bool testCompleted = false;
+   late Timer timeoutTimer;
+ 
+   @override
+   void initState() {
+     super.initState();
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+       _generateAnchorPoints(context);
+       timeoutTimer = Timer(const Duration(minutes: 2), () {
+         if (!testCompleted) {
+           widget.onScored(0);
+           widget.onNext();
+         }
+       });
      });
    }
  
-   void _startTest() {
+   @override
+   void dispose() {
+diff --git a/lib/ui/views/neuro_test/steps/step_8.dart b/lib/ui/views/neuro_test/steps/vigilance.dart
+similarity index 88%
+rename from lib/ui/views/neuro_test/steps/step_8.dart
+rename to lib/ui/views/neuro_test/steps/vigilance.dart
+index 3b94b7232eececa891a6fdb21b857b7343748029..4ee02320e88e874be4d6fa0f946e912a999ace29 100644
+--- a/lib/ui/views/neuro_test/steps/step_8.dart
++++ b/lib/ui/views/neuro_test/steps/vigilance.dart
+@@ -1,40 +1,40 @@
+ import 'dart:async';
+ import 'dart:math';
+ import 'package:flutter/material.dart';
+ 
+ /// Step 8 - Vigilance. Random letters flash every second. Tap when "Α" appears.
+-class NeuroStep8 extends StatefulWidget {
++class VigilanceStep extends StatefulWidget {
+   final VoidCallback onNext;
+   final Function(int score) onScored;
+-  const NeuroStep8({super.key, required this.onNext, required this.onScored});
++  const VigilanceStep({super.key, required this.onNext, required this.onScored});
+ 
+   @override
+-  State<NeuroStep8> createState() => _NeuroStep8State();
++  State<VigilanceStep> createState() => _VigilanceStepState();
+ }
+ 
+-class _NeuroStep8State extends State<NeuroStep8> {
++class _VigilanceStepState extends State<VigilanceStep> {
+   static const _letters = ['Α','Β','Γ','Δ','Ε'];
+   String _current = '';
+   late Timer _timer;
+   int _correct = 0;
+   int _wrong = 0;
+   int _shown = 0;
+ 
+   @override
+   void initState() {
+     super.initState();
+     // Show 15 letters total.
+     _nextLetter();
+     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _nextLetter());
+   }
+ 
+   @override
+   void dispose() {
+     _timer.cancel();
+     super.dispose();
+   }
+ 
+   void _nextLetter() {
      setState(() {
-       _testStarted = true;
-       _testEnded = false;
-       _thumbsUpOverlay = false;
-       _success = false;
-       _thumbsUpCount = 0;
-@@ -200,50 +201,65 @@ class _NeuroStep1State extends State<NeuroStep1> {
-             Positioned.fill(
-               child: AndroidView(
-                 viewType: 'gesture_recognizer_view',
-                 layoutDirection: TextDirection.ltr,
-                 onPlatformViewCreated: _onViewCreated,
-               ),
-             ),
-             // Always visible instructions overlay
-             Positioned(
-               left: 24,
-               right: 24,
-               top: kToolbarHeight + MediaQuery.of(context).padding.top + 20,
-               child: Container(
-                 padding: const EdgeInsets.all(20),
-                 decoration: BoxDecoration(
-                   color: Colors.blueGrey[800]?.withOpacity(0.93),
-                   borderRadius: BorderRadius.circular(28),
-                 ),
-                 child: const Text(
-                   'Δείξτε "thumbs up" στο χέρι σας μπροστά στην κάμερα.\nΈχετε 1 λεπτό για να πετύχετε!',
-                   textAlign: TextAlign.center,
-                   style: TextStyle(fontSize: 19, color: Colors.white),
-                 ),
-               ),
-             ),
-+            if (_debugOverlay)
-+              Positioned(
-+                left: 50,
-+                top: 50,
-+                child: Container(
-+                  width: 200,
-+                  height: 100,
-+                  color: Colors.redAccent.withOpacity(0.7),
-+                  alignment: Alignment.center,
-+                  child: const Text(
-+                    'DEBUG',
-+                    style: TextStyle(fontSize: 32, color: Colors.white),
-+                  ),
-+                ),
-+              ),
-             // Detected overlay (only for 0.8s when detected, does not hide instructions)
-             if (_thumbsUpOverlay)
-               Center(
-                 child: Container(
-                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-                   decoration: BoxDecoration(
-                     color: Colors.green[700]!.withOpacity(0.91),
-                     borderRadius: BorderRadius.circular(34),
-                   ),
-                   child: const Text(
-                     '👍 Detected!',
-                     style: TextStyle(
-                       color: Colors.white,
-                       fontSize: 32,
-                       fontWeight: FontWeight.bold,
-                     ),
-                   ),
-                 ),
-               ),
-             // Fake AppBar/title (optional, comment out if you want totally immersive!)
-             Positioned(
-               left: 0, right: 0, top: 0,
-               child: Container(
-                 height: kToolbarHeight + MediaQuery.of(context).padding.top,
-                 color: Colors.black.withOpacity(0.6),
+       _current = _letters[Random().nextInt(_letters.length)];
+       _shown++;
  
 EOF
 )

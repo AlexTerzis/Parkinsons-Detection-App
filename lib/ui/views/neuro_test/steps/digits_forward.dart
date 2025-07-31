@@ -1,23 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-/// Step 7 - Backward digit span. User repeats 7‑4‑2 in reverse order.
-class NeuroStep7 extends StatefulWidget {
+/// Step 6 - Working memory. User must repeat the shown sequence "2 1 8 5 4".
+class DigitsForwardStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep7({super.key, required this.onNext, required this.onScored});
+  const DigitsForwardStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep7> createState() => _NeuroStep7State();
+  State<DigitsForwardStep> createState() => _DigitsForwardStepState();
 }
 
-class _NeuroStep7State extends State<NeuroStep7> {
+class _DigitsForwardStepState extends State<DigitsForwardStep> {
   final _controller = TextEditingController();
   Timer? _timeout;
 
   @override
   void initState() {
     super.initState();
+    // Auto move on after a minute so the test doesn't block.
     _timeout = Timer(const Duration(minutes: 1), _submit);
   }
 
@@ -30,8 +31,8 @@ class _NeuroStep7State extends State<NeuroStep7> {
 
   void _submit() {
     _timeout?.cancel();
-    final ans = _controller.text.replaceAll(' ', '');
-    final score = ans == '247' ? 1 : 0;
+    final answer = _controller.text.replaceAll(' ', '');
+    final score = answer == '21854' ? 1 : 0;
     widget.onScored(score);
     widget.onNext();
   }
@@ -39,14 +40,14 @@ class _NeuroStep7State extends State<NeuroStep7> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Οπισθοχωρητική μνήμη')),
+      appBar: AppBar(title: const Text('Εργαζόμενη μνήμη')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Επαναλάβετε με την αντίστροφη σειρά τους αριθμούς 7 – 4 – 2',
+              'Επαναλάβετε με την ίδια σειρά τους αριθμούς 2 – 1 – 8 – 5 – 4',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),
@@ -57,7 +58,7 @@ class _NeuroStep7State extends State<NeuroStep7> {
               textInputAction: TextInputAction.done,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: '2 4 7',
+                hintText: '2 1 8 5 4',
               ),
               onSubmitted: (_) => _submit(),
             ),

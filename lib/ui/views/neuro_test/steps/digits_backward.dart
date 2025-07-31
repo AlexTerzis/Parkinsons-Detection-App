@@ -1,24 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-/// Step 6 - Working memory. User must repeat the shown sequence "2 1 8 5 4".
-class NeuroStep6 extends StatefulWidget {
+/// Step 7 - Backward digit span. User repeats 7‑4‑2 in reverse order.
+class DigitsBackwardStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep6({super.key, required this.onNext, required this.onScored});
+  const DigitsBackwardStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep6> createState() => _NeuroStep6State();
+  State<DigitsBackwardStep> createState() => _DigitsBackwardStepState();
 }
 
-class _NeuroStep6State extends State<NeuroStep6> {
+class _DigitsBackwardStepState extends State<DigitsBackwardStep> {
   final _controller = TextEditingController();
   Timer? _timeout;
 
   @override
   void initState() {
     super.initState();
-    // Auto move on after a minute so the test doesn't block.
     _timeout = Timer(const Duration(minutes: 1), _submit);
   }
 
@@ -31,8 +30,8 @@ class _NeuroStep6State extends State<NeuroStep6> {
 
   void _submit() {
     _timeout?.cancel();
-    final answer = _controller.text.replaceAll(' ', '');
-    final score = answer == '21854' ? 1 : 0;
+    final ans = _controller.text.replaceAll(' ', '');
+    final score = ans == '247' ? 1 : 0;
     widget.onScored(score);
     widget.onNext();
   }
@@ -40,14 +39,14 @@ class _NeuroStep6State extends State<NeuroStep6> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Εργαζόμενη μνήμη')),
+      appBar: AppBar(title: const Text('Οπισθοχωρητική μνήμη')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Επαναλάβετε με την ίδια σειρά τους αριθμούς 2 – 1 – 8 – 5 – 4',
+              'Επαναλάβετε με την αντίστροφη σειρά τους αριθμούς 7 – 4 – 2',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),
@@ -58,7 +57,7 @@ class _NeuroStep6State extends State<NeuroStep6> {
               textInputAction: TextInputAction.done,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: '2 1 8 5 4',
+                hintText: '2 4 7',
               ),
               onSubmitted: (_) => _submit(),
             ),

@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class NeuroStep1 extends StatefulWidget {
+class GesturesStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(double score) onScored;
 
-  const NeuroStep1({
+  const GesturesStep({
     Key? key,
     required this.onNext,
     required this.onScored,
   }) : super(key: key);
 
   @override
-  State<NeuroStep1> createState() => _NeuroStep1State();
+  State<GesturesStep> createState() => _GesturesStepState();
 }
 
-class _NeuroStep1State extends State<NeuroStep1> {
+class _GesturesStepState extends State<GesturesStep> {
   MethodChannel? _channel;
   Timer? _timeout;
   bool _hasPermission = false;

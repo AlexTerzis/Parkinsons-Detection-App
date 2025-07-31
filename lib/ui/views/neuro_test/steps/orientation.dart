@@ -2,16 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Step 11 - Orientation in time and place.
-class NeuroStep11 extends StatefulWidget {
+class OrientationStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
-  const NeuroStep11({super.key, required this.onNext, required this.onScored});
+  const OrientationStep({super.key, required this.onNext, required this.onScored});
 
   @override
-  State<NeuroStep11> createState() => _NeuroStep11State();
+  State<OrientationStep> createState() => _OrientationStepState();
 }
 
-class _NeuroStep11State extends State<NeuroStep11> {
+class _OrientationStepState extends State<OrientationStep> {
   final _date = TextEditingController();
   final _month = TextEditingController();
   final _year = TextEditingController();
