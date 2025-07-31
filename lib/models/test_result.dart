@@ -41,7 +41,7 @@ class TestResult {
     };
   }
 
-   static TestType _typeFromString(String value) {
+  static TestType _typeFromString(String value) {
     switch (value) {
       case 'drawing':
         return TestType.drawing;
@@ -52,10 +52,14 @@ class TestResult {
       case 'tap':
         return TestType.tap;
       case 'voice':
-        return TestType.voice;  
+        return TestType.voice;
+      case 'camera':
+      case 'cameraDetection':
+        return TestType.cameraDetection;
+      case 'neuropsychological':
+        return TestType.neuro;
       default:
         return TestType.cameraDetection;
-        
     }
   }
 }

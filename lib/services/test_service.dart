@@ -34,11 +34,15 @@ class TestService {
   Future<List<TestResult>> fetchResultsForPatient(String patientId) async {
     final List<TestResult> results = [];
     for (final type in TestType.values) {
-      final snap = await _categoryCol(patientId, type)
-          .orderBy('performedAt', descending: true)
-          .get();
-      results.addAll(
-          snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
+      try {
+        final snap = await _categoryCol(patientId, type)
+            .orderBy('performedAt', descending: true)
+            .get();
+        results.addAll(
+            snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
+      } catch (_) {
+        // Ignore permission errors or missing collections
+      }
     }
     results.sort((a, b) => b.performedAt.compareTo(a.performedAt));
     return results;
@@ -47,7 +51,7 @@ class TestService {
   /// Watches the patient's response collection for live updates.
   Stream<List<TestResult>> watchResultsForPatient(String patientId) {
     final controller = StreamController<List<TestResult>>();
-        final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
 
     void emit() async {
       final list = await fetchResultsForPatient(patientId);
@@ -55,11 +59,15 @@ class TestService {
     }
 
     for (final type in TestType.values) {
-      final sub = _categoryCol(patientId, type)
-          .orderBy('performedAt', descending: true)
-          .snapshots()
-          .listen((_) => emit());
-      subs.add(sub);
+      try {
+        final sub = _categoryCol(patientId, type)
+            .orderBy('performedAt', descending: true)
+            .snapshots()
+            .listen((_) => emit(), onError: (_) {});
+        subs.add(sub);
+      } catch (_) {
+        // Ignore permission errors
+      }
     }
 
     controller.onCancel = () {
