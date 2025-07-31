@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 
@@ -8,6 +10,7 @@ import 'steps/clock.dart';
 import 'steps/naming.dart';
 import 'steps/digits_forward.dart';
 import 'steps/digits_backward.dart';
+import 'steps/repeat_sentences.dart';
 import 'steps/vigilance.dart';
 import 'steps/subtract.dart';
 import 'steps/similarities.dart';
@@ -17,16 +20,20 @@ import 'steps/trails.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
-  int totalMocaScore = 0;
+  double totalMocaScore = 0.0;
   late List<Widget> _steps;
 
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
+      RepeatSentencesStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
       GesturesStep(
         onNext: nextStep,
         onScored: (num score) {
-          totalMocaScore += score.toInt(); // or however you wish to handle it
+          totalMocaScore += score; // or however you wish to handle it
         },),
       DrawCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
