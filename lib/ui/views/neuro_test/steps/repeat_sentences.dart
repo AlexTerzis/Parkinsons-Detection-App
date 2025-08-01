@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
 
-// =========== FLOW WIDGET ===========
 class RepeatSentencesStep extends StatefulWidget {
   final void Function(double score) onScored;
   final VoidCallback onNext;
@@ -35,7 +33,6 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   }
 }
 
-// =========== ACTUAL TEST STEP ===========
 class _RepeatSentencesStepInternal extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(double score) onScored;
@@ -59,12 +56,15 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   bool _showHint = false;
   int _previewSeconds = 20;
   int _listenSeconds = 60;
-  String _recognized = '';
   double _totalScore = 0;
   Timer? _previewTimer;
   Timer? _listenTimer;
   Timer? _hintTimer;
   bool _speechAvailable = false;
+  bool _finished = false;
+
+  // Collects all recognized text segments from mic restarts (no dupe)
+  String _recognizedText = '';
 
   @override
   void initState() {
@@ -74,7 +74,19 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   }
 
   Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize();
+    _speechAvailable = await _speech.initialize(
+      onStatus: (status) async {
+        if (!_previewPhase &&
+            !_finished &&
+            _listenSeconds > 0 &&
+            _scoreRecognized(_recognizedText) < 1.0 &&
+            status == 'notListening') {
+          // Mic stopped (by itself) – restart unless correct or finished
+          await Future.delayed(const Duration(milliseconds: 100));
+          if (!_finished) _startOrRestartListening();
+        }
+      },
+    );
     setState(() {});
   }
 
@@ -83,8 +95,9 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
       _previewPhase = true;
       _previewSeconds = 20;
       _hintUsed = false;
-      _recognized = '';
+      _recognizedText = '';
       _showHint = false;
+      _finished = false;
     });
     _previewTimer?.cancel();
     _previewTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -97,24 +110,54 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
     });
   }
 
+  void _startOrRestartListening() {
+    if (!_speechAvailable || _finished) return;
+    _speech.listen(
+      localeId: 'el_GR',
+      onResult: (result) {
+        setState(() {
+          // Always append any new words to the recognized text
+          // If result is empty, do nothing
+          if (result.recognizedWords.isNotEmpty) {
+            // Avoid repeated phrases: if new part is at the end, just append the difference
+            if (_recognizedText.isEmpty) {
+              _recognizedText = result.recognizedWords;
+            } else {
+              final prev = _recognizedText.trim();
+              final current = result.recognizedWords.trim();
+              // Don't append if current is substring of end of prev
+              if (!prev.endsWith(current)) {
+                // Try to append only new part
+                var newPart = current;
+                if (current.startsWith(prev)) {
+                  newPart = current.substring(prev.length).trim();
+                }
+                if (newPart.isNotEmpty) {
+                  _recognizedText = (prev + ' ' + newPart).trim();
+                }
+              }
+            }
+          }
+          if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
+        });
+      },
+      listenFor: Duration(seconds: _listenSeconds),
+      pauseFor: Duration(seconds: _listenSeconds),
+      listenMode: ListenMode.dictation,
+      partialResults: true,
+    );
+  }
+
   Future<void> _startListening() async {
     if (!_speechAvailable) return;
     setState(() {
       _previewPhase = false;
       _listenSeconds = 60;
       _showHint = false;
+      _recognizedText = '';
+      _finished = false;
     });
-    _speech.listen(
-      localeId: 'el_GR',
-      onResult: (result) {
-        setState(() => _recognized = result.recognizedWords);
-        // Optional: stop if perfect or half correct
-        // if (_scoreRecognized(_recognized) >= 1.0) _stopListening();
-        if (_scoreRecognized(_recognized) >= 1.0) _stopListening();
-      },
-      listenFor: const Duration(seconds: 60),
-      pauseFor: const Duration(seconds: 3),
-    );
+    _startOrRestartListening();
     _listenTimer?.cancel();
     _listenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_listenSeconds == 0) {
@@ -126,40 +169,63 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
     });
   }
 
-  double _scoreRecognized(String spoken) {
-    String normalize(String s) => s
+  String normalizeGreek(String s) {
+    return s
+        .replaceAll('ά', 'α')
+        .replaceAll('έ', 'ε')
+        .replaceAll('ή', 'η')
+        .replaceAll('ί', 'ι')
+        .replaceAll('ό', 'ο')
+        .replaceAll('ύ', 'υ')
+        .replaceAll('ώ', 'ω')
+        .replaceAll('Ά', 'Α')
+        .replaceAll('Έ', 'Ε')
+        .replaceAll('Ή', 'Η')
+        .replaceAll('Ί', 'Ι')
+        .replaceAll('Ό', 'Ο')
+        .replaceAll('Ύ', 'Υ')
+        .replaceAll('Ώ', 'Ω')
+        .replaceAll('ϊ', 'ι')
+        .replaceAll('ΐ', 'ι')
+        .replaceAll('Ϊ', 'Ι')
+        .replaceAll('ϋ', 'υ')
+        .replaceAll('ΰ', 'υ')
+        .replaceAll('Ϋ', 'Υ')
+        .replaceAll(RegExp(r'[^\p{L}]', unicode: true), '')
         .toLowerCase()
-        .replaceAll(RegExp(r"[^\p{L}\s]", unicode: true), '')
         .trim();
-    final target = normalize(_phrases[_index]).split(RegExp(r'\\s+'));
-    final words = normalize(spoken).split(RegExp(r'\\s+'));
-    int match = 0;
-    for (int i = 0; i < min(target.length, words.length); i++) {
-      if (target[i] == words[i]) match++;
-    }
-    final halfCorrect = match >= (target.length / 2);
-    final allCorrect = match >= (target.length - 1);
+  }
 
-    if (allCorrect) return 1.0;
-    if (halfCorrect) return 0.5;
+  double _scoreRecognized(String spoken) {
+    final phrase = _phrases[_index];
+    final targetWords = Set<String>.from(normalizeGreek(phrase).split(RegExp(r'\s+')));
+    final userWords = Set<String>.from(normalizeGreek(spoken).split(RegExp(r'\s+')));
+    final correctCount = targetWords.intersection(userWords).length;
+    final totalWords = targetWords.length;
+    final half = (totalWords / 2).ceil();
+
+    if (correctCount >= totalWords - 1) return 1.0;
+    if (correctCount >= half) return 0.5;
     return 0.0;
   }
 
   Future<void> _stopListening() async {
+    if (_finished) return;
+    _finished = true;
     await _speech.stop();
     _listenTimer?.cancel();
     _evaluate();
   }
 
   void _evaluate() {
-    double base = _scoreRecognized(_recognized);
+    double base = _scoreRecognized(_recognizedText);
     double score = base;
     if (_hintUsed) score /= 2;
     _totalScore += score;
   }
 
   void _showHintPressed() {
-    if (_previewPhase) return; // ignore during preview
+    if (_previewPhase) return;
     setState(() {
       _showHint = true;
       _hintUsed = true;
@@ -170,24 +236,21 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
         _showHint = false;
       });
     });
-    // DO NOT clear recognized or reset timer
   }
 
   void _clear() {
-    // Only clear recognized text, do not reset timer or restart recording
     setState(() {
-      _recognized = '';
+      _recognizedText = '';
     });
   }
 
   void _next() {
     if (_previewPhase) {
-      // Skip preview and start recording immediately
       _previewTimer?.cancel();
       _startListening();
       return;
     }
-    if (_speech.isListening) return; // prevent skipping while recording
+    if (_speech.isListening) return;
     if (_index < _phrases.length - 1) {
       setState(() => _index++);
       _startPreview();
@@ -216,7 +279,6 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Show instructions ONLY during recording (not during preview)
             if (!_previewPhase)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -245,37 +307,52 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
                           ),
                         ],
                       )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
+                    : Stack(
+                        alignment: Alignment.center,
                         children: [
                           if (_showHint)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
                               child: Text(
                                 phrase,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
                               ),
                             ),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black45),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _recognized.isEmpty
-                                  ? 'Ακούω… ($_listenSeconds δευτ.)'
-                                  : _recognized,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 18),
-                            ),
+                          Align(
+                            alignment: Alignment.center,
+                            child: _recognizedText.isEmpty
+                                ? const Text(
+                                    'Επαναλάβετε την πρόταση',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : Text(
+                                    _recognizedText,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
                           ),
                         ],
                       ),
               ),
             ),
-            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: !_previewPhase
+                  ? Text(
+                      '$_listenSeconds δευτ.',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    )
+                  : const SizedBox.shrink(),
+            ),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 12,
@@ -301,7 +378,6 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   }
 }
 
-// =========== INSTRUCTIONS SCREEN ===========
 class RepeatInstructionsScreen extends StatelessWidget {
   final VoidCallback onStart;
 
@@ -317,10 +393,10 @@ class RepeatInstructionsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Σε αυτή τη δοκιμασία θα δείτε μία πρόταση για 20\".\n'
-              'Μετά από 20\", η εγγραφή θα ξεκινήσει αυτόματα για 60\" ή έως ότου την επαναλάβετε σωστά.\n'
-              'Μπορείτε να πατήσετε \"Υπόδειξη\" για να εμφανιστεί ξανά η πρόταση για 3\" με ποινή 0.5 βαθμού,\n'
-              'ή \"Καθαρισμός\" για επανεκκίνηση της εγγραφής.',
+              'Σε αυτή τη δοκιμασία θα δείτε μία πρόταση για 20".\n'
+              'Μετά από 20", η εγγραφή θα ξεκινήσει αυτόματα για 60" ή έως ότου την επαναλάβετε σωστά.\n'
+              'Μπορείτε να πατήσετε "Υπόδειξη" για να εμφανιστεί ξανά η πρόταση για 3" με ποινή 0.5 βαθμού,\n'
+              'ή "Καθαρισμός" για να διαγράψετε τα λόγια σας.',
               style: const TextStyle(fontSize: 18),
               textAlign: TextAlign.left,
             ),

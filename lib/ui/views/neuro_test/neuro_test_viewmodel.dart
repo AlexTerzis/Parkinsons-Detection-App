@@ -17,19 +17,39 @@ import 'steps/similarities.dart';
 import 'steps/orientation.dart';
 import 'steps/fluency.dart';
 import 'steps/trails.dart';
+import 'steps/immediate_recall.dart';
+import 'steps/delayed_recall.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
   double totalMocaScore = 0.0;
   late List<Widget> _steps;
+  List<String> _immediateAnswers = [];
 
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
-      RepeatSentencesStep(
+       FluencyStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
+      RepeatSentencesStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),     DelayedRecallStep(
+        onFinished: (score, result) {
+          totalMocaScore += score.toDouble();
+          nextStep();
+        },
+        immediateTrials: _immediateAnswers,
+      ),
+      ImmediateRecallStep(
+        onFinished: (resp,__) {
+          _immediateAnswers = resp;
+          nextStep();
+        },
+      ),
+
       GesturesStep(
         onNext: nextStep,
         onScored: (num score) {
@@ -78,10 +98,7 @@ class NeuroTestViewModel extends BaseViewModel {
         onScored: (score) => totalMocaScore += score,
       ),
       
-      FluencyStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
+      
       
       TrailsStep(
         onNext: nextStep,
