@@ -1,566 +1,276 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-index b2704181645d06dc2b0c9ec5aaf11e7f40153ac0..ed74c2e639f6d3e69ab4c6914f023753372f6d5d 100644
---- a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-+++ b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-@@ -1,53 +1,62 @@
- import 'dart:ffi';
+diff --git a/lib/ui/views/neuro_test/steps/repeat_sentences.dart b/lib/ui/views/neuro_test/steps/repeat_sentences.dart
+index 6ece4a2d3893b65b0a5e41a58249bda1c2eb68b2..7b4e11fa77f7720867b07de38831cff05a2976df 100644
+--- a/lib/ui/views/neuro_test/steps/repeat_sentences.dart
++++ b/lib/ui/views/neuro_test/steps/repeat_sentences.dart
+@@ -41,141 +41,151 @@ class _RepeatSentencesStepInternal extends StatefulWidget {
  
- import 'package:flutter/material.dart';
- import 'package:stacked/stacked.dart';
+   @override
+   State<_RepeatSentencesStepInternal> createState() => _RepeatSentencesStepInternalState();
+ }
  
- import 'steps/gestures.dart';
- import 'steps/draw_cube.dart';
- import 'steps/connect_cube.dart';
- import 'steps/clock.dart';
- import 'steps/naming.dart';
- import 'steps/digits_forward.dart';
- import 'steps/digits_backward.dart';
- import 'steps/repeat_sentences.dart';
- import 'steps/vigilance.dart';
- import 'steps/subtract.dart';
- import 'steps/similarities.dart';
- import 'steps/orientation.dart';
- import 'steps/fluency.dart';
- import 'steps/trails.dart';
-+import 'steps/immediate_recall.dart';
-+import 'steps/delayed_recall.dart';
+ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepInternal> {
+   final SpeechToText _speech = SpeechToText();
+   final List<String> _phrases = const [
+     'Το μόνο που ξέρω είναι ότι ο Γιάννης είναι αυτός που θα βοηθήσει σήμερα.',
+     'Η γάτα κρυβόταν πάντα κάτω από τον καναπέ όταν βρίσκονταν σκυλιά μέσα στο δωμάτιο.',
+   ];
  
- class NeuroTestViewModel extends BaseViewModel {
-   int _currentStep = 0;
-   double totalMocaScore = 0.0;
-   late List<Widget> _steps;
-+  List<String> _immediateAnswers = [];
+   int _index = 0;
+   bool _previewPhase = true;
+   bool _hintUsed = false;
+   bool _showHint = false;
+   int _previewSeconds = 20;
+   int _listenSeconds = 60;
+   double _totalScore = 0;
+   Timer? _previewTimer;
+   Timer? _listenTimer;
+   Timer? _hintTimer;
+   bool _speechAvailable = false;
+   bool _finished = false;
  
-   // ✅ Constructor: define the steps
-   NeuroTestViewModel() {
-     _steps = [
-+      ImmediateRecallStep(
-+        onFinished: (resp) {
-+          _immediateAnswers = resp;
-+          nextStep();
-+        },
-+      ),
-       RepeatSentencesStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       GesturesStep(
-         onNext: nextStep,
-         onScored: (num score) {
-           totalMocaScore += score; // or however you wish to handle it
-         },),
-       DrawCubeStep(onNext: nextStep,onScored: (score) {
-           totalMocaScore += score;
-         },),
-       ConnectCubeStep(onNext: nextStep,onScored: (score) {
-           totalMocaScore += score;
-         },),
-       ClockStep(
-         onNext: nextStep,
-         onScored: (num score) {
-           totalMocaScore += score.toInt(); // or however you wish to handle it
-         },
-       ),
-       NamingStep(
-         onNext: nextStep,
-         onScored: (num score) {
-           totalMocaScore += score.toInt(); // or however you wish to handle it
-@@ -65,44 +74,51 @@ class NeuroTestViewModel extends BaseViewModel {
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       SubtractStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       SimilaritiesStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       OrientationStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       
-       FluencyStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       
-       TrailsStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-+      DelayedRecallStep(
-+        onFinished: (score, result) {
-+          totalMocaScore += score.toDouble();
-+          nextStep();
-+        },
-+        immediateTrials: _immediateAnswers,
-+      ),
-     ];
+-  // Collects all recognized text segments from mic restarts (no dupe)
++  // --- Speech recognition buffering ---
++  // Stores complete segments returned by the recognizer
++  final List<String> _segments = [];
++  // Current partial phrase from the active listening session
++  String _currentPartial = '';
++  // Combined text of [_segments] and [_currentPartial]
+   String _recognizedText = '';
++  // Prevents overlapping restart attempts when onStatus fires rapidly
++  bool _restartLock = false;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _initSpeech();
+     _startPreview();
    }
  
-   // ✅ Getter to expose current step
-   Widget get currentStepWidget => _steps[_currentStep];
+   Future<void> _initSpeech() async {
+     _speechAvailable = await _speech.initialize(
+       onStatus: (status) async {
++        // When Android stops listening after a pause the status changes to
++        // "notListening". Restart immediately unless the user already
++        // finished or time ran out.
+         if (!_previewPhase &&
+             !_finished &&
++            !_restartLock &&
+             _listenSeconds > 0 &&
+             _scoreRecognized(_recognizedText) < 1.0 &&
+             status == 'notListening') {
+-          // Mic stopped (by itself) – restart unless correct or finished
++          _restartLock = true;
+           await Future.delayed(const Duration(milliseconds: 100));
+-          if (!_finished) _startOrRestartListening();
++          if (!_finished) await _startOrRestartListening();
++          _restartLock = false;
+         }
+       },
+     );
+     setState(() {});
+   }
  
-   // ✅ Move to the next step
-   void nextStep() {
-     if (_currentStep < _steps.length - 1) {
-       _currentStep++;
-       notifyListeners();
+   void _startPreview() {
+     setState(() {
+       _previewPhase = true;
+       _previewSeconds = 20;
+       _hintUsed = false;
++      _segments.clear();
++      _currentPartial = '';
+       _recognizedText = '';
+       _showHint = false;
+       _finished = false;
+     });
+     _previewTimer?.cancel();
+     _previewTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+       if (_previewSeconds == 0) {
+         timer.cancel();
+         _startListening();
+       } else {
+         setState(() => _previewSeconds--);
+       }
+     });
+   }
+ 
+   void _startOrRestartListening() {
+     if (!_speechAvailable || _finished) return;
++    // Stop any existing session before starting a new one
++    if (_speech.isListening) _speech.stop();
++
++    _currentPartial = '';
+     _speech.listen(
+       localeId: 'el_GR',
+-      onResult: (result) {
+-        setState(() {
+-          // Always append any new words to the recognized text
+-          // If result is empty, do nothing
+-          if (result.recognizedWords.isNotEmpty) {
+-            // Avoid repeated phrases: if new part is at the end, just append the difference
+-            if (_recognizedText.isEmpty) {
+-              _recognizedText = result.recognizedWords;
+-            } else {
+-              final prev = _recognizedText.trim();
+-              final current = result.recognizedWords.trim();
+-              // Don't append if current is substring of end of prev
+-              if (!prev.endsWith(current)) {
+-                // Try to append only new part
+-                var newPart = current;
+-                if (current.startsWith(prev)) {
+-                  newPart = current.substring(prev.length).trim();
+-                }
+-                if (newPart.isNotEmpty) {
+-                  _recognizedText = (prev + ' ' + newPart).trim();
+-                }
+-              }
+-            }
+-          }
+-          if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
+-        });
+-      },
++      // Every recognition update (partial or final) passes here
++      onResult: _processResult,
+       listenFor: Duration(seconds: _listenSeconds),
+       pauseFor: Duration(seconds: _listenSeconds),
+       listenMode: ListenMode.dictation,
+       partialResults: true,
+     );
+   }
+ 
++  // Consolidates the words from [_segments] and the current partial result
++  void _processResult(SpeechRecognitionResult result) {
++    setState(() {
++      _currentPartial = result.recognizedWords;
++      if (result.finalResult) {
++        // Save completed phrase before restart
++        final trimmed = _currentPartial.trim();
++        if (trimmed.isNotEmpty) _segments.add(trimmed);
++        _currentPartial = '';
++      }
++      _recognizedText = (_segments + [_currentPartial]).join(' ').trim();
++      if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
++    });
++  }
++
+   Future<void> _startListening() async {
+     if (!_speechAvailable) return;
+     setState(() {
+       _previewPhase = false;
+       _listenSeconds = 60;
+       _showHint = false;
++      _segments.clear();
++      _currentPartial = '';
+       _recognizedText = '';
+       _finished = false;
+     });
+     _startOrRestartListening();
+     _listenTimer?.cancel();
+     _listenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+       if (_listenSeconds == 0) {
+         timer.cancel();
+         _stopListening();
+       } else {
+         setState(() => _listenSeconds--);
+       }
+     });
+   }
+ 
+   String normalizeGreek(String s) {
+     return s
+         .replaceAll('ά', 'α')
+         .replaceAll('έ', 'ε')
+         .replaceAll('ή', 'η')
+         .replaceAll('ί', 'ι')
+         .replaceAll('ό', 'ο')
+         .replaceAll('ύ', 'υ')
+         .replaceAll('ώ', 'ω')
+         .replaceAll('Ά', 'Α')
+@@ -190,78 +200,85 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
+         .replaceAll('Ϊ', 'Ι')
+         .replaceAll('ϋ', 'υ')
+         .replaceAll('ΰ', 'υ')
+         .replaceAll('Ϋ', 'Υ')
+         .replaceAll(RegExp(r'[^\p{L}]', unicode: true), '')
+         .toLowerCase()
+         .trim();
+   }
+ 
+   double _scoreRecognized(String spoken) {
+     final phrase = _phrases[_index];
+     final targetWords = Set<String>.from(normalizeGreek(phrase).split(RegExp(r'\s+')));
+     final userWords = Set<String>.from(normalizeGreek(spoken).split(RegExp(r'\s+')));
+     final correctCount = targetWords.intersection(userWords).length;
+     final totalWords = targetWords.length;
+     final half = (totalWords / 2).ceil();
+ 
+     if (correctCount >= totalWords - 1) return 1.0;
+     if (correctCount >= half) return 0.5;
+     return 0.0;
+   }
+ 
+   Future<void> _stopListening() async {
+     if (_finished) return;
+     _finished = true;
++    // Include the latest partial words before stopping
++    final trimmed = _currentPartial.trim();
++    if (trimmed.isNotEmpty) _segments.add(trimmed);
++    _currentPartial = '';
++    _recognizedText = _segments.join(' ').trim();
+     await _speech.stop();
+     _listenTimer?.cancel();
+     _evaluate();
+   }
+ 
+   void _evaluate() {
+     double base = _scoreRecognized(_recognizedText);
+     double score = base;
+     if (_hintUsed) score /= 2;
+     _totalScore += score;
+   }
+ 
+   void _showHintPressed() {
+     if (_previewPhase) return;
+     setState(() {
+       _showHint = true;
+       _hintUsed = true;
+     });
+     _hintTimer?.cancel();
+     _hintTimer = Timer(const Duration(seconds: 3), () {
+       setState(() {
+         _showHint = false;
+       });
+     });
+   }
+ 
+   void _clear() {
+     setState(() {
++      _segments.clear();
++      _currentPartial = '';
+       _recognizedText = '';
+     });
+   }
+ 
+   void _next() {
+     if (_previewPhase) {
+       _previewTimer?.cancel();
+       _startListening();
+       return;
+     }
+     if (_speech.isListening) return;
+     if (_index < _phrases.length - 1) {
+       setState(() => _index++);
+       _startPreview();
      } else {
-       // End of test
-       print('Test complete!');
-       
-       print('Total MoCA Score: $totalMocaScore');
+       widget.onScored(_totalScore);
+       widget.onNext();
      }
    }
- }
-diff --git a/lib/ui/views/neuro_test/steps/delayed_recall.dart b/lib/ui/views/neuro_test/steps/delayed_recall.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..dd4d2080cd79f9824f7d4b997909d287c8ca85bc
---- /dev/null
-+++ b/lib/ui/views/neuro_test/steps/delayed_recall.dart
-@@ -0,0 +1,297 @@
-+import 'dart:math';
-+import 'package:flutter/material.dart';
-+import 'package:speech_to_text/speech_to_text.dart';
-+
-+/// Executes the delayed recall portion of the MoCA verbal memory test.
-+/// The patient first attempts free recall. Words not remembered are then
-+/// probed with a category cue followed by a 3-option multiple choice.
-+class DelayedRecallStep extends StatefulWidget {
-+  final void Function(int score, VerbalMemoryResult result) onFinished;
-+  final List<String> immediateTrials;
-+
-+  const DelayedRecallStep({
-+    Key? key,
-+    required this.onFinished,
-+    required this.immediateTrials,
-+  }) : super(key: key);
-+
-+  @override
-+  State<DelayedRecallStep> createState() => _DelayedRecallStepState();
-+}
-+
-+class _DelayedRecallStateData {
-+  String freeRecall = '';
-+  final Map<String, String?> category = {};
-+  final Map<String, String?> choice = {};
-+}
-+
-+class _DelayedRecallStepState extends State<DelayedRecallStep> {
-+  static const _words = [
-+    'ΠΡΟΣΩΠΟ',
-+    'ΒΕΛΟΥΔΟ',
-+    'ΕΚΚΛΗΣΙΑ',
-+    'ΜΑΡΓΑΡΙΤΑ',
-+    'ΚΟΚΚΙΝΟ',
-+  ];
-+  static const _cues = {
-+    'ΠΡΟΣΩΠΟ': 'ένα μέρος του σώματος',
-+    'ΒΕΛΟΥΔΟ': 'ένα είδος υφάσματος',
-+    'ΕΚΚΛΗΣΙΑ': 'ένας τόπος λατρείας',
-+    'ΜΑΡΓΑΡΙΤΑ': 'ένα είδος λουλουδιού',
-+    'ΚΟΚΚΙΝΟ': 'ένα χρώμα',
-+  };
-+  static const _choices = {
-+    'ΠΡΟΣΩΠΟ': ['ΠΡΟΣΩΠΟ', 'ΓΕΦΥΡΑ', 'ΛΑΜΠΑ'],
-+    'ΒΕΛΟΥΔΟ': ['ΒΕΛΟΥΔΟ', 'ΜΕΤΑΞΙ', 'ΜΑΧΑΙΡΙ'],
-+    'ΕΚΚΛΗΣΙΑ': ['ΕΚΚΛΗΣΙΑ', 'ΕΡΓΟΣΤΑΣΙΟ', 'ΚΑΦΕΝΕΙΟ'],
-+    'ΜΑΡΓΑΡΙΤΑ': ['ΜΑΡΓΑΡΙΤΑ', 'ΤΟΥΛΙΠΑ', 'ΔΡΥΣ'],
-+    'ΚΟΚΚΙΝΟ': ['ΚΟΚΚΙΝΟ', 'ΠΡΑΣΙΝΟ', 'ΓΑΛΑΖΙΟ'],
-+  };
-+
-+  final SpeechToText _speech = SpeechToText();
-+  final TextEditingController _controller = TextEditingController();
-+  bool _speechAvailable = false;
-+  bool _listening = false;
-+  int _stage = 0; // 0 free recall, 1 cue/choice per word
-+  int _wordIndex = 0;
-+  List<String> _missing = [];
-+  final _DelayedRecallStateData _data = _DelayedRecallStateData();
-+  bool _finished = false;
-+
-+  @override
-+  void initState() {
-+    super.initState();
-+    _initSpeech();
-+  }
-+
-+  Future<void> _initSpeech() async {
-+    _speechAvailable = await _speech.initialize();
-+    setState(() {});
-+  }
-+
-+  void _toggleListening() async {
-+    if (!_speechAvailable) return;
-+    if (_listening) {
-+      await _speech.stop();
-+      setState(() => _listening = false);
-+    } else {
-+      setState(() {
-+        _listening = true;
-+        _controller.text = '';
-+      });
-+      await _speech.listen(
-+        localeId: 'el_GR',
-+        onResult: (r) {
-+          setState(() => _controller.text = r.recognizedWords);
-+        },
-+        listenMode: ListenMode.dictation,
-+        partialResults: true,
-+      );
-+    }
-+  }
-+
-+  void _finishFreeRecall() {
-+    _data.freeRecall = _controller.text.trim();
-+    _controller.clear();
-+    final recalled =
-+        _data.freeRecall.toUpperCase().split(RegExp(r'[\s,]+')).toSet();
-+    _missing = _words.where((w) => !recalled.contains(w)).toList();
-+    _stage = _missing.isEmpty ? 3 : 1;
-+    _wordIndex = 0;
-+    setState(() {});
-+  }
-+
-+  bool _wordInText(String word, String text) {
-+    final normalized = text.toUpperCase().split(RegExp(r'[\s,]+'));
-+    return normalized.contains(word);
-+  }
-+
-+  void _submitCue() {
-+    final w = _missing[_wordIndex];
-+    final answer = _controller.text.trim();
-+    _data.category[w] = answer.isEmpty ? null : answer;
-+    if (_wordInText(w, answer)) {
-+      _advanceWord();
-+    } else {
-+      setState(() => _stage = 2); // move to multiple choice
-+    }
-+  }
-+
-+  void _submitChoice(String choice) {
-+    final w = _missing[_wordIndex];
-+    _data.choice[w] = choice;
-+    _advanceWord();
-+  }
-+
-+  void _advanceWord() {
-+    _controller.clear();
-+    _wordIndex++;
-+    if (_wordIndex >= _missing.length) {
-+      _complete();
-+    } else {
-+      setState(() => _stage = 1); // next cue if needed
-+    }
-+  }
-+
-+  void _complete() {
-+    if (_finished) return;
-+    _finished = true;
-+    final recalled = _data.freeRecall.toUpperCase().split(RegExp(r'[\s,]+'));
-+    final score = _words.where(recalled.contains).length;
-+    widget.onFinished(
-+      score,
-+      VerbalMemoryResult(
-+        immediateTrials: widget.immediateTrials,
-+        delayedFreeRecall: _data.freeRecall,
-+        categoryCueAnswers: _data.category,
-+        choiceAnswers: _data.choice,
-+        score: score,
-+      ),
-+    );
-+  }
-+
-+  @override
-+  void dispose() {
-+    _speech.stop();
-+    _controller.dispose();
-+    super.dispose();
-+  }
-+
-+  @override
-+  Widget build(BuildContext context) {
-+    if (_stage == 0) {
-+      return Scaffold(
-+        appBar: AppBar(title: const Text('Καθυστερημένη Ανάκληση')),
-+        body: Padding(
-+          padding: const EdgeInsets.all(16),
-+          child: Column(
-+            crossAxisAlignment: CrossAxisAlignment.stretch,
-+            children: [
-+              const Text(
-+                'Πείτε ξανά όσες από τις πέντε λέξεις θυμάστε.',
-+                textAlign: TextAlign.center,
-+              ),
-+              const SizedBox(height: 12),
-+              TextField(
-+                controller: _controller,
-+                decoration: const InputDecoration(
-+                  border: OutlineInputBorder(),
-+                  hintText: 'Απαντήσεις',
-+                ),
-+              ),
-+              const SizedBox(height: 12),
-+              Row(
-+                mainAxisAlignment: MainAxisAlignment.center,
-+                children: [
-+                  IconButton(
-+                    onPressed: _toggleListening,
-+                    icon: Icon(_listening ? Icons.stop : Icons.mic),
-+                  ),
-+                  const SizedBox(width: 24),
-+                  ElevatedButton(
-+                    onPressed: _controller.text.isEmpty && !_listening ? null : _finishFreeRecall,
-+                    child: const Text('Επόμενο'),
-+                  ),
-+                ],
-+              ),
-+            ],
-+          ),
-+        ),
-+      );
-+    }
-+
-+    if (_stage == 3) {
-+      // No cues needed; complete immediately
-+      Future.microtask(_complete);
-+      return const SizedBox.shrink();
-+    }
-+
-+    final word = _missing[_wordIndex];
-+    final cue = _cues[word]!;
-+    final options = List<String>.from(_choices[word]!);
-+    options.shuffle(Random());
-+
-+    if (_stage == 1) {
-+      return Scaffold(
-+        appBar: AppBar(title: const Text('Υπόδειξη Κατηγορίας')),
-+        body: Padding(
-+          padding: const EdgeInsets.all(16),
-+          child: Column(
-+            crossAxisAlignment: CrossAxisAlignment.stretch,
-+            children: [
-+              Text('Δεν βρέθηκε: $word. Δοκιμάστε ξανά – $cue'),
-+              const SizedBox(height: 12),
-+              TextField(
-+                controller: _controller,
-+                decoration: const InputDecoration(
-+                  border: OutlineInputBorder(),
-+                  hintText: 'Απάντηση',
-+                ),
-+              ),
-+              const SizedBox(height: 12),
-+              Row(
-+                mainAxisAlignment: MainAxisAlignment.center,
-+                children: [
-+                  IconButton(
-+                    onPressed: _toggleListening,
-+                    icon: Icon(_listening ? Icons.stop : Icons.mic),
-+                  ),
-+                  const SizedBox(width: 24),
-+                  ElevatedButton(
-+                    onPressed: _controller.text.isEmpty && !_listening ? null : _submitCue,
-+                    child: const Text('Επόμενο'),
-+                  ),
-+                ],
-+              ),
-+            ],
-+          ),
-+        ),
-+      );
-+    }
-+
-+    return Scaffold(
-+      appBar: AppBar(title: const Text('Επιλογή Λέξης')),
-+      body: Padding(
-+        padding: const EdgeInsets.all(16),
-+        child: Column(
-+          crossAxisAlignment: CrossAxisAlignment.stretch,
-+          children: [
-+            Text('Ποια λέξη ήταν στη λίστα;'),
-+            const SizedBox(height: 20),
-+            ...options.map((o) => Padding(
-+                  padding: const EdgeInsets.symmetric(vertical: 4),
-+                  child: ElevatedButton(
-+                    onPressed: () => _submitChoice(o),
-+                    child: Text(o),
-+                  ),
-+                )),
-+          ],
-+        ),
-+      ),
-+    );
-+  }
-+}
-+
-+class VerbalMemoryResult {
-+  const VerbalMemoryResult({
-+    required this.immediateTrials,
-+    required this.delayedFreeRecall,
-+    required this.categoryCueAnswers,
-+    required this.choiceAnswers,
-+    required this.score,
-+  });
-+
-+  final List<String> immediateTrials;
-+  final String delayedFreeRecall;
-+  final Map<String, String?> categoryCueAnswers;
-+  final Map<String, String?> choiceAnswers;
-+  final int score;
-+
-+  Map<String, dynamic> toJson() => {
-+        'immediateTrials': immediateTrials,
-+        'delayedFreeRecall': delayedFreeRecall,
-+        'categoryCueAnswers': categoryCueAnswers,
-+        'choiceAnswers': choiceAnswers,
-+        'score': score,
-+      };
-+}
-diff --git a/lib/ui/views/neuro_test/steps/immediate_recall.dart b/lib/ui/views/neuro_test/steps/immediate_recall.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..4fd5fe75fc2fd11ddd7215ccd14178099ea3194b
---- /dev/null
-+++ b/lib/ui/views/neuro_test/steps/immediate_recall.dart
-@@ -0,0 +1,134 @@
-+import 'package:flutter/material.dart';
-+import 'package:speech_to_text/speech_to_text.dart';
-+
-+/// Displays the five target words and collects the patient's immediate recall
-+/// responses using speech recognition. Two trials are performed without scoring
-+/// so that results can be reused later by [DelayedRecallStep].
-+class ImmediateRecallStep extends StatefulWidget {
-+  final void Function(List<String> responses) onFinished;
-+
-+  const ImmediateRecallStep({Key? key, required this.onFinished}) : super(key: key);
-+
-+  @override
-+  State<ImmediateRecallStep> createState() => _ImmediateRecallStepState();
-+}
-+
-+class _ImmediateRecallStepState extends State<ImmediateRecallStep> {
-+  static const _words = [
-+    'ΠΡΟΣΩΠΟ',
-+    'ΒΕΛΟΥΔΟ',
-+    'ΕΚΚΛΗΣΙΑ',
-+    'ΜΑΡΓΑΡΙΤΑ',
-+    'ΚΟΚΚΙΝΟ',
-+  ];
-+
-+  final SpeechToText _speech = SpeechToText();
-+  final TextEditingController _controller = TextEditingController();
-+  bool _speechAvailable = false;
-+  bool _listening = false;
-+  int _trial = 0; // 0 -> first, 1 -> second
-+  final List<String> _results = [];
-+
-+  @override
-+  void initState() {
-+    super.initState();
-+    _initSpeech();
-+  }
-+
-+  Future<void> _initSpeech() async {
-+    _speechAvailable = await _speech.initialize();
-+    setState(() {});
-+  }
-+
-+  void _toggleListening() async {
-+    if (!_speechAvailable) return;
-+    if (_listening) {
-+      await _speech.stop();
-+      setState(() => _listening = false);
-+    } else {
-+      setState(() {
-+        _listening = true;
-+        _controller.text = '';
-+      });
-+      await _speech.listen(
-+        localeId: 'el_GR',
-+        onResult: (r) {
-+          setState(() => _controller.text = r.recognizedWords);
-+        },
-+        listenMode: ListenMode.dictation,
-+        partialResults: true,
-+      );
-+    }
-+  }
-+
-+  void _next() {
-+    _results.add(_controller.text.trim());
-+    _controller.clear();
-+    if (_trial == 0) {
-+      setState(() => _trial = 1);
-+    } else {
-+      widget.onFinished(_results);
-+    }
-+  }
-+
-+  @override
-+  void dispose() {
-+    _speech.stop();
-+    _controller.dispose();
-+    super.dispose();
-+  }
-+
-+  @override
-+  Widget build(BuildContext context) {
-+    return Scaffold(
-+      appBar: AppBar(title: const Text('Λεκτική Μνήμη')),
-+      body: Padding(
-+        padding: const EdgeInsets.all(16),
-+        child: Column(
-+          crossAxisAlignment: CrossAxisAlignment.stretch,
-+          children: [
-+            const Text(
-+              'Θυμηθείτε τις παρακάτω λέξεις:',
-+              textAlign: TextAlign.center,
-+            ),
-+            const SizedBox(height: 8),
-+            Wrap(
-+              alignment: WrapAlignment.center,
-+              spacing: 8,
-+              children: _words.map((w) => Chip(label: Text(w))).toList(),
-+            ),
-+            const SizedBox(height: 20),
-+            Text(
-+              'ΔΟΚΙΜΗ ${_trial + 1}',
-+              textAlign: TextAlign.center,
-+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-+            ),
-+            const SizedBox(height: 12),
-+            TextField(
-+              controller: _controller,
-+              decoration: const InputDecoration(
-+                border: OutlineInputBorder(),
-+                hintText: 'Οι απαντήσεις σας',
-+              ),
-+            ),
-+            const SizedBox(height: 12),
-+            Row(
-+              mainAxisAlignment: MainAxisAlignment.center,
-+              children: [
-+                IconButton(
-+                  onPressed: _toggleListening,
-+                  icon: Icon(_listening ? Icons.stop : Icons.mic),
-+                ),
-+                const SizedBox(width: 24),
-+                ElevatedButton(
-+                  onPressed: _controller.text.isEmpty && !_listening ? null : _next,
-+                  child: Text(_trial == 0 ? 'Επόμενο' : 'Ολοκλήρωση'),
-+                ),
-+              ],
-+            ),
-+          ],
-+        ),
-+      ),
-+    );
-+  }
-+}
+ 
+   @override
+   void dispose() {
+     _previewTimer?.cancel();
+     _listenTimer?.cancel();
+     _hintTimer?.cancel();
  
 EOF
 )

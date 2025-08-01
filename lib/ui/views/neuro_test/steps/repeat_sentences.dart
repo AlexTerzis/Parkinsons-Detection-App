@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class RepeatSentencesStep extends StatefulWidget {
@@ -61,10 +62,14 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   Timer? _listenTimer;
   Timer? _hintTimer;
   bool _speechAvailable = false;
+  bool _listening = false;
   bool _finished = false;
 
-  // Collects all recognized text segments from mic restarts (no dupe)
+  // Stores all segments and recognized partials
+  final List<String> _segments = [];
+  String _currentPartial = '';
   String _recognizedText = '';
+  bool _restartLock = false;
 
   @override
   void initState() {
@@ -76,14 +81,9 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   Future<void> _initSpeech() async {
     _speechAvailable = await _speech.initialize(
       onStatus: (status) async {
-        if (!_previewPhase &&
-            !_finished &&
-            _listenSeconds > 0 &&
-            _scoreRecognized(_recognizedText) < 1.0 &&
-            status == 'notListening') {
-          // Mic stopped (by itself) – restart unless correct or finished
-          await Future.delayed(const Duration(milliseconds: 100));
-          if (!_finished) _startOrRestartListening();
+        // If stopped (e.g. due to silence), allow restart via button
+        if (!_previewPhase && !_finished && status == 'notListening') {
+          setState(() => _listening = false);
         }
       },
     );
@@ -95,9 +95,12 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
       _previewPhase = true;
       _previewSeconds = 20;
       _hintUsed = false;
+      _segments.clear();
+      _currentPartial = '';
       _recognizedText = '';
       _showHint = false;
       _finished = false;
+      _listening = false;
     });
     _previewTimer?.cancel();
     _previewTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -110,54 +113,26 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
     });
   }
 
-  void _startOrRestartListening() {
-    if (!_speechAvailable || _finished) return;
-    _speech.listen(
-      localeId: 'el_GR',
-      onResult: (result) {
-        setState(() {
-          // Always append any new words to the recognized text
-          // If result is empty, do nothing
-          if (result.recognizedWords.isNotEmpty) {
-            // Avoid repeated phrases: if new part is at the end, just append the difference
-            if (_recognizedText.isEmpty) {
-              _recognizedText = result.recognizedWords;
-            } else {
-              final prev = _recognizedText.trim();
-              final current = result.recognizedWords.trim();
-              // Don't append if current is substring of end of prev
-              if (!prev.endsWith(current)) {
-                // Try to append only new part
-                var newPart = current;
-                if (current.startsWith(prev)) {
-                  newPart = current.substring(prev.length).trim();
-                }
-                if (newPart.isNotEmpty) {
-                  _recognizedText = (prev + ' ' + newPart).trim();
-                }
-              }
-            }
-          }
-          if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
-        });
-      },
-      listenFor: Duration(seconds: _listenSeconds),
-      pauseFor: Duration(seconds: _listenSeconds),
-      listenMode: ListenMode.dictation,
-      partialResults: true,
-    );
-  }
-
-  Future<void> _startListening() async {
+  void _startListening() {
     if (!_speechAvailable) return;
     setState(() {
       _previewPhase = false;
       _listenSeconds = 60;
       _showHint = false;
+      _segments.clear();
+      _currentPartial = '';
       _recognizedText = '';
       _finished = false;
+      _listening = true;
     });
-    _startOrRestartListening();
+    _speech.listen(
+      localeId: 'el_GR',
+      onResult: _processResult,
+      listenFor: const Duration(seconds: 60),
+      pauseFor: const Duration(seconds: 60),
+      listenMode: ListenMode.dictation,
+      partialResults: true,
+    );
     _listenTimer?.cancel();
     _listenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_listenSeconds == 0) {
@@ -166,6 +141,18 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
       } else {
         setState(() => _listenSeconds--);
       }
+    });
+  }
+
+  void _processResult(SpeechRecognitionResult result) {
+    setState(() {
+      _currentPartial = result.recognizedWords;
+      if (result.finalResult) {
+        final trimmed = _currentPartial.trim();
+        if (trimmed.isNotEmpty) _segments.add(trimmed);
+        _currentPartial = '';
+      }
+      _recognizedText = (_segments + [_currentPartial]).join(' ').trim();
     });
   }
 
@@ -204,7 +191,7 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
     final totalWords = targetWords.length;
     final half = (totalWords / 2).ceil();
 
-    if (correctCount >= totalWords - 1) return 1.0;
+    if (correctCount >= totalWords) return 1.0; // Require all
     if (correctCount >= half) return 0.5;
     return 0.0;
   }
@@ -212,8 +199,13 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
   Future<void> _stopListening() async {
     if (_finished) return;
     _finished = true;
+    final trimmed = _currentPartial.trim();
+    if (trimmed.isNotEmpty) _segments.add(trimmed);
+    _currentPartial = '';
+    _recognizedText = _segments.join(' ').trim();
     await _speech.stop();
     _listenTimer?.cancel();
+    setState(() => _listening = false);
     _evaluate();
   }
 
@@ -240,6 +232,8 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
 
   void _clear() {
     setState(() {
+      _segments.clear();
+      _currentPartial = '';
       _recognizedText = '';
     });
   }
@@ -250,13 +244,19 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
       _startListening();
       return;
     }
-    if (_speech.isListening) return;
-    if (_index < _phrases.length - 1) {
+    if (_speech.isListening) _stopListening();
+    else if (_index < _phrases.length - 1) {
       setState(() => _index++);
       _startPreview();
     } else {
       widget.onScored(_totalScore);
       widget.onNext();
+    }
+  }
+
+  void _startMicManually() {
+    if (!_previewPhase && !_listening && !_finished && _listenSeconds > 0) {
+      _startListening();
     }
   }
 
@@ -367,8 +367,13 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
                 ),
                 ElevatedButton(
                   onPressed: _next,
-                  child: const Text('Επόμενο'),
+                  child: Text(_previewPhase ? 'Έναρξη' : 'Επόμενο'),
                 ),
+                if (!_previewPhase && !_listening && !_finished && _listenSeconds > 0)
+                  ElevatedButton(
+                    onPressed: _startMicManually,
+                    child: const Text('Ξανα-Άκου'),
+                  ),
               ],
             ),
           ],
