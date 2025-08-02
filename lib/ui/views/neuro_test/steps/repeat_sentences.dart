@@ -1,17 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class RepeatSentencesStep extends StatefulWidget {
-  final void Function(double score) onScored;
   final VoidCallback onNext;
-
+  final void Function(double score) onScored;
   const RepeatSentencesStep({
     Key? key,
-    required this.onScored,
     required this.onNext,
+    required this.onScored,
   }) : super(key: key);
 
   @override
@@ -19,403 +17,409 @@ class RepeatSentencesStep extends StatefulWidget {
 }
 
 class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
-  bool _started = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return _started
-        ? _RepeatSentencesStepInternal(
-            onScored: widget.onScored,
-            onNext: widget.onNext,
-          )
-        : RepeatInstructionsScreen(
-            onStart: () => setState(() => _started = true),
-          );
-  }
-}
-
-class _RepeatSentencesStepInternal extends StatefulWidget {
-  final VoidCallback onNext;
-  final void Function(double score) onScored;
-
-  const _RepeatSentencesStepInternal({Key? key, required this.onNext, required this.onScored}) : super(key: key);
-
-  @override
-  State<_RepeatSentencesStepInternal> createState() => _RepeatSentencesStepInternalState();
-}
-
-class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepInternal> {
   final SpeechToText _speech = SpeechToText();
   final List<String> _phrases = const [
-    'Το μόνο που ξέρω είναι ότι ο Γιάννης είναι αυτός που θα βοηθήσει σήμερα.',
-    'Η γάτα κρυβόταν πάντα κάτω από τον καναπέ όταν βρίσκονταν σκυλιά μέσα στο δωμάτιο.',
+    'Το μόνο που ξέρω είναι ότι ο Γιάννης είναι αυτός που θα βοηθήσει σήμερα',
+    'Η γάτα κρυβόταν πάντα κάτω από τον καναπέ όταν βρίσκονταν σκυλιά μέσα στο δωμάτιο',
   ];
 
-  int _index = 0;
-  bool _previewPhase = true;
-  bool _hintUsed = false;
-  bool _showHint = false;
-  int _previewSeconds = 20;
-  int _listenSeconds = 60;
-  double _totalScore = 0;
-  Timer? _previewTimer;
-  Timer? _listenTimer;
-  Timer? _hintTimer;
-  bool _speechAvailable = false;
+  int _step = 0; // 0: instructions, 1: memorize, 2: recording
+  int _phraseIndex = 0;
   bool _listening = false;
-  bool _finished = false;
-
-  // Stores all segments and recognized partials
-  final List<String> _segments = [];
-  String _currentPartial = '';
-  String _recognizedText = '';
-  bool _restartLock = false;
+  String _recognized = '';
+  String _recognizedHistory = '';
+  bool _hintUsed = false;
+  bool _showHintPhrase = false;
+  bool _micUnexpectedlyClosed = false;
+  int _memorizeSecondsLeft = 20;
+  int _recordingSecondsLeft = 60;
+  Timer? _memorizeTimer;
+  Timer? _recordingTimer;
+  bool _available = false;
+  List<double> _phraseScores = [];
+  bool _timerStarted = false;
 
   @override
   void initState() {
     super.initState();
     _initSpeech();
-    _startPreview();
   }
 
   Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize(
-      onStatus: (status) async {
-        // If stopped (e.g. due to silence), allow restart via button
-        if (!_previewPhase && !_finished && status == 'notListening') {
-          setState(() => _listening = false);
-        }
-      },
+    _available = await _speech.initialize(
+      onStatus: _onSpeechStatus,
+      onError: _onSpeechError,
     );
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
-  void _startPreview() {
+  void _goToMemorize() {
     setState(() {
-      _previewPhase = true;
-      _previewSeconds = 20;
+      _step = 1;
       _hintUsed = false;
-      _segments.clear();
-      _currentPartial = '';
-      _recognizedText = '';
-      _showHint = false;
-      _finished = false;
+      _showHintPhrase = false;
+      _micUnexpectedlyClosed = false;
+      _memorizeSecondsLeft = 20;
+      _recordingSecondsLeft = 60;
+      _timerStarted = false;
+      _recognized = '';
+      _recognizedHistory = '';
+    });
+    _memorizeTimer?.cancel();
+    _memorizeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_memorizeSecondsLeft > 1) {
+        setState(() => _memorizeSecondsLeft--);
+      } else {
+        timer.cancel();
+        _goToRecording();
+      }
+    });
+  }
+
+  void _skipMemorizeAndRecord() {
+    _memorizeTimer?.cancel();
+    _goToRecording();
+  }
+
+  void _goToRecording() {
+    setState(() {
+      _step = 2;
+      _micUnexpectedlyClosed = false;
+      _showHintPhrase = false;
+      _recordingSecondsLeft = 60;
+      _timerStarted = false;
+      // Do NOT clear _recognized or _recognizedHistory here!
+    });
+    _recordingTimer?.cancel();
+    // Timer will be started by the mic, NOT here.
+  }
+
+  void _onSpeechStatus(String status) {
+    if (_listening &&
+        (status == "notListening" || status == "done" || status == "done_no_result")) {
+      if (!mounted) return;
+      setState(() {
+        _micUnexpectedlyClosed = true;
+        _listening = false;
+      });
+      _speech.stop();
+    }
+  }
+
+  void _onSpeechError(dynamic error) {
+    if (!mounted) return;
+    setState(() {
+      _micUnexpectedlyClosed = true;
       _listening = false;
     });
-    _previewTimer?.cancel();
-    _previewTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_previewSeconds == 0) {
-        timer.cancel();
-        _startListening();
-      } else {
-        setState(() => _previewSeconds--);
-      }
-    });
   }
 
-  void _startListening() {
-    if (!_speechAvailable) return;
+  Future<void> _startListening() async {
+    if (!_available) return;
     setState(() {
-      _previewPhase = false;
-      _listenSeconds = 60;
-      _showHint = false;
-      _segments.clear();
-      _currentPartial = '';
-      _recognizedText = '';
-      _finished = false;
+      _micUnexpectedlyClosed = false; // Hide message as soon as mic is started
       _listening = true;
+      // DO NOT CLEAR _recognized or _recognizedHistory HERE!
     });
-    _speech.listen(
+    if (!_timerStarted) {
+      setState(() {
+        _timerStarted = true;
+      });
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) return;
+        if (_recordingSecondsLeft > 1) {
+          setState(() => _recordingSecondsLeft--);
+        } else {
+          timer.cancel();
+          _stopListening();
+          setState(() => _listening = false);
+        }
+      });
+    }
+    await _speech.listen(
       localeId: 'el_GR',
-      onResult: _processResult,
-      listenFor: const Duration(seconds: 60),
-      pauseFor: const Duration(seconds: 60),
-      listenMode: ListenMode.dictation,
-      partialResults: true,
+      onResult: (r) {
+        if (!mounted) return;
+        setState(() {
+          if (r.recognizedWords.isNotEmpty) {
+            _recognized = r.recognizedWords;
+            // Only append if new recognition doesn't already exist at the end
+            if (!_recognizedHistory.endsWith(_recognized)) {
+              _recognizedHistory = (_recognizedHistory + ' ' + _recognized).trim();
+            }
+          }
+          if (r.finalResult) {
+            // Always save the final recognizedWords to history
+            if (!_recognizedHistory.endsWith(_recognized)) {
+              _recognizedHistory = (_recognizedHistory + ' ' + _recognized).trim();
+            }
+            _listening = false;
+          }
+        });
+      },
+      listenFor: Duration(seconds: _recordingSecondsLeft),
+      pauseFor: const Duration(seconds: 3),
     );
-    _listenTimer?.cancel();
-    _listenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_listenSeconds == 0) {
-        timer.cancel();
-        _stopListening();
-      } else {
-        setState(() => _listenSeconds--);
-      }
-    });
-  }
-
-  void _processResult(SpeechRecognitionResult result) {
-    setState(() {
-      _currentPartial = result.recognizedWords;
-      if (result.finalResult) {
-        final trimmed = _currentPartial.trim();
-        if (trimmed.isNotEmpty) _segments.add(trimmed);
-        _currentPartial = '';
-      }
-      _recognizedText = (_segments + [_currentPartial]).join(' ').trim();
-    });
-  }
-
-  String normalizeGreek(String s) {
-    return s
-        .replaceAll('ά', 'α')
-        .replaceAll('έ', 'ε')
-        .replaceAll('ή', 'η')
-        .replaceAll('ί', 'ι')
-        .replaceAll('ό', 'ο')
-        .replaceAll('ύ', 'υ')
-        .replaceAll('ώ', 'ω')
-        .replaceAll('Ά', 'Α')
-        .replaceAll('Έ', 'Ε')
-        .replaceAll('Ή', 'Η')
-        .replaceAll('Ί', 'Ι')
-        .replaceAll('Ό', 'Ο')
-        .replaceAll('Ύ', 'Υ')
-        .replaceAll('Ώ', 'Ω')
-        .replaceAll('ϊ', 'ι')
-        .replaceAll('ΐ', 'ι')
-        .replaceAll('Ϊ', 'Ι')
-        .replaceAll('ϋ', 'υ')
-        .replaceAll('ΰ', 'υ')
-        .replaceAll('Ϋ', 'Υ')
-        .replaceAll(RegExp(r'[^\p{L}]', unicode: true), '')
-        .toLowerCase()
-        .trim();
-  }
-
-  double _scoreRecognized(String spoken) {
-    final phrase = _phrases[_index];
-    final targetWords = Set<String>.from(normalizeGreek(phrase).split(RegExp(r'\s+')));
-    final userWords = Set<String>.from(normalizeGreek(spoken).split(RegExp(r'\s+')));
-    final correctCount = targetWords.intersection(userWords).length;
-    final totalWords = targetWords.length;
-    final half = (totalWords / 2).ceil();
-
-    if (correctCount >= totalWords) return 1.0; // Require all
-    if (correctCount >= half) return 0.5;
-    return 0.0;
   }
 
   Future<void> _stopListening() async {
-    if (_finished) return;
-    _finished = true;
-    final trimmed = _currentPartial.trim();
-    if (trimmed.isNotEmpty) _segments.add(trimmed);
-    _currentPartial = '';
-    _recognizedText = _segments.join(' ').trim();
+    if (!_listening) return;
     await _speech.stop();
-    _listenTimer?.cancel();
+    if (!mounted) return;
     setState(() => _listening = false);
-    _evaluate();
   }
 
-  void _evaluate() {
-    double base = _scoreRecognized(_recognizedText);
-    double score = base;
-    if (_hintUsed) score /= 2;
-    _totalScore += score;
-  }
-
-  void _showHintPressed() {
-    if (_previewPhase) return;
+  void _showHint() {
     setState(() {
-      _showHint = true;
       _hintUsed = true;
+      _showHintPhrase = true;
     });
-    _hintTimer?.cancel();
-    _hintTimer = Timer(const Duration(seconds: 3), () {
-      setState(() {
-        _showHint = false;
-      });
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() => _showHintPhrase = false);
     });
   }
 
   void _clear() {
     setState(() {
-      _segments.clear();
-      _currentPartial = '';
-      _recognizedText = '';
+      _recognized = '';
+      _recognizedHistory = '';
     });
   }
 
-  void _next() {
-    if (_previewPhase) {
-      _previewTimer?.cancel();
-      _startListening();
-      return;
-    }
-    if (_speech.isListening) _stopListening();
-    else if (_index < _phrases.length - 1) {
-      setState(() => _index++);
-      _startPreview();
-    } else {
-      widget.onScored(_totalScore);
-      widget.onNext();
-    }
-  }
+  void _next() async {
+    await _stopListening();
+    _memorizeTimer?.cancel();
+    _recordingTimer?.cancel();
 
-  void _startMicManually() {
-    if (!_previewPhase && !_listening && !_finished && _listenSeconds > 0) {
-      _startListening();
+    // Scoring
+    final phrase = _phrases[_phraseIndex]
+        .toLowerCase()
+        .replaceAll(RegExp('[.,«»]'), '')
+        .split(RegExp(r'\s+'));
+    final actual = _recognizedHistory
+        .toLowerCase()
+        .replaceAll(RegExp('[.,«»]'), '')
+        .split(RegExp(r'\s+'));
+    int errors = 0;
+    int minLen = min(phrase.length, actual.length);
+    for (var i = 0; i < minLen; i++) {
+      if (phrase[i] != actual[i]) errors++;
+    }
+    errors += (phrase.length - actual.length).abs();
+    int correctCount = 0;
+    for (var w in actual) {
+      if (phrase.contains(w)) correctCount++;
+    }
+    double score = 0;
+    if (_recognizedHistory.trim().isEmpty) {
+      score = 0;
+    } else if (_hintUsed) {
+      score = 0.5;
+    } else if (errors == 0) {
+      score = 1;
+    } else if (errors == 1 || correctCount >= (phrase.length / 2).ceil()) {
+      score = 0.5;
+    } else {
+      score = 0;
+    }
+    _phraseScores.add(score);
+
+    if (_phraseIndex < _phrases.length - 1) {
+      setState(() {
+        _phraseIndex++;
+      });
+      _goToMemorize();
+    } else {
+      double totalScore =
+          _phraseScores.isEmpty ? 0 : _phraseScores.reduce((a, b) => a + b) / _phraseScores.length;
+      widget.onScored(totalScore);
+      widget.onNext();
     }
   }
 
   @override
   void dispose() {
-    _previewTimer?.cancel();
-    _listenTimer?.cancel();
-    _hintTimer?.cancel();
+    _memorizeTimer?.cancel();
+    _recordingTimer?.cancel();
     _speech.stop();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final phrase = _phrases[_index];
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            if (!_previewPhase)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'Επαναλάβετε ακριβώς την πρόταση που εμφανίστηκε.\n'
-                  'Η εγγραφή διαρκεί 60" ή μέχρι να την πείτε σωστά. Μισό βαθμό αν πείτε τα μισά σωστά.',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+    if (_step == 0) {
+      // Instructions Page
+      return Scaffold(
+        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Οδηγίες"),
+                const SizedBox(height: 12),
+                const Text(
+                  "Θα εμφανιστεί μια πρόταση για 20 δευτερόλεπτα. "
+                  "Προσπάθησε να τη διαβάσεις και να την απομνημονεύσεις. "
+                  "Στη συνέχεια θα σου ζητηθεί να την επαναλάβεις όσο πιο σωστά μπορείς. "
+                  "\n• Θα έχεις τη δυνατότητα να δεις ξανά την πρόταση για 3 δευτερόλεπτα αν χρειαστεί (Υπόδειξη).\n"
+                  "• Μπορείς να καθαρίσεις ό,τι έχει πει το μικρόφωνο (Καθαρισμός).\n"
+                  "• Πάτα 'Επόμενο' για να προχωρήσεις, ακόμα κι αν δεν έχεις απαντήσει.",
                   textAlign: TextAlign.center,
                 ),
-              ),
-            Expanded(
-              child: Center(
-                child: _previewPhase
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            phrase,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '$_previewSeconds δευτ.',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      )
-                    : Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (_showHint)
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: Text(
-                                phrase,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ),
-                          Align(
-                            alignment: Alignment.center,
-                            child: _recognizedText.isEmpty
-                                ? const Text(
-                                    'Επαναλάβετε την πρόταση',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
-                                    textAlign: TextAlign.center,
-                                  )
-                                : Text(
-                                    _recognizedText,
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                    textAlign: TextAlign.center,
-                                  ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: !_previewPhase
-                  ? Text(
-                      '$_listenSeconds δευτ.',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              children: [
+                const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: (!_previewPhase && !_showHint) ? _showHintPressed : null,
-                  child: const Text('Υπόδειξη'),
+                  onPressed: _goToMemorize,
+                  child: const Text("Έναρξη Τεστ"),
                 ),
-                ElevatedButton(
-                  onPressed: !_previewPhase ? _clear : null,
-                  child: const Text('Καθαρισμός'),
-                ),
-                ElevatedButton(
-                  onPressed: _next,
-                  child: Text(_previewPhase ? 'Έναρξη' : 'Επόμενο'),
-                ),
-                if (!_previewPhase && !_listening && !_finished && _listenSeconds > 0)
-                  ElevatedButton(
-                    onPressed: _startMicManually,
-                    child: const Text('Ξανα-Άκου'),
-                  ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class RepeatInstructionsScreen extends StatelessWidget {
-  final VoidCallback onStart;
-
-  const RepeatInstructionsScreen({Key? key, required this.onStart}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Οδηγίες')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Σε αυτή τη δοκιμασία θα δείτε μία πρόταση για 20".\n'
-              'Μετά από 20", η εγγραφή θα ξεκινήσει αυτόματα για 60" ή έως ότου την επαναλάβετε σωστά.\n'
-              'Μπορείτε να πατήσετε "Υπόδειξη" για να εμφανιστεί ξανά η πρόταση για 3" με ποινή 0.5 βαθμού,\n'
-              'ή "Καθαρισμός" για να διαγράψετε τα λόγια σας.',
-              style: const TextStyle(fontSize: 18),
-              textAlign: TextAlign.left,
-            ),
-            const SizedBox(height: 48),
-            ElevatedButton(
-              onPressed: onStart,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Text('Επόμενο', style: TextStyle(fontSize: 16)),
+      );
+    } else if (_step == 1) {
+      // Memorize Phase
+      return Scaffold(
+        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Column(
+            children: [
+              const SizedBox(height: 14),
+              Text(_phrases[_phraseIndex], textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              Text("Χρόνος απομνημόνευσης: $_memorizeSecondsLeft"),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _skipMemorizeAndRecord,
+                  child: const Text("Επόμενο"),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      // Recording Phase
+      bool micEnabled = (!_listening && _available && _recordingSecondsLeft > 0);
+
+      return Scaffold(
+        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Επανάλαβε την πρόταση που διάβασες. "
+                "Πάτησε το μικρόφωνο για να ξεκινήσεις. Αν σταματήσει, πάτησέ το ξανά.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  "Χρόνος που απομένει: $_recordingSecondsLeft δευτ.",
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Recognized Text (plain)
+              Text(
+                _recognizedHistory.isEmpty ? 'Πείτε την πρόταση...' : _recognizedHistory,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 17),
+              ),
+              if (_showHintPhrase)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.yellow[100],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _phrases[_phraseIndex],
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              if (_micUnexpectedlyClosed && !_listening)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Το μικρόφωνο σταμάτησε. Πάτησε το μικρόφωνο για να συνεχίσεις.',
+                    style: const TextStyle(color: Colors.orange),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              Center(
+                child: SizedBox(
+                  height: 50,
+                  width: 50,
+                  child: FloatingActionButton(
+                    onPressed: micEnabled
+                        ? () async {
+                            setState(() {
+                              _micUnexpectedlyClosed = false; // Hide message as soon as user tries again
+                            });
+                            await _startListening();
+                          }
+                        : null,
+                    tooltip: 'Εκκίνηση μικροφώνου',
+                    child: const Icon(Icons.mic, size: 30),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _showHint,
+                        child: const Text('Υπόδειξη'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _clear,
+                        child: const Text('Καθαρισμός'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _next,
+                        child: Text(
+                          _phraseIndex < _phrases.length - 1 ? 'Επόμενο' : 'Τέλος',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }
