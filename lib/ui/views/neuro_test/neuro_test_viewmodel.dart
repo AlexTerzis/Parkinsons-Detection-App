@@ -35,6 +35,12 @@ class NeuroTestViewModel extends BaseViewModel {
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
+      ImmediateRecallStep(
+        onFinished: (resp,__) {
+          _immediateAnswers = resp;
+          nextStep();
+        },
+      ),
       VigilanceStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
@@ -63,9 +69,6 @@ class NeuroTestViewModel extends BaseViewModel {
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      GesturesStep(        
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,),
       FluencyStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
@@ -81,18 +84,15 @@ class NeuroTestViewModel extends BaseViewModel {
         },
         immediateTrials: _immediateAnswers,
       ),
-      ImmediateRecallStep(
-        onFinished: (resp,__) {
-          _immediateAnswers = resp;
-          nextStep();
-        },
-      ),
       DrawCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
       ConnectCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
-        },),
+        },),      
+      GesturesStep(        
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,),  
     ];
   }
 
