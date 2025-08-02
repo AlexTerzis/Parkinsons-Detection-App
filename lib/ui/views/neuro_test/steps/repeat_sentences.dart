@@ -215,7 +215,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
     double score = 0;
     if (_recognizedHistory.trim().isEmpty) {
       score = 0;
-    } else if (errors <=1) {
+    } else if (errors <= 1) {
       score = 1;
     } else if (correctCount >= (phrase.length / 2).ceil()) {
       score = 0.5;
@@ -235,7 +235,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
       _goToMemorize();
     } else {
       double totalScore =
-          _phraseScores.isEmpty ? 0 : _phraseScores.reduce((a, b) => a + b) / _phraseScores.length;
+          _phraseScores.isEmpty ? 0 : _phraseScores.reduce((a, b) => a + b);
       widget.onScored(totalScore);
       widget.onNext();
     }
