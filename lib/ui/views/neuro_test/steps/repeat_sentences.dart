@@ -215,15 +215,17 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
     double score = 0;
     if (_recognizedHistory.trim().isEmpty) {
       score = 0;
-    } else if (_hintUsed) {
-      score = 0.5;
-    } else if (errors == 0) {
+    } else if (errors <=1) {
       score = 1;
-    } else if (errors == 1 || correctCount >= (phrase.length / 2).ceil()) {
+    } else if (correctCount >= (phrase.length / 2).ceil()) {
       score = 0.5;
     } else {
       score = 0;
     }
+    if (_hintUsed) {
+      score /= 2;
+    }
+
     _phraseScores.add(score);
 
     if (_phraseIndex < _phrases.length - 1) {
@@ -265,9 +267,9 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
                   "Θα εμφανιστεί μια πρόταση για 20 δευτερόλεπτα. "
                   "Προσπάθησε να τη διαβάσεις και να την απομνημονεύσεις. "
                   "Στη συνέχεια θα σου ζητηθεί να την επαναλάβεις όσο πιο σωστά μπορείς. "
-                  "\n• Θα έχεις τη δυνατότητα να δεις ξανά την πρόταση για 3 δευτερόλεπτα αν χρειαστεί (Υπόδειξη).\n"
-                  "• Μπορείς να καθαρίσεις ό,τι έχει πει το μικρόφωνο (Καθαρισμός).\n"
-                  "• Πάτα 'Επόμενο' για να προχωρήσεις, ακόμα κι αν δεν έχεις απαντήσει.",
+                  "\n Θα έχεις τη δυνατότητα να δεις ξανά την πρόταση για 3 δευτερόλεπτα αν χρειαστεί (Υπόδειξη).\n"
+                  " Μπορείς να καθαρίσεις ό,τι έχει πει το μικρόφωνο (Καθαρισμός).\n"
+                  " Πάτα 'Επόμενο' για να προχωρήσεις, ακόμα κι αν δεν έχεις απαντήσει.",
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),

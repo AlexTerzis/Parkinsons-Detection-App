@@ -1,8 +1,5 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-
 import 'steps/gestures.dart';
 import 'steps/draw_cube.dart';
 import 'steps/connect_cube.dart';
