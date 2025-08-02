@@ -399,7 +399,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
                       height: 50,
                       child: OutlinedButton(
                         onPressed: _clear,
-                        child: const Text('Καθαρισμός'),
+                        child: const Text('Διαγραφή'),
                       ),
                     ),
                   ),

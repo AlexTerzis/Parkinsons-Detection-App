@@ -33,7 +33,8 @@ class NeuroTestViewModel extends BaseViewModel {
       RepeatSentencesStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
-      ),     DelayedRecallStep(
+      ),
+      DelayedRecallStep(
         onFinished: (score, result) {
           totalMocaScore += score.toDouble();
           nextStep();
@@ -46,12 +47,6 @@ class NeuroTestViewModel extends BaseViewModel {
           nextStep();
         },
       ),
-
-      GesturesStep(
-        onNext: nextStep,
-        onScored: (num score) {
-          totalMocaScore += score; // or however you wish to handle it
-        },),
       DrawCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
@@ -101,6 +96,11 @@ class NeuroTestViewModel extends BaseViewModel {
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
+      GesturesStep(
+        onNext: nextStep,
+        onScored: (num score) {
+          totalMocaScore += score; // or however you wish to handle it
+        },),
     ];
   }
 
@@ -111,6 +111,7 @@ class NeuroTestViewModel extends BaseViewModel {
   void nextStep() {
     if (_currentStep < _steps.length - 1) {
       _currentStep++;
+      print('Total MoCA Score: $totalMocaScore');
       notifyListeners();
     } else {
       // End of test

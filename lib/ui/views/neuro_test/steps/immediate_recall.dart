@@ -227,7 +227,7 @@ class _ImmediateRecallStepState extends State<ImmediateRecallStep> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _allController.text.trim().isEmpty ? null : _nextPhase,
+                onPressed: _nextPhase,
                 child: const Text('Επόμενο'),
               ),
             ],

@@ -3,7 +3,7 @@ import 'dart:async';
 
 class ConnectCubeStep extends StatefulWidget {
   final VoidCallback onNext;
-  final Function(int) onScored;
+  final Function(double) onScored;
 
   const ConnectCubeStep({
     super.key,
@@ -16,24 +16,14 @@ class ConnectCubeStep extends StatefulWidget {
 }
 
 class _ConnectCubeStepState extends State<ConnectCubeStep> {
-  final List<Offset> points = [
-    const Offset(100, 100), // 0
-    const Offset(200, 100), // 1
-    const Offset(100, 200), // 2
-    const Offset(200, 200), // 3
-    const Offset(140, 140), // 4
-    const Offset(240, 140), // 5
-    const Offset(140, 240), // 6
-    const Offset(240, 240), // 7
-  ];
-
   final Set<String> connectedPairs = {};
   final Set<String> incorrectPairs = {};
   int? selectedPoint;
-  bool showHint = true;
-  late Timer hintTimer;
-  late Timer timeoutTimer;
+  bool showHint = false;
+  Timer? hintTimer;
+  Timer? timeoutTimer;
   bool testCompleted = false;
+  bool usedHint = false;
 
   final Set<String> expectedEdges = {
     '0-1', '0-2', '1-3', '2-3',
@@ -44,9 +34,7 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
   @override
   void initState() {
     super.initState();
-    hintTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => showHint = false);
-    });
+    _triggerHint(initial: true);
     timeoutTimer = Timer(const Duration(minutes: 2), () {
       if (!testCompleted) {
         widget.onScored(0);
@@ -57,15 +45,14 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
 
   @override
   void dispose() {
-    hintTimer.cancel();
-    timeoutTimer.cancel();
+    hintTimer?.cancel();
+    timeoutTimer?.cancel();
     super.dispose();
   }
 
-  void handlePointTap(int index) {
+  void handlePointTap(int index, List<Offset> points) {
     final messenger = ScaffoldMessenger.of(context);
 
-    // 1) select / deselect dots
     if (selectedPoint == null) {
       setState(() => selectedPoint = index);
       return;
@@ -75,7 +62,6 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
       return;
     }
 
-    // 2) two distinct taps → form key
     final a = selectedPoint!;
     final b = index;
     final pair = [a, b]..sort();
@@ -84,7 +70,6 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
 
     bool justWrong = false;
 
-    // 3) update state
     setState(() {
       if (connectedPairs.contains(key)) {
         connectedPairs.remove(key);
@@ -99,46 +84,45 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
       selectedPoint = null;
     });
 
-    // clear any existing snackbars immediately
     messenger.hideCurrentSnackBar();
 
-    // 4) wrong-line feedback
     if (justWrong) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Λάθος γραμμή')),
       );
     }
 
-    // 5) check for completion
     final hasAll = expectedEdges.every(connectedPairs.contains);
     final hasSomeWrong = incorrectPairs.isNotEmpty;
 
     if (hasAll && !hasSomeWrong && !testCompleted) {
       // perfect completion
       testCompleted = true;
-      timeoutTimer.cancel();
+      timeoutTimer?.cancel();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Σωστή απάντηση!')),
+        SnackBar(
+          content: Text(usedHint
+              ? 'Σωστό! (Χρησιμοποιήθηκε υπόδειξη)'
+              : 'Σωστή απάντηση!'),
+        ),
       );
-      Future.delayed(const Duration(seconds: 2), () {
-        widget.onScored(1);
+      Future.delayed(const Duration(seconds: 1), () {
+        widget.onScored(usedHint ? 0.5 : 1.0);
         widget.onNext();
       });
     } else if (hasAll && hasSomeWrong) {
-      // almost there—red lines still present
       messenger.showSnackBar(
-        const SnackBar(content: Text('Σχεδόν εκεί—διαγράψτε τις κόκκινες γραμμές')),
+        const SnackBar(content: Text('Σχεδόν σωστό—διαγράψτε τις κόκκινες γραμμές')),
       );
     }
   }
 
-  bool _hasCompletedCubePerfectly() {
-    return expectedEdges.every(connectedPairs.contains) && incorrectPairs.isEmpty;
-  }
-
-  void triggerHint() {
-    setState(() => showHint = true);
-    hintTimer.cancel();
+  void _triggerHint({bool initial = false}) {
+    setState(() {
+      showHint = true;
+      if (!initial) usedHint = true;
+    });
+    hintTimer?.cancel();
     hintTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => showHint = false);
     });
@@ -146,11 +130,34 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive centering and scaling
+    final size = MediaQuery.of(context).size;
+    final double cubeWidth = size.width * 0.45;
+    final double cubeHeight = size.width * 0.45;
+    final double centerX = size.width / 2;
+    final double centerY = size.height / 2 - 40; // slightly up
+
+    // Cube "base" is 4x4 grid (spacing)
+    final spacing = cubeWidth / 3;
+    final layerGap = spacing * 0.8;
+
+    final List<Offset> points = [
+      // Back square (lower layer)
+      Offset(centerX - spacing, centerY - spacing), // 0
+      Offset(centerX + spacing, centerY - spacing), // 1
+      Offset(centerX - spacing, centerY + spacing), // 2
+      Offset(centerX + spacing, centerY + spacing), // 3
+      // Front square (upper layer)
+      Offset(centerX - spacing + layerGap, centerY - spacing + layerGap), // 4
+      Offset(centerX + spacing + layerGap, centerY - spacing + layerGap), // 5
+      Offset(centerX - spacing + layerGap, centerY + spacing + layerGap), // 6
+      Offset(centerX + spacing + layerGap, centerY + spacing + layerGap), // 7
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Οπτικο-Κατασκευαστικές Ικανότητες')),
       body: Stack(
         children: [
-          // Instructions
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -165,8 +172,6 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
               ],
             ),
           ),
-
-          // Full‑screen painter
           Positioned.fill(
             child: CustomPaint(
               painter: LinePainter(
@@ -178,22 +183,20 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
               ),
             ),
           ),
-
-          // Dots
           ...points.asMap().entries.map((e) {
             final idx = e.key;
             final pos = e.value;
             return Positioned(
-              left: pos.dx - 12,
-              top: pos.dy - 12,
+              left: pos.dx - 16,
+              top: pos.dy - 16,
               child: GestureDetector(
-                onTap: () => handlePointTap(idx),
+                onTap: () => handlePointTap(idx, points),
                 child: Container(
-                  width: 24,
-                  height: 24,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: selectedPoint == idx
-                        ? Colors.blue.withOpacity(0.3)
+                        ? Colors.blue.withOpacity(0.2)
                         : Colors.white,
                     border: Border.all(
                       color: selectedPoint == idx ? Colors.blue : Colors.black,
@@ -205,8 +208,6 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
               ),
             );
           }).toList(),
-
-          // Controls
           Positioned(
             bottom: 16,
             left: 16,
@@ -220,17 +221,18 @@ class _ConnectCubeStepState extends State<ConnectCubeStep> {
                       connectedPairs.clear();
                       incorrectPairs.clear();
                       selectedPoint = null;
+                      usedHint = false;
                     });
                   },
                   child: const Text('Καθαρισμα'),
                 ),
                 ElevatedButton(
-                  onPressed: triggerHint,
+                  onPressed: () => _triggerHint(),
                   child: const Text('Υπόδειξη'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    timeoutTimer.cancel();
+                    timeoutTimer?.cancel();
                     widget.onScored(0);
                     widget.onNext();
                   },
@@ -272,7 +274,6 @@ class LinePainter extends CustomPainter {
       ..color = Colors.blue.withOpacity(0.4)
       ..strokeWidth = 2;
 
-    // Draw confirmed connections
     for (final key in connections) {
       final idx = key.split('-').map(int.parse).toList();
       final p1 = points[idx[0]];
@@ -281,7 +282,6 @@ class LinePainter extends CustomPainter {
       canvas.drawLine(p1, p2, paint);
     }
 
-    // Draw hints
     if (showHint) {
       for (final key in expected) {
         final idx = key.split('-').map(int.parse).toList();

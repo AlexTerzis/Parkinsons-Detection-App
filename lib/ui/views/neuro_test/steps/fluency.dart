@@ -188,7 +188,7 @@ class _FluencyStepState extends State<FluencyStep> {
             Text(
               _listening
                   ? 'Μιλήστε τώρα! Κάθε λέξη εμφανίζεται αμέσως στην οθόνη.'
-                  : 'Πάτα το μικρόφωνο για να ξεκινήσεις ή να συνεχίσεις.',
+                  : 'Πάτα το μικρόφωνο για να ξεκινήσεις.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),

@@ -57,6 +57,7 @@ flutter:
     - assets/images/icon.png
     - assets/images/logo128x128.png    
     - assets/images/logo192x192.png
+    - assets/images/cube_reference.png
     - assets/tapping_model.tflite
     - assets/models/drawing_binary_classifier2.tflite
     - assets/models/kalo.tflite

@@ -234,7 +234,7 @@ class _GesturesStepState extends State<GesturesStep> {
     if (_testEnded) {
       // ✅ No camera widget here, so camera closes!
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         body: Center(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
