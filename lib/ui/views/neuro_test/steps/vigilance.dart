@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
-/// Step 8 - Vigilance. Random letters flash every second. Tap when "Α" appears.
 class VigilanceStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
@@ -13,78 +12,169 @@ class VigilanceStep extends StatefulWidget {
 }
 
 class _VigilanceStepState extends State<VigilanceStep> {
-  static const _letters = ['Α','Β','Γ','Δ','Ε'];
+  // Real MoCA sequence, can be replaced with your own if needed
+  static const _sequence = [
+    'Φ','Β','Α','Γ','Μ','Ν','Α','Α','Ξ','Κ','Λ','Β','Α','Φ','Α','Κ',
+    'Ε','Α','Α','Α','Ξ','Α','Ν','Ο','Φ','Α','Α','Β'
+  ];
+  int _index = -1;
   String _current = '';
-  late Timer _timer;
   int _correct = 0;
   int _wrong = 0;
-  int _shown = 0;
+  bool _buttonEnabled = true;
+  bool _testDone = false;
+  Timer? _letterTimer;
+  int _phase = 0;
+  late FlutterTts _tts;
 
   @override
   void initState() {
     super.initState();
-    // Show 15 letters total.
-    _nextLetter();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _nextLetter());
+    _tts = FlutterTts();
+    _tts.setLanguage("el-GR");
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _letterTimer?.cancel();
+    _tts.stop();
     super.dispose();
   }
 
-  void _nextLetter() {
+  void _startPhase2() {
     setState(() {
-      _current = _letters[Random().nextInt(_letters.length)];
-      _shown++;
+      _phase = 1;
+      _index = -1;
+      _correct = 0;
+      _wrong = 0;
+      _testDone = false;
     });
-    if (_shown >= 15) {
-      _timer.cancel();
-    }
+    _nextLetter();
+  }
+
+  void _nextLetter() async {
+    if (!mounted) return;
+    _letterTimer?.cancel();
+
+    setState(() {
+      _index += 1;
+      if (_index >= _sequence.length) {
+        _testDone = true;
+        _current = '';
+        _buttonEnabled = false;
+        return;
+      }
+      _current = _sequence[_index];
+      _buttonEnabled = true;
+    });
+
+    // Speak the letter (always, in black)
+    await _tts.speak(_current);
+
+    _letterTimer = Timer(const Duration(milliseconds: 1500), () {
+      // Automatically proceed to next letter
+      if (!_testDone) _nextLetter();
+    });
   }
 
   void _pressed() {
-    if (_current == 'Α') {
-      _correct++;
-    } else {
-      _wrong++;
-    }
-    if (_shown >= 15) _finish();
+    if (!_buttonEnabled || _testDone) return;
+
+    setState(() {
+      _buttonEnabled = false;
+      if (_current == 'Α') {
+        _correct++;
+      } else {
+        _wrong++;
+      }
+    });
   }
 
   void _finish() {
-    final score = _correct > _wrong ? 1 : 0;
+    _letterTimer?.cancel();
+    // MoCA: 1 point if <=2 mistakes (false positives or misses), else 0
+    int missedA = _sequence.where((c) => c == 'Α').length - _correct;
+    int totalMistakes = _wrong + missedA;
+    int score = totalMistakes <= 2 ? 1 : 0;
     widget.onScored(score);
     widget.onNext();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_phase == 0) {
+      // Instruction phase
+      return Scaffold(
+        appBar: AppBar(title: const Text('Εγρήγορση')),
+        body: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: const [
+                  SizedBox(height: 48),
+                  Text(
+                    'Oδηγίες:\nΑυτό το τεστ μετρά την εγρήγορση και την προσοχή σας.\n'
+                    'Θα εμφανιστεί μία σειρά από γράμματα, ένα κάθε φορά.\n'
+                    'Πατήστε το κουμπί όταν βλέπετε το γράμμα "Α".\n',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: ElevatedButton(
+                onPressed: _startPhase2,
+                child: const Text('Επόμενο'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Phase 2: Test
     return Scaffold(
       appBar: AppBar(title: const Text('Εγρήγορση')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _current,
-              style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold),
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _current.isEmpty ? '-' : _current,
+                  style: const TextStyle(
+                    fontSize: 72,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _buttonEnabled && !_testDone ? _pressed : null,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(180, 48),
+                  ),
+                  child: const Text('Άκουσα Α'),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _pressed,
-              child: const Text('Άκουσα Α'),
-            ),
-            const SizedBox(height: 20),
-            if (_shown >= 15)
-              ElevatedButton(
+          ),
+          if (_phase == 1)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: ElevatedButton(
                 onPressed: _finish,
                 child: const Text('Επόμενο'),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

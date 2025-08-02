@@ -26,14 +26,7 @@ class NeuroTestViewModel extends BaseViewModel {
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
-      ClockStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
-      NamingStep(        
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
+      
       DigitsForwardStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
@@ -59,6 +52,14 @@ class NeuroTestViewModel extends BaseViewModel {
         onScored: (score) => totalMocaScore += score,
       ),
       TrailsStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      ClockStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      NamingStep(        
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
