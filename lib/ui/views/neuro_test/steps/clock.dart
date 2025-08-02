@@ -19,29 +19,26 @@ class ClockStep extends StatefulWidget {
 enum Hand { hour, minute }
 
 class _ClockStepState extends State<ClockStep> {
-  double _hourAngle = -pi/2;
-  double _minuteAngle = -pi/2;
+  double _hourAngle = -pi / 2;
+  double _minuteAngle = -pi / 2;
   bool _hourCorrect = false;
   bool _minuteCorrect = false;
   bool _showHint = false;
   bool _hintUsed = false;
   Hand? _activeHand;
-  Timer? _completionTimer, _timeoutTimer, _hintTimer;
+  Timer? _completionTimer, _timeoutTimer, _hintTimer, _greenTimer;
+  bool _bothCorrectStable = false;
+  bool _shouldShowGreen = false;
 
-  // Pre‑shifted targets (canvas 0=3 o'clock)
-  static final _targetHourAngle   = ((11 + 10/60) * 30) * pi/180 - pi/2;
-  static final _targetMinuteAngle = (10 * 6) * pi/180 - pi/2;
+  static final _targetHourAngle = ((11 + 10 / 60) * 30) * pi / 180 - pi / 2;
+  static final _targetMinuteAngle = (10 * 6) * pi / 180 - pi / 2;
   static const _tolerance = 0.1; // ~6°
 
   @override
   void initState() {
     super.initState();
-    // Two‑minute timeout → partial scoring
     _timeoutTimer = Timer(const Duration(minutes: 2), () {
-      final raw = (_hourCorrect ? 1.5 : 0) + (_minuteCorrect ? 1.5 : 0);
-      final score = raw - (_hintUsed ? 0.5 : 0);
-      widget.onScored(score);
-      widget.onNext();
+      _proceedWithScore();
     });
   }
 
@@ -50,14 +47,14 @@ class _ClockStepState extends State<ClockStep> {
     _completionTimer?.cancel();
     _timeoutTimer?.cancel();
     _hintTimer?.cancel();
+    _greenTimer?.cancel();
     super.dispose();
   }
 
-  // normalize difference to [0, π]
   bool _isClose(double a, double b) {
-    double d = (a - b) % (2*pi);
-    if (d < 0) d += 2*pi;
-    if (d > pi) d = 2*pi - d;
+    double d = (a - b) % (2 * pi);
+    if (d < 0) d += 2 * pi;
+    if (d > pi) d = 2 * pi - d;
     return d < _tolerance;
   }
 
@@ -75,32 +72,68 @@ class _ClockStepState extends State<ClockStep> {
     final center = size.center(Offset.zero);
     final ang = atan2(d.localPosition.dy - center.dy, d.localPosition.dx - center.dx);
 
+    bool hourWasCorrect = _hourCorrect;
+    bool minuteWasCorrect = _minuteCorrect;
+
     setState(() {
       if (_activeHand == Hand.hour) {
-        _hourAngle   = ang;
+        _hourAngle = ang;
         _hourCorrect = _isClose(_hourAngle, _targetHourAngle);
       } else {
-        _minuteAngle   = ang;
+        _minuteAngle = ang;
         _minuteCorrect = _isClose(_minuteAngle, _targetMinuteAngle);
       }
     });
 
-    if (_hourCorrect && _minuteCorrect) {
-      _timeoutTimer?.cancel();
-      _completionTimer?.cancel();
-      _completionTimer = Timer(const Duration(milliseconds: 500), () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Σωστή απάντηση!')),
-        );
-        final raw = 3.0; // full
-        final score = raw - (_hintUsed ? 0.5 : 0);
-        widget.onScored(score);
-        widget.onNext();
-      });
-    }
+    _checkBothCorrect();
   }
 
   void _onPanEnd(_) => _activeHand = null;
+
+  void _checkBothCorrect() {
+    if (_hourCorrect && _minuteCorrect && !_bothCorrectStable) {
+      // Start the stable timer for 0.5s
+      _greenTimer?.cancel();
+      _greenTimer = Timer(const Duration(milliseconds: 500), () {
+        setState(() {
+          _bothCorrectStable = true;
+          _shouldShowGreen = true;
+        });
+        _timeoutTimer?.cancel();
+        _completionTimer?.cancel();
+        _completionTimer = Timer(const Duration(milliseconds: 500), () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_hintUsed
+                  ? 'Σωστό! (Χρησιμοποιήθηκε υπόδειξη)'
+                  : 'Σωστή απάντηση!'),
+            ),
+          );
+          _proceedWithScore();
+        });
+      });
+    } else if (!_hourCorrect || !_minuteCorrect) {
+      // Any hand not correct resets the timer
+      _greenTimer?.cancel();
+      if (_bothCorrectStable) {
+        setState(() {
+          _bothCorrectStable = false;
+          _shouldShowGreen = false;
+        });
+      }
+    }
+  }
+
+  void _proceedWithScore() {
+    _timeoutTimer?.cancel();
+    _completionTimer?.cancel();
+    _greenTimer?.cancel();
+    double raw = (_hourCorrect ? 1.5 : 0) + (_minuteCorrect ? 1.5 : 0);
+    if (_bothCorrectStable) raw = 3.0;
+    final score =(_hintUsed ? raw : raw/2);
+    widget.onScored(score < 0 ? 0 : score);
+    widget.onNext();
+  }
 
   void _triggerHint() {
     setState(() {
@@ -115,6 +148,10 @@ class _ClockStepState extends State<ClockStep> {
 
   @override
   Widget build(BuildContext context) {
+    Color handColor(bool correct) => (_shouldShowGreen && _bothCorrectStable)
+        ? Colors.green
+        : Colors.black;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Ρολόι: δείκτες')),
       body: Column(
@@ -133,25 +170,27 @@ class _ClockStepState extends State<ClockStep> {
               return Stack(children: [
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onPanStart:  (d) => _onPanStart(d, size),
+                  onPanStart: (d) => _onPanStart(d, size),
                   onPanUpdate: (d) => _onPanUpdate(d, size),
-                  onPanEnd:    _onPanEnd,
+                  onPanEnd: _onPanEnd,
                   child: CustomPaint(
                     size: size,
                     painter: _ClockHandsPainter(
-                      hourAngle:   _hourAngle,
+                      hourAngle: _hourAngle,
                       minuteAngle: _minuteAngle,
-                      hourColor:   _hourCorrect   ? Colors.green : Colors.black,
-                      minuteColor: _minuteCorrect ? Colors.green : Colors.black,
-                      showHint:    _showHint,
-                      hintHour:    _targetHourAngle,
-                      hintMinute:  _targetMinuteAngle,
+                      hourColor: handColor(_hourCorrect),
+                      minuteColor: handColor(_minuteCorrect),
+                      showHint: _showHint,
+                      hintHour: _targetHourAngle,
+                      hintMinute: _targetMinuteAngle,
                     ),
                   ),
                 ),
                 // Hint button centered
                 Positioned(
-                  bottom: 16, left: 0, right: 0,
+                  bottom: 16,
+                  left: 0,
+                  right: 0,
                   child: Center(
                     child: ElevatedButton(
                       onPressed: _triggerHint,
@@ -161,14 +200,11 @@ class _ClockStepState extends State<ClockStep> {
                 ),
                 // Next in bottom right
                 Positioned(
-                  bottom: 16, right: 16,
+                  bottom: 16,
+                  right: 16,
                   child: ElevatedButton(
                     onPressed: () {
-                      _timeoutTimer?.cancel();
-                      final raw = (_hourCorrect ? 1.5 : 0) + (_minuteCorrect ? 1.5 : 0);
-                      final score = raw - (_hintUsed ? 0.5 : 0);
-                      widget.onScored(score);
-                      widget.onNext();
+                      _proceedWithScore();
                     },
                     child: const Text('Επόμενο'),
                   ),
@@ -207,21 +243,20 @@ class _ClockHandsPainter extends CustomPainter {
     canvas.drawCircle(center, r, Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
-      ..color = Colors.black
-    );
+      ..color = Colors.black);
 
     // Numbers
     const ts = TextStyle(fontSize: 18, color: Colors.black);
     for (int i = 0; i < 12; i++) {
-      final a = (pi/6)*i - pi/2;
-      final pos = Offset(center.dx + cos(a)*(r-24),
-                         center.dy + sin(a)*(r-24));
+      final a = (pi / 6) * i - pi / 2;
+      final pos = Offset(center.dx + cos(a) * (r - 24),
+          center.dy + sin(a) * (r - 24));
       final tp = TextPainter(
-        text: TextSpan(text: '${i==0?12:i}', style: ts),
+        text: TextSpan(text: '${i == 0 ? 12 : i}', style: ts),
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, pos - Offset(tp.width/2, tp.height/2));
+      tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
     // Hint lines
@@ -236,22 +271,22 @@ class _ClockHandsPainter extends CustomPainter {
     }
 
     // Hour hand
-    canvas.drawLine(center,
-      center + Offset(cos(hourAngle), sin(hourAngle)) * r * 0.6,
-      Paint()
-        ..strokeWidth = 6
-        ..color = hourColor
-        ..strokeCap = StrokeCap.round
-    );
+    canvas.drawLine(
+        center,
+        center + Offset(cos(hourAngle), sin(hourAngle)) * r * 0.6,
+        Paint()
+          ..strokeWidth = 6
+          ..color = hourColor
+          ..strokeCap = StrokeCap.round);
 
     // Minute hand
-    canvas.drawLine(center,
-      center + Offset(cos(minuteAngle), sin(minuteAngle)) * r * 0.8,
-      Paint()
-        ..strokeWidth = 4
-        ..color = minuteColor
-        ..strokeCap = StrokeCap.round
-    );
+    canvas.drawLine(
+        center,
+        center + Offset(cos(minuteAngle), sin(minuteAngle)) * r * 0.8,
+        Paint()
+          ..strokeWidth = 4
+          ..color = minuteColor
+          ..strokeCap = StrokeCap.round);
   }
 
   @override

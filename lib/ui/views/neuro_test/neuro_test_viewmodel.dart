@@ -26,44 +26,13 @@ class NeuroTestViewModel extends BaseViewModel {
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
-       FluencyStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
-      RepeatSentencesStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
-      DelayedRecallStep(
-        onFinished: (score, result) {
-          totalMocaScore += score.toDouble();
-          nextStep();
-        },
-        immediateTrials: _immediateAnswers,
-      ),
-      ImmediateRecallStep(
-        onFinished: (resp,__) {
-          _immediateAnswers = resp;
-          nextStep();
-        },
-      ),
-      DrawCubeStep(onNext: nextStep,onScored: (score) {
-          totalMocaScore += score;
-        },),
-      ConnectCubeStep(onNext: nextStep,onScored: (score) {
-          totalMocaScore += score;
-        },),
       ClockStep(
         onNext: nextStep,
-        onScored: (num score) {
-          totalMocaScore += score.toInt(); // or however you wish to handle it
-        },
+        onScored: (score) => totalMocaScore += score,
       ),
-      NamingStep(
+      NamingStep(        
         onNext: nextStep,
-        onScored: (num score) {
-          totalMocaScore += score.toInt(); // or however you wish to handle it
-        },
+        onScored: (score) => totalMocaScore += score,
       ),
       DigitsForwardStep(
         onNext: nextStep,
@@ -89,17 +58,39 @@ class NeuroTestViewModel extends BaseViewModel {
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      
-      
-      
       TrailsStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
       ),
-      GesturesStep(
+      GesturesStep(        
         onNext: nextStep,
-        onScored: (num score) {
-          totalMocaScore += score; // or however you wish to handle it
+        onScored: (score) => totalMocaScore += score,),
+      FluencyStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      RepeatSentencesStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      DelayedRecallStep(
+        onFinished: (score, result) {
+          totalMocaScore += score.toDouble();
+          nextStep();
+        },
+        immediateTrials: _immediateAnswers,
+      ),
+      ImmediateRecallStep(
+        onFinished: (resp,__) {
+          _immediateAnswers = resp;
+          nextStep();
+        },
+      ),
+      DrawCubeStep(onNext: nextStep,onScored: (score) {
+          totalMocaScore += score;
+        },),
+      ConnectCubeStep(onNext: nextStep,onScored: (score) {
+          totalMocaScore += score;
         },),
     ];
   }
