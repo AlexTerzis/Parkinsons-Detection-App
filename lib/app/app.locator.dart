@@ -13,6 +13,7 @@ import 'package:stacked_shared/stacked_shared.dart';
 
 import '../services/authentication_service.dart';
 import '../services/hand_metrics.dart';
+import '../services/localization_service.dart';
 import '../services/raison_api_service.dart';
 import '../services/reports_service.dart';
 import '../services/storage_service.dart';
@@ -40,4 +41,5 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => RaisonApiService());
   locator.registerLazySingleton(() => HandMetrics());
   locator.registerLazySingleton(() => StorageService());
+  locator.registerLazySingleton(() => LocalizationService());
 }

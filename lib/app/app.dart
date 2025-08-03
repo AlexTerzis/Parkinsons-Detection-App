@@ -1,3 +1,4 @@
+import 'package:parkinsondetetion/services/localization_service.dart';
 import 'package:parkinsondetetion/services/storage_service.dart';
 import 'package:parkinsondetetion/ui/bottom_sheets/notice/notice_sheet.dart';
 import 'package:parkinsondetetion/ui/dialogs/info_alert/info_alert_dialog.dart';
@@ -5,7 +6,6 @@ import 'package:parkinsondetetion/ui/views/drawing_test/camera_draw_view.dart';
 import 'package:parkinsondetetion/ui/views/drawing_test/gallery_draw_view.dart';
 import 'package:parkinsondetetion/ui/views/drawing_test/signature_canvas_view.dart';
 import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart';
-import 'package:parkinsondetetion/ui/views/home/home_view.dart';
 import 'package:parkinsondetetion/ui/views/insights/insights_view.dart';
 import 'package:parkinsondetetion/ui/views/startup/startup_view.dart';
 import 'package:stacked/stacked_annotations.dart';
@@ -23,14 +23,12 @@ import 'package:parkinsondetetion/ui/views/questionnaire/questionnaire_view.dart
 import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart';
 import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
 import 'package:parkinsondetetion/ui/views/neuro_test/neuro_test_view.dart';
-import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart';
 import 'package:parkinsondetetion/services/raison_api_service.dart';
 import '../services/hand_metrics.dart';
 // @stacked-import
 
 @StackedApp(
   routes: [
-    MaterialRoute(page: HomeView),
     MaterialRoute(page: StartupView),
     MaterialRoute(page: LoginView),
     MaterialRoute(page: DoctorView),
@@ -60,6 +58,7 @@ import '../services/hand_metrics.dart';
     LazySingleton(classType: RaisonApiService),
     LazySingleton(classType: HandMetrics),
     LazySingleton(classType: StorageService),
+    LazySingleton(classType: LocalizationService),
     
 // @stacked-service
   ],
