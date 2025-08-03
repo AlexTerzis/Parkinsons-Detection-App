@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import 'voice_test_viewmodel.dart';
 
@@ -11,14 +12,14 @@ class VoiceTestView extends StackedView<VoiceTestViewModel> {
   Widget builder(
       BuildContext context, VoiceTestViewModel viewModel, Widget? child) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Voice Test')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.voiceTest)),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              viewModel.status,
+              viewModel.statusText(AppLocalizations.of(context)!),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -26,7 +27,8 @@ class VoiceTestView extends StackedView<VoiceTestViewModel> {
             if (viewModel.isRecording)
               Column(
                 children: [
-                  Text('Time left: ${viewModel.secondsLeft}s'),
+                  Text(AppLocalizations.of(context)!
+                      .timeLeft(viewModel.secondsLeft)),
                   const SizedBox(height: 10),
                   LinearProgressIndicator(value: viewModel.progress, minHeight: 8),
                 ],
@@ -35,14 +37,14 @@ class VoiceTestView extends StackedView<VoiceTestViewModel> {
             ElevatedButton.icon(
               onPressed: viewModel.isRecording ? null : viewModel.startTest,
               icon: const Icon(Icons.mic),
-              label: const Text('Start Test'),
+              label: Text(AppLocalizations.of(context)!.startTest),
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: viewModel.stopTest,
               icon: const Icon(Icons.stop),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              label: const Text('Stop'),
+              label: Text(AppLocalizations.of(context)!.stop),
             ),
           ],
         ),

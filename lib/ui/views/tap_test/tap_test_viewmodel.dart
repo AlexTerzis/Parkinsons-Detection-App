@@ -3,11 +3,14 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:stacked/stacked.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
+
+enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed }
 
 class TapTestViewModel extends BaseViewModel {
   // Services used to persist results and fetch the current user
@@ -18,7 +21,7 @@ class TapTestViewModel extends BaseViewModel {
 
   int secondsLeft = 0;
   bool isTesting = false;
-  String status = 'Press start to begin';
+  TapTestStatus status = TapTestStatus.initial;
   String resultHand1 = '';
   String resultHand2 = '';
 
@@ -35,6 +38,23 @@ class TapTestViewModel extends BaseViewModel {
   bool _modelLoaded = false;
 
   double get progress => secondsLeft / testDuration;
+
+  String statusText(AppLocalizations l10n) {
+    switch (status) {
+      case TapTestStatus.initial:
+        return l10n.pressStart;
+      case TapTestStatus.starting:
+        return l10n.startingTest;
+      case TapTestStatus.rightHand:
+        return l10n.tapRightHand;
+      case TapTestStatus.switchHands:
+        return l10n.switchHands;
+      case TapTestStatus.leftHand:
+        return l10n.tapLeftHand;
+      case TapTestStatus.completed:
+        return l10n.testCompleted;
+    }
+  }
 
   Future<void> initModel() async {
     try {
@@ -77,7 +97,7 @@ class TapTestViewModel extends BaseViewModel {
     _historyHand2.clear();
     _score1 = 0.0;
     _score2 = 0.0;
-    status = 'Starting test...';
+    status = TapTestStatus.starting;
     isTesting = true;
     _phase = 0;
     notifyListeners();
@@ -85,7 +105,7 @@ class TapTestViewModel extends BaseViewModel {
 
   void _startHand1() {
     _phase = 0;
-    status = 'Tap with right hand';
+    status = TapTestStatus.rightHand;
     secondsLeft = testDuration;
     _tapTimes.clear();
     _tapPairs.clear();
@@ -103,7 +123,7 @@ class TapTestViewModel extends BaseViewModel {
 
   void _startPause() {
     _phase = 1;
-    status = 'Switch hands';
+    status = TapTestStatus.switchHands;
     secondsLeft = pauseDuration;
     _tapTimes.clear();
     _tapPairs.clear();
@@ -113,7 +133,7 @@ class TapTestViewModel extends BaseViewModel {
 
   void _startHand2() {
     _phase = 2;
-    status = 'Tap with left hand';
+    status = TapTestStatus.leftHand;
     secondsLeft = testDuration;
     _tapTimes.clear();
     _tapPairs.clear();
@@ -125,7 +145,7 @@ class TapTestViewModel extends BaseViewModel {
         storeInHand1: false,
       );
       _historyHand2.addAll(List.of(_tapPairs));
-      status = 'Test completed';
+      status = TapTestStatus.completed;
       isTesting = false;
       _phase = 3;
       notifyListeners();
@@ -253,7 +273,7 @@ class TapTestViewModel extends BaseViewModel {
   void stopTest() {
     _timer?.cancel();
     isTesting = false;
-    status = 'Test stopped';
+    status = 'Test stopped' as TapTestStatus;
     notifyListeners();
   }
   @override

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
+import 'package:parkinsondetetion/app/app.locator.dart';
+import 'package:parkinsondetetion/services/localization_service.dart';
 
 import '../../patience/patience_viewmodel.dart';
 
@@ -19,6 +22,7 @@ class ProfileTab extends StatelessWidget {
           CircleAvatar(
             radius: 48,
             backgroundColor: theme.colorScheme.primaryContainer,
+            // Generic profile avatar icon.
             child: const Icon(Icons.person, size: 48),
           ),
           const SizedBox(height: 16),
@@ -26,30 +30,36 @@ class ProfileTab extends StatelessWidget {
           const SizedBox(height: 8),
           Text(viewModel.email, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 24),
+          // Name editing field.
           TextField(
             controller: viewModel.nameController,
-            decoration: const InputDecoration(
-              labelText: 'Edit Name',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.editName,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
+          // Date of birth field with localized hint.
           TextField(
             controller: viewModel.dobController,
-            decoration: const InputDecoration(
-              labelText: 'Date of Birth',
-              border: OutlineInputBorder(),
-              hintText: 'yyyy-mm-dd',
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.dateOfBirth,
+              border: const OutlineInputBorder(),
+              hintText: AppLocalizations.of(context)!.dobHint,
             ),
           ),
           const SizedBox(height: 16),
+          // Medication field.
           TextField(
             controller: viewModel.medicationController,
-            decoration: const InputDecoration(
-              labelText: 'Add Medication',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.addMedication,
+              border: const OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 16),
+          // Language picker uses localization service to change app-wide locale.
+          _LanguagePicker(localizationService: locator<LocalizationService>()),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: viewModel.isBusy
@@ -58,12 +68,14 @@ class ProfileTab extends StatelessWidget {
                     await viewModel.saveExtraProfileFields();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile saved')),
+                        SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .profileSaved)),
                       );
                     }
                   },
             icon: const Icon(Icons.save_alt),
-            label: const Text('Save Profile'),
+            label: Text(AppLocalizations.of(context)!.saveProfile),
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
@@ -73,12 +85,14 @@ class ProfileTab extends StatelessWidget {
                     await viewModel.saveName();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Saved successfully')),
+                        SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .savedSuccessfully)),
                       );
                     }
                   },
             icon: const Icon(Icons.save),
-            label: const Text('Save Changes'),
+            label: Text(AppLocalizations.of(context)!.saveChanges),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -88,9 +102,9 @@ class ProfileTab extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             onPressed: () => viewModel.logout(context),
-            child: const Text(
-              'LOG OUT',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)!.logOut,
+              style: const TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
                 fontStyle: FontStyle.italic,
@@ -99,6 +113,41 @@ class ProfileTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Dropdown that lets the user choose the desired app language.
+class _LanguagePicker extends StatelessWidget {
+  final LocalizationService localizationService;
+  const _LanguagePicker({required this.localizationService});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(AppLocalizations.of(context)!.language),
+        const SizedBox(width: 16),
+        DropdownButton<Locale>(
+          value: localizationService.locale,
+          onChanged: (locale) {
+            if (locale != null) {
+              localizationService.setLocale(locale);
+            }
+          },
+          items: [
+            DropdownMenuItem(
+              value: const Locale('en'),
+              child: Text(AppLocalizations.of(context)!.english),
+            ),
+            DropdownMenuItem(
+              value: const Locale('el'),
+              child: Text(AppLocalizations.of(context)!.greek),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

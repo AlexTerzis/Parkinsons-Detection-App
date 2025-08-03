@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked_services/stacked_services.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../../app/app.locator.dart';
 import '../../patience/patience_viewmodel.dart';
@@ -25,8 +26,8 @@ class DoctorTab extends StatelessWidget {
                 viewModel,
                 onSelect: (doc) => viewModel.setPrimaryDoctor(doc.uid),
               ),
-              child: const Text(
-                "You haven't selected a doctor yet.\nClick to select",
+              child: Text(
+                AppLocalizations.of(context)!.noDoctorSelected,
                 textAlign: TextAlign.center,
               ),
             )
@@ -39,26 +40,27 @@ class DoctorTab extends StatelessWidget {
                 subtitle: Text(
                   '${viewModel.primaryDoctor!.specialty ?? ''} ${viewModel.primaryDoctor!.location != null ? '• ${viewModel.primaryDoctor!.location}' : ''}',
                 ),
-                trailing: const Chip(label: Text('My Doctor')),
+                trailing:
+                    Chip(label: Text(AppLocalizations.of(context)!.myDoctor)),
               ),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: viewModel.sendResultsToPrimaryDoctor,
               icon: const Icon(Icons.send),
-              label: const Text('Send Results'),
+              label: Text(AppLocalizations.of(context)!.sendResults),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () => _showDiagnosesDialog(context, viewModel, theme),
               icon: const Icon(Icons.receipt),
-              label: const Text('Diagnoses'),
+              label: Text(AppLocalizations.of(context)!.diagnoses),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.calendar_today),
-              label: const Text('Book Appointment'),
+              label: Text(AppLocalizations.of(context)!.bookAppointment),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
@@ -69,23 +71,25 @@ class DoctorTab extends StatelessWidget {
                 onSelect: (doc) => viewModel.sendResultsToDoctor(doc.uid),
               ),
               icon: const Icon(Icons.group),
-              label: const Text('Get Second Opinion'),
+              label: Text(AppLocalizations.of(context)!.getSecondOpinion),
             ),
           ],
           const SizedBox(height: 24),
-          _buildSecondOpinions(viewModel, theme),
+          _buildSecondOpinions(context, viewModel, theme),
         ],
       ),
     );
   }
 
-  Widget _buildSecondOpinions(PatienceViewModel vm, ThemeData theme) {
+  Widget _buildSecondOpinions(
+      BuildContext context, PatienceViewModel vm, ThemeData theme) {
     final ids = vm.secondOpinionDoctorIds;
     if (ids.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Second Opinions', style: theme.textTheme.titleMedium),
+        Text(AppLocalizations.of(context)!.secondOpinions,
+            style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         ...ids.map((id) {
           final doc = vm.doctorById(id);
@@ -112,15 +116,15 @@ class DoctorTab extends StatelessWidget {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Diagnoses'),
+          title: Text(AppLocalizations.of(context)!.diagnoses),
           content: SizedBox(
             width: double.maxFinite,
-            child: _diagnosesList(vm),
+            child: _diagnosesList(context, vm),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             )
           ],
         );
@@ -128,9 +132,9 @@ class DoctorTab extends StatelessWidget {
     );
   }
 
-  Widget _diagnosesList(PatienceViewModel vm) {
+  Widget _diagnosesList(BuildContext context, PatienceViewModel vm) {
     if (vm.reports.isEmpty) {
-      return const Center(child: Text('No doctor feedback yet.'));
+      return Center(child: Text(AppLocalizations.of(context)!.noDoctorFeedback));
     }
     return ListView.separated(
       shrinkWrap: true,
@@ -145,9 +149,9 @@ class DoctorTab extends StatelessWidget {
             subtitle: Text(report.status.name.toUpperCase()),
             children: [
               if (report.notes.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('No notes yet.'),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(AppLocalizations.of(context)!.noNotesYet),
                 )
               else
                 ...report.notes.map(
@@ -173,7 +177,7 @@ class DoctorTab extends StatelessWidget {
   }) {
     if (vm.results.isEmpty && onSelect != vm.setPrimaryDoctor) {
       ScaffoldMessenger.of(rootContext).showSnackBar(
-        const SnackBar(content: Text('Please complete at least one test first.')),
+        SnackBar(content: Text(AppLocalizations.of(rootContext)!.completeOneTest)),
       );
       return;
     }
@@ -191,23 +195,23 @@ class DoctorTab extends StatelessWidget {
           }).toList();
 
           return AlertDialog(
-            title: const Text('Select Doctor'),
+            title: Text(AppLocalizations.of(rootContext)!.selectDoctor),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search doctor...',
-                      prefixIcon: Icon(Icons.search),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(rootContext)!.searchDoctor,
+                      prefixIcon: const Icon(Icons.search),
                     ),
                     onChanged: (val) => setState(() => query = val),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: filtered.isEmpty
-                        ? const Center(child: Text('No doctors found'))
+                        ? Center(child: Text(AppLocalizations.of(rootContext)!.noDoctorsFound))
                         : ListView.builder(
                             shrinkWrap: true,
                             itemCount: filtered.length,
@@ -226,8 +230,8 @@ class DoctorTab extends StatelessWidget {
                                       onSelect != vm.setPrimaryDoctor) {
                                     ScaffoldMessenger.of(rootContext).showSnackBar(
                                       SnackBar(
-                                        content:
-                                            Text('Results sent to ${doc.name ?? doc.email}'),
+                                        content: Text(AppLocalizations.of(rootContext)!
+                                            .resultsSentTo(doc.name ?? doc.email)),
                                       ),
                                     );
                                   }

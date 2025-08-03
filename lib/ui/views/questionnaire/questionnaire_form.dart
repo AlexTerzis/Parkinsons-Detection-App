@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:responsive_builder/responsive_builder.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import 'questionnaire_schema.dart';
 
@@ -41,7 +42,7 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
 
     return ResponsiveBuilder(
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('Questionnaire')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.questionnaire)),
         body: Form(
           key: _formKey,
           child: ListView(
@@ -60,7 +61,7 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isValid() ? _submit : null,
-                child: const Text('Submit'),
+                child: Text(AppLocalizations.of(context)!.submit),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart';
 import 'package:stacked_services/stacked_services.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../../app/app.locator.dart';
 import '../../patience/patience_viewmodel.dart';
@@ -23,44 +24,45 @@ class TestsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final rootContext = context;
+    final l10n = AppLocalizations.of(context)!;
     final tests = [
       {
-        'title': 'Camera Detection Test',
+        'title': l10n.cameraDetectionTest,
         'icon': Icons.camera_alt,
         'type': TestType.cameraDetection,
       },
       {
-        'title': 'Tremor Test',
+        'title': l10n.tremorTest,
         'icon': Icons.vibration,
         'type': TestType.tremor,
       },
       {
-        'title': 'Tap Test',
+        'title': l10n.tapTest,
         'icon': Icons.touch_app,
         'type': TestType.tap,
       },
       {
-        'title': 'Drawing Test',
+        'title': l10n.drawingTest,
         'icon': Icons.edit,
         'type': TestType.drawing,
       },
       {
-        'title': 'Questionnaire',
+        'title': l10n.questionnaire,
         'icon': Icons.question_answer,
         'type': TestType.questionnaire,
       },
       {
-        'title': 'Voice Test',
+        'title': l10n.voiceTest,
         'icon': Icons.mic,
         'type': TestType.voice,
       },
       {
-        'title': 'Neuropsychological Test',
+        'title': l10n.neuropsychologicalTest,
         'icon': Icons.psychology,
         'type': TestType.neuro,
       },
       {
-        'title': 'Frontal Assessment Battery Test',
+        'title': l10n.fabTest,
         'icon': Icons.psychology_alt_outlined,
         'type': TestType.fab,
       },
@@ -95,9 +97,9 @@ class TestsTab extends StatelessWidget {
                             .navigateToView(const CameraTestView());
                         if (rootContext.mounted && success == false) {
                           ScaffoldMessenger.of(rootContext).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                                 content:
-                                    Text('No hands detected. Try again.')),
+                                    Text(l10n.noHandsDetected)),
                           );
                         }
                       } else if (type == TestType.tremor) {
@@ -121,10 +123,9 @@ class TestsTab extends StatelessWidget {
                         await locator<NavigationService>()
                             .navigateToView(const FABTestView());
                       } else {
-                        await viewModel.recordDemoResult(type);
-                        ScaffoldMessenger.of(rootContext).showSnackBar(
-                          SnackBar(content: Text('${test['title']} completed')),
-                        );
+                        await locator<NavigationService>()
+                            .navigateToView(const CameraTestView());
+
                       }
                     },
                   ),
@@ -136,7 +137,7 @@ class TestsTab extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () => _onSendResultsPressed(rootContext, viewModel),
             icon: const Icon(Icons.send),
-            label: const Text('Send Results to Doctor'),
+            label: Text(l10n.sendResultsToDoctor),
           ),
         ],
       ),
@@ -174,7 +175,7 @@ class TestsTab extends StatelessWidget {
   void _onSendResultsPressed(BuildContext rootContext, PatienceViewModel vm) {
     if (vm.results.isEmpty) {
       ScaffoldMessenger.of(rootContext).showSnackBar(
-        const SnackBar(content: Text('Please complete at least one test first.')),
+        SnackBar(content: Text(AppLocalizations.of(rootContext)!.completeOneTest)),
       );
       return;
     }
@@ -192,23 +193,23 @@ class TestsTab extends StatelessWidget {
             }).toList();
 
             return AlertDialog(
-              title: const Text('Select Doctor'),
+              title: Text(AppLocalizations.of(rootContext)!.selectDoctor),
               content: SizedBox(
                 width: double.maxFinite,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search doctor...',
-                        prefixIcon: Icon(Icons.search),
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(rootContext)!.searchDoctor,
+                        prefixIcon: const Icon(Icons.search),
                       ),
                       onChanged: (val) => setState(() => query = val),
                     ),
                     const SizedBox(height: 12),
                     Expanded(
                       child: filtered.isEmpty
-                          ? const Center(child: Text('No doctors found'))
+                          ? Center(child: Text(AppLocalizations.of(rootContext)!.noDoctorsFound))
                           : ListView.builder(
                               shrinkWrap: true,
                               itemCount: filtered.length,
@@ -225,7 +226,8 @@ class TestsTab extends StatelessWidget {
                                       ScaffoldMessenger.of(rootContext).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Results sent to ${doc.name ?? doc.email}',
+                                            AppLocalizations.of(rootContext)!
+                                                .resultsSentTo(doc.name ?? doc.email),
                                           ),
                                         ),
                                       );

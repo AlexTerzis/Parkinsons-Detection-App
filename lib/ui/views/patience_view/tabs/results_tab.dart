@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../patience/patience_viewmodel.dart';
 import '../../../../models/test_result.dart';
@@ -16,7 +17,8 @@ class ResultsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Test Results', style: theme.textTheme.titleLarge),
+        Text(AppLocalizations.of(context)!.testResults,
+            style: theme.textTheme.titleLarge),
         const SizedBox(height: 16),
         ...grouped.entries.map((entry) {
           final label = viewModel.labelForType(entry.key);
@@ -107,7 +109,8 @@ class ResultsTab extends StatelessWidget {
         }),
         if (grouped.isNotEmpty) ...[
           const SizedBox(height: 24),
-          Text('Summary', style: theme.textTheme.titleLarge),
+          Text(AppLocalizations.of(context)!.summary,
+              style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
           if (viewModel.resultsSummary.length >= 3)
             SizedBox(
@@ -142,9 +145,9 @@ class ResultsTab extends StatelessWidget {
               ),
             )
           else
-            const Text(
-              'Complete at least 3 different tests to view the summary chart.',
-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            Text(
+              AppLocalizations.of(context)!.needThreeTests,
+              style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
             ),
         ],
         if (viewModel.results.isNotEmpty) ...[
@@ -154,7 +157,9 @@ class ResultsTab extends StatelessWidget {
             child: DropdownButton<int>(
               value: viewModel.selectedAverageWindow,
               items: const [3, 7, 14, 30]
-                  .map((d) => DropdownMenuItem(value: d, child: Text('$d days')))
+                  .map((d) => DropdownMenuItem(
+                      value: d,
+                      child: Text(AppLocalizations.of(context)!.days(d))))
                   .toList(),
               onChanged: (val) {
                 if (val != null) viewModel.updateAverageWindow(val);
@@ -194,7 +199,7 @@ class ResultsTab extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () {},
           icon: const Icon(Icons.download),
-          label: const Text('Export Results'),
+          label: Text(AppLocalizations.of(context)!.exportResults),
         ),
       ],
     );

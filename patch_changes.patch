@@ -1,464 +1,2439 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-index 8f1383dbc616f17d3d4d1445ba6e3ba36f33c2e1..6a44767d1bd4a324f33e45a9b7deaca483086ad9 100644
---- a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-+++ b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
-@@ -1,43 +1,45 @@
+diff --git a/l10n.yaml b/l10n.yaml
+new file mode 100644
+index 0000000000000000000000000000000000000000..15338f2ddca9bc3ac4990d93f52be717e963e998
+--- /dev/null
++++ b/l10n.yaml
+@@ -0,0 +1,3 @@
++arb-dir: lib/l10n
++template-arb-file: app_en.arb
++output-localization-file: app_localizations.dart
+diff --git a/lib/l10n/app_el.arb b/lib/l10n/app_el.arb
+new file mode 100644
+index 0000000000000000000000000000000000000000..727b12dcbf5d6c023d771265fee9717cbb2ed39a
+--- /dev/null
++++ b/lib/l10n/app_el.arb
+@@ -0,0 +1,89 @@
++{
++  "@@locale": "el",
++  "appTitle": "Ανιχνευτής Πάρκινσον AI",
++  "editName": "Επεξεργασία ονόματος",
++  "dateOfBirth": "Ημερομηνία γέννησης",
++  "dobHint": "εεεε-μμ-ηη",
++  "addMedication": "Προσθήκη φαρμάκου",
++  "profileSaved": "Το προφίλ αποθηκεύτηκε",
++  "saveProfile": "Αποθήκευση προφίλ",
++  "saveChanges": "Αποθήκευση αλλαγών",
++  "logOut": "ΑΠΟΣΥΝΔΕΣΗ",
++  "language": "Γλώσσα",
++  "english": "Αγγλικά",
++  "greek": "Ελληνικά",
++  "welcome": "Καλώς ήρθατε",
++  "createAccount": "Δημιουργία λογαριασμού",
++  "nameLabel": "Όνομα",
++  "emailLabel": "Email",
++  "passwordLabel": "Κωδικός",
++  "confirmPasswordLabel": "Επιβεβαίωση κωδικού",
++  "iAmA": "Είμαι",
++  "patient": "Ασθενής",
++  "doctor": "Γιατρός",
++  "keepMeLoggedIn": "Να παραμείνω συνδεδεμένος",
++  "login": "Σύνδεση",
++  "signUp": "Εγγραφή",
++  "forgotPassword": "Ξεχάσατε τον κωδικό;",
++  "passwordRecovery": "Ανάκτηση κωδικού",
++  "cancel": "Ακύρωση",
++  "send": "Αποστολή",
++  "emailSent": "Αν το email υπάρχει, στάλθηκε σύνδεσμος επαναφοράς.",
++  "dontHaveAccount": "Δεν έχετε λογαριασμό; Εγγραφείτε",
++  "alreadyHaveAccount": "Έχετε ήδη λογαριασμό; Συνδεθείτε",
++  "savedSuccessfully": "Αποθηκεύτηκε με επιτυχία",
++  "gotIt": "Το κατάλαβα",
++  "insights": "Συμβουλές",
++  "noRecommendations": "Δεν επιστράφηκαν προτάσεις",
++  "questionnaire": "Ερωτηματολόγιο",
++  "submit": "Υποβολή",
++  "tapTest": "Τεστ χτυπήματος",
++  "timeLeft": "Χρόνος που απομένει: {seconds}s",
++  "tap": "ΧΤΥΠΑ",
++  "startTest": "Έναρξη τεστ",
++  "stop": "Διακοπή",
++  "pressStart": "Πατήστε έναρξη για να ξεκινήσετε",
++  "startingTest": "Εκκίνηση τεστ...",
++  "tapRightHand": "Χτυπήστε με το δεξί χέρι",
++  "switchHands": "Αλλάξτε χέρια",
++  "tapLeftHand": "Χτυπήστε με το αριστερό χέρι",
++  "testCompleted": "Το τεστ ολοκληρώθηκε",
++  "voiceTest": "Τεστ φωνής",
++  "recording": "Εγγραφή...",
++  "processing": "Επεξεργασία...",
++  "microphonePermissionDenied": "Δεν δόθηκε άδεια μικροφώνου",
++  "possibleParkinson": "⚠️ Πιθανό μοτίβο Πάρκινσον ({percent}%)",
++  "normalVoice": "✅ Κανονική φωνή ({percent}%)",
++  "recordingFailed": "Η εγγραφή απέτυχε",
++  "noDoctorSelected": "Δεν έχετε επιλέξει γιατρό.\nΚάντε κλικ για επιλογή",
++  "myDoctor": "Ο γιατρός μου",
++  "sendResults": "Αποστολή αποτελεσμάτων",
++  "diagnoses": "Διαγνώσεις",
++  "bookAppointment": "Κράτηση ραντεβού",
++  "getSecondOpinion": "Λήψη δεύτερης γνώμης",
++  "secondOpinions": "Δεύτερες γνώμες",
++  "close": "Κλείσιμο",
++  "noDoctorFeedback": "Δεν υπάρχουν ακόμη σχόλια γιατρού.",
++  "noNotesYet": "Δεν υπάρχουν σημειώσεις.",
++  "completeOneTest": "Παρακαλώ ολοκληρώστε τουλάχιστον ένα τεστ πρώτα.",
++  "selectDoctor": "Επιλέξτε γιατρό",
++  "searchDoctor": "Αναζήτηση γιατρού...",
++  "noDoctorsFound": "Δεν βρέθηκαν γιατροί",
++  "resultsSentTo": "Αποτελέσματα στάλθηκαν στον/στην {name}",
++  "testResults": "Αποτελέσματα τεστ",
++  "summary": "Περίληψη",
++  "needThreeTests": "Ολοκληρώστε τουλάχιστον 3 διαφορετικά τεστ για να δείτε το διάγραμμα περίληψης.",
++  "days": "{count} ημέρες",
++  "exportResults": "Εξαγωγή αποτελεσμάτων",
++  "cameraDetectionTest": "Τεστ ανίχνευσης κάμερας",
++  "tremorTest": "Τεστ τρόμου",
++  "drawingTest": "Τεστ σχεδίασης",
++  "neuropsychologicalTest": "Νευροψυχολογικό τεστ",
++  "fabTest": "Τεστ Frontal Assessment Battery",
++  "sendResultsToDoctor": "Αποστολή αποτελεσμάτων στον γιατρό",
++  "noHandsDetected": "Δεν εντοπίστηκαν χέρια. Προσπαθήστε ξανά.",
++  "testCompletedMsg": "Το {test} ολοκληρώθηκε",
++  "drawOnPhone": "Σχεδίαση στο τηλέφωνο",
++  "takePicture": "Λήψη φωτογραφίας",
++  "uploadPicture": "Μεταφόρτωση φωτογραφίας"
++}
+diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
+new file mode 100644
+index 0000000000000000000000000000000000000000..de7e5288d482c66fa255362b3b1d7d37f2b18065
+--- /dev/null
++++ b/lib/l10n/app_en.arb
+@@ -0,0 +1,89 @@
++{
++  "@@locale": "en",
++  "appTitle": "Parkinson AI Detector",
++  "editName": "Edit Name",
++  "dateOfBirth": "Date of Birth",
++  "dobHint": "yyyy-mm-dd",
++  "addMedication": "Add Medication",
++  "profileSaved": "Profile saved",
++  "saveProfile": "Save Profile",
++  "saveChanges": "Save Changes",
++  "logOut": "LOG OUT",
++  "language": "Language",
++  "english": "English",
++  "greek": "Greek",
++  "welcome": "Welcome",
++  "createAccount": "Create Account",
++  "nameLabel": "Name",
++  "emailLabel": "Email",
++  "passwordLabel": "Password",
++  "confirmPasswordLabel": "Confirm Password",
++  "iAmA": "I am a",
++  "patient": "Patient",
++  "doctor": "Doctor",
++  "keepMeLoggedIn": "Keep me logged in",
++  "login": "Login",
++  "signUp": "Sign Up",
++  "forgotPassword": "Forgot password?",
++  "passwordRecovery": "Password Recovery",
++  "cancel": "Cancel",
++  "send": "Send",
++  "emailSent": "If the email exists, a reset link has been sent.",
++  "dontHaveAccount": "Don't have an account? Sign Up",
++  "alreadyHaveAccount": "Already have an account? Login",
++  "savedSuccessfully": "Saved successfully",
++  "gotIt": "Got it",
++  "insights": "Insights",
++  "noRecommendations": "No recommendations returned",
++  "questionnaire": "Questionnaire",
++  "submit": "Submit",
++  "tapTest": "Tap Test",
++  "timeLeft": "Time left: {seconds}s",
++  "tap": "TAP",
++  "startTest": "Start Test",
++  "stop": "Stop",
++  "pressStart": "Press start to begin",
++  "startingTest": "Starting test...",
++  "tapRightHand": "Tap with right hand",
++  "switchHands": "Switch hands",
++  "tapLeftHand": "Tap with left hand",
++  "testCompleted": "Test completed",
++  "voiceTest": "Voice Test",
++  "recording": "Recording...",
++  "processing": "Processing...",
++  "microphonePermissionDenied": "Microphone permission denied",
++  "possibleParkinson": "⚠️ Possible Parkinson pattern ({percent}%)",
++  "normalVoice": "✅ Normal voice ({percent}%)",
++  "recordingFailed": "Recording failed",
++  "noDoctorSelected": "You haven't selected a doctor yet.\nClick to select",
++  "myDoctor": "My Doctor",
++  "sendResults": "Send Results",
++  "diagnoses": "Diagnoses",
++  "bookAppointment": "Book Appointment",
++  "getSecondOpinion": "Get Second Opinion",
++  "secondOpinions": "Second Opinions",
++  "close": "Close",
++  "noDoctorFeedback": "No doctor feedback yet.",
++  "noNotesYet": "No notes yet.",
++  "completeOneTest": "Please complete at least one test first.",
++  "selectDoctor": "Select Doctor",
++  "searchDoctor": "Search doctor...",
++  "noDoctorsFound": "No doctors found",
++  "resultsSentTo": "Results sent to {name}",
++  "testResults": "Test Results",
++  "summary": "Summary",
++  "needThreeTests": "Complete at least 3 different tests to view the summary chart.",
++  "days": "{count} days",
++  "exportResults": "Export Results",
++  "cameraDetectionTest": "Camera Detection Test",
++  "tremorTest": "Tremor Test",
++  "drawingTest": "Drawing Test",
++  "neuropsychologicalTest": "Neuropsychological Test",
++  "fabTest": "Frontal Assessment Battery Test",
++  "sendResultsToDoctor": "Send Results to Doctor",
++  "noHandsDetected": "No hands detected. Try again.",
++  "testCompletedMsg": "{test} completed",
++  "drawOnPhone": "Draw on phone",
++  "takePicture": "Take picture",
++  "uploadPicture": "Upload picture"
++}
+diff --git a/lib/main.dart b/lib/main.dart
+index 42f9eb4e67f3bd8d308f47d8895d61de878460f6..bed8abde30fb74cb0ef2eff23eab71427eddaf16 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,72 +1,95 @@
+ import 'dart:async';
+ import 'package:firebase_core/firebase_core.dart';
  import 'package:flutter/material.dart';
- import 'package:stacked/stacked.dart';
- import 'steps/gestures.dart';
- import 'steps/draw_cube.dart';
- import 'steps/connect_cube.dart';
- import 'steps/clock.dart';
- import 'steps/naming.dart';
- import 'steps/digits_forward.dart';
- import 'steps/digits_backward.dart';
- import 'steps/repeat_sentences.dart';
- import 'steps/vigilance.dart';
- import 'steps/subtract.dart';
- import 'steps/similarities.dart';
- import 'steps/orientation.dart';
- import 'steps/fluency.dart';
- import 'steps/trails.dart';
- import 'steps/immediate_recall.dart';
- import 'steps/delayed_recall.dart';
-+import 'steps/conflicting_instructions.dart';
-+import 'steps/go_no_go.dart';
+ import 'package:parkinsondetetion/app/app.bottomsheets.dart';
+ import 'package:parkinsondetetion/app/app.dialogs.dart';
+ import 'package:parkinsondetetion/app/app.locator.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
++import 'package:parkinsondetetion/services/localization_service.dart';
+ import 'package:parkinsondetetion/app/app.router.dart';
+ import 'package:parkinsondetetion/firebase_options.dart';
+ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
+ import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
+ import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart';
+ import 'package:responsive_builder/responsive_builder.dart';
+ import 'package:stacked_services/stacked_services.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
  
- class NeuroTestViewModel extends BaseViewModel {
-   int _currentStep = 0;
-   double totalMocaScore = 0.0;
-   late List<Widget> _steps;
-   List<String> _immediateAnswers = [];
+ Future<void> main() async {
+   WidgetsFlutterBinding.ensureInitialized();
+   await Firebase.initializeApp(
+     options: DefaultFirebaseOptions.currentPlatform,
+   );
+   await setupLocator();
++  // Load persisted locale before the UI starts so the correct language
++  // renders immediately. The service notifies listeners on changes.
++  await locator<LocalizationService>().init();
+   setupDialogUi();
+   setupBottomSheetUi();
  
-   // ✅ Constructor: define the steps
-   NeuroTestViewModel() {
-     _steps = [
-       
-       DigitsForwardStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
+   runApp(const MainApp());
+ }
+ 
+ class MainApp extends StatelessWidget {
+   const MainApp({super.key});
+ 
+   @override
+   Widget build(BuildContext context) {
+-    return ResponsiveApp(
+-      builder: (_) => MaterialApp(
+-        title: "Parkinson AI Detector",
+-        theme: ThemeData(
+-          colorScheme: ColorScheme.fromSeed(
+-            seedColor: const Color.fromARGB(255, 7, 24, 51),
++    // Obtain the localization service which holds the current locale.
++    final localizationService = locator<LocalizationService>();
++
++    // AnimatedBuilder rebuilds MaterialApp whenever the locale changes.
++    return AnimatedBuilder(
++      animation: localizationService,
++      builder: (context, _) => ResponsiveApp(
++        builder: (_) => MaterialApp(
++          // onGenerateTitle uses the localized string at runtime.
++          onGenerateTitle: (context) =>
++              AppLocalizations.of(context)!.appTitle,
++          locale: localizationService.locale,
++          supportedLocales: const [Locale('en'), Locale('el')],
++          localizationsDelegates: const [
++            AppLocalizations.delegate,
++            GlobalMaterialLocalizations.delegate,
++            GlobalWidgetsLocalizations.delegate,
++            GlobalCupertinoLocalizations.delegate,
++          ],
++          theme: ThemeData(
++            colorScheme: ColorScheme.fromSeed(
++              seedColor: const Color.fromARGB(255, 7, 24, 51),
++            ),
++            useMaterial3: true,
+           ),
+-          useMaterial3: true,
++          debugShowCheckedModeBanner: false,
++          home: const SplashScreen(),
++          onGenerateRoute: StackedRouter().onGenerateRoute,
++          navigatorKey: StackedService.navigatorKey,
+         ),
+-        debugShowCheckedModeBanner: false,
+-        home: const SplashScreen(),
+-        onGenerateRoute: StackedRouter().onGenerateRoute,
+-        navigatorKey: StackedService.navigatorKey,
        ),
-       DigitsBackwardStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       ImmediateRecallStep(
-         onFinished: (resp,__) {
-           _immediateAnswers = resp;
-           nextStep();
-         },
-       ),
-@@ -67,49 +69,57 @@ class NeuroTestViewModel extends BaseViewModel {
-       ),
-       NamingStep(        
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       FluencyStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       RepeatSentencesStep(
-         onNext: nextStep,
-         onScored: (score) => totalMocaScore += score,
-       ),
-       DelayedRecallStep(
-         onFinished: (score, result) {
-           totalMocaScore += score.toDouble();
-           nextStep();
-         },
-         immediateTrials: _immediateAnswers,
-       ),
-       DrawCubeStep(onNext: nextStep,onScored: (score) {
-           totalMocaScore += score;
-         },),
-       ConnectCubeStep(onNext: nextStep,onScored: (score) {
-           totalMocaScore += score;
--        },),      
--      GesturesStep(        
-+        },),
-+      GesturesStep(
-+        onNext: nextStep,
-+        onScored: (score) => totalMocaScore += score,),
-+      ConflictingInstructionsStep(
-         onNext: nextStep,
--        onScored: (score) => totalMocaScore += score,),  
-+        onScored: (score) => totalMocaScore += score,
-+      ),
-+      GoNoGoStep(
-+        onNext: nextStep,
-+        onScored: (score) => totalMocaScore += score,
-+      ),
-     ];
+     );
+   }
+ }
+ 
+ class SplashScreen extends StatefulWidget {
+   const SplashScreen({super.key});
+ 
+   @override
+   State<SplashScreen> createState() => _SplashScreenState();
+ }
+ 
+ class _SplashScreenState extends State<SplashScreen> {
+   int _currentDot = 0;
+   late Timer _timer;
+ 
+   @override
+   void initState() {
+     super.initState();
+     _startSplashLogic();
    }
  
-   // ✅ Getter to expose current step
-   Widget get currentStepWidget => _steps[_currentStep];
+   void _startSplashLogic() {
+     // Start the dot animation
+     _timer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
+diff --git a/lib/ui/dialogs/info_alert/info_alert_dialog.dart b/lib/ui/dialogs/info_alert/info_alert_dialog.dart
+index 03e0feaeb3e332a647468dfd6c81aa08511a990e..c051d7e0ebcb23f319e70a2ed06481129814ba14 100644
+--- a/lib/ui/dialogs/info_alert/info_alert_dialog.dart
++++ b/lib/ui/dialogs/info_alert/info_alert_dialog.dart
+@@ -1,30 +1,31 @@
+ import 'package:flutter/material.dart';
+ import 'package:parkinsondetetion/ui/common/app_colors.dart';
+ import 'package:parkinsondetetion/ui/common/ui_helpers.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:stacked_services/stacked_services.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
  
-   // ✅ Move to the next step
-   void nextStep() {
-     if (_currentStep < _steps.length - 1) {
-       _currentStep++;
-       print('Total MoCA Score: $totalMocaScore');
-       notifyListeners();
-     } else {
-       // End of test
-       print('Test complete!');
-       
-       print('Total MoCA Score: $totalMocaScore');
+ import 'info_alert_dialog_model.dart';
+ 
+ const double _graphicSize = 60;
+ 
+ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
+   final DialogRequest request;
+   final Function(DialogResponse) completer;
+ 
+   const InfoAlertDialog({
+     Key? key,
+     required this.request,
+     required this.completer,
+   }) : super(key: key);
+ 
+   @override
+   Widget builder(
+     BuildContext context,
+     InfoAlertDialogModel viewModel,
+     Widget? child,
+   ) {
+     return Dialog(
+       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+       backgroundColor: Colors.white,
+       child: Padding(
+@@ -63,45 +64,45 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
+                 Container(
+                   width: _graphicSize,
+                   height: _graphicSize,
+                   decoration: const BoxDecoration(
+                     color: Color(0xffF6E7B0),
+                     borderRadius: BorderRadius.all(
+                       Radius.circular(_graphicSize / 2),
+                     ),
+                   ),
+                   alignment: Alignment.center,
+                   child: const Text('⭐️', style: TextStyle(fontSize: 30)),
+                 ),
+               ],
+             ),
+             verticalSpaceMedium,
+             GestureDetector(
+               onTap: () => completer(DialogResponse(confirmed: true)),
+               child: Container(
+                 height: 50,
+                 width: double.infinity,
+                 alignment: Alignment.center,
+                 decoration: BoxDecoration(
+                   color: Colors.black,
+                   borderRadius: BorderRadius.circular(10),
+                 ),
+-                child: const Text(
+-                  'Got it',
+-                  style: TextStyle(
++                child: Text(
++                  AppLocalizations.of(context)!.gotIt,
++                  style: const TextStyle(
+                     color: Colors.white,
+                     fontWeight: FontWeight.bold,
+                     fontSize: 16,
+                   ),
+                 ),
+               ),
+             ),
+           ],
+         ),
+       ),
+     );
+   }
+ 
+   @override
+   InfoAlertDialogModel viewModelBuilder(BuildContext context) =>
+       InfoAlertDialogModel();
+ }
+diff --git a/lib/ui/views/insights/insights_view.dart b/lib/ui/views/insights/insights_view.dart
+index dca0032666a907b90547aac2be71bd673e96da13..37e961c565a51a4a6c124cba1108e24923afd4c8 100644
+--- a/lib/ui/views/insights/insights_view.dart
++++ b/lib/ui/views/insights/insights_view.dart
+@@ -1,49 +1,51 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../../models/raison_result.dart';
+ import 'insights_viewmodel.dart';
+ 
+ /// Displays solutions returned by the Raison API.
+ class InsightsView extends StackedView<InsightsViewModel> {
+   const InsightsView({super.key, required this.results});
+ 
+   final List<RaisonResult> results;
+ 
+   @override
+   Widget builder(
+     BuildContext context, InsightsViewModel viewModel, Widget? child) {
+     if (viewModel.results.isEmpty) {
++      return Scaffold(
++        appBar: AppBar(title: Text(AppLocalizations.of(context)!.insights)),
++        body: Center(
++            child: Text(AppLocalizations.of(context)!.noRecommendations)),
++      );
++    }
++
+     return Scaffold(
+-      appBar: AppBar(title: const Text('Insights')),
+-      body: Center(child: Text('No recommendations returned')),
+-    );
+-  }
+-    
+-    return Scaffold(
+-      appBar: AppBar(title: const Text('Insights')),
++      appBar: AppBar(title: Text(AppLocalizations.of(context)!.insights)),
+       body: ListView.builder(
+         padding: const EdgeInsets.all(16),
+         itemCount: viewModel.results.length,
+         itemBuilder: (_, index) {
+           final item = viewModel.results[index];
+           return Card(
+             margin: const EdgeInsets.symmetric(vertical: 8),
+             child: Padding(
+               padding: const EdgeInsets.all(12),
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Text(item.label,
+                       style: Theme.of(context).textTheme.titleMedium),
+                   const SizedBox(height: 8),
+                   ...item.explanation.map(
+                     (e) => Row(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         const Text('• '),
+                         Expanded(child: Text(e)),
+                       ],
+                     ),
+                   ),
+                 ],
+diff --git a/lib/ui/views/login/login_view.dart b/lib/ui/views/login/login_view.dart
+index d82c383bdcf777ab8045d3369f864bc66dad59df..a3556718a045afbc88fdddd6b1895f5d1292b57c 100644
+--- a/lib/ui/views/login/login_view.dart
++++ b/lib/ui/views/login/login_view.dart
+@@ -1,268 +1,283 @@
+ import 'package:flutter/material.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ import 'package:stacked/stacked.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ 
+ import '../../../services/authentication_service.dart';
+ import 'login_viewmodel.dart';
+ 
+ class LoginView extends StackedView<LoginViewModel> {
+   LoginView({Key? key}) : super(key: key);
+ 
+   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+ 
+   @override
+   Widget builder(
+     BuildContext context,
+     LoginViewModel viewModel,
+     Widget? child,
+   ) {
+     final ThemeData theme = Theme.of(context);
+ 
+     return Scaffold(
+       body: GestureDetector(
+         onTap: () => FocusScope.of(context).unfocus(),
+         child: Container(
+           decoration: const BoxDecoration(
+             gradient: LinearGradient(
+               begin: Alignment.topLeft,
+               end: Alignment.bottomRight,
+               colors: [Color.fromARGB(255, 7, 24, 51), Color.fromARGB(255, 1, 2, 23)],
+             ),
+           ),
+           child: Center(
+             child: SingleChildScrollView(
+               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+               child: ConstrainedBox(
+                 constraints: const BoxConstraints(maxWidth: 420),
+                 child: Card(
+                   shape: RoundedRectangleBorder(
+                       borderRadius: BorderRadius.circular(20)),
+                   elevation: 8,
+                   child: Padding(
+                     padding: const EdgeInsets.all(24.0),
+                     child: Form(
+                       key: _formKey,
+                       child: Column(
+                         mainAxisSize: MainAxisSize.min,
+                         crossAxisAlignment: CrossAxisAlignment.stretch,
+                         children: [
++                          // Header switches text based on authentication mode.
+                           Text(
+                             viewModel.isLoginMode
+-                                ? 'Welcome '
+-                                : 'Create Account',
++                                ? AppLocalizations.of(context)!.welcome
++                                : AppLocalizations.of(context)!.createAccount,
+                             style: theme.textTheme.headlineMedium
+                                 ?.copyWith(fontWeight: FontWeight.bold),
+                             textAlign: TextAlign.center,
+                           ),
+                           const SizedBox(height: 24),
+ 
+                           if (!viewModel.isLoginMode) ...[
+                             TextFormField(
+                               controller: viewModel.nameController,
+                               validator: viewModel.validateName,
+                               decoration: const InputDecoration(
+                                 prefixIcon: Icon(Icons.person_outline),
+-                                labelText: 'Name',
++                                // Localized label for user's name.
++                                labelText:
++                                    AppLocalizations.of(context)!.nameLabel,
+                                 border: OutlineInputBorder(),
+                               ),
+                             ),
+                             const SizedBox(height: 16),
+                           ],
+ 
+                           TextFormField(
+                             controller: viewModel.emailController,
+                             keyboardType: TextInputType.emailAddress,
+                             validator: viewModel.validateEmail,
+                             decoration: const InputDecoration(
+                               prefixIcon: Icon(Icons.email_outlined),
+-                              labelText: 'Email',
++                              labelText:
++                                  AppLocalizations.of(context)!.emailLabel,
+                               border: OutlineInputBorder(),
+                             ),
+                           ),
+                           const SizedBox(height: 16),
+ 
+                           TextFormField(
+                             controller: viewModel.passwordController,
+                             obscureText: !viewModel.passwordVisible,
+                             validator: viewModel.validatePassword,
+                             decoration: InputDecoration(
+                               prefixIcon: const Icon(Icons.lock_outline),
+-                              labelText: 'Password',
++                              labelText:
++                                  AppLocalizations.of(context)!.passwordLabel,
+                               border: const OutlineInputBorder(),
+                               suffixIcon: IconButton(
+                                 icon: Icon(viewModel.passwordVisible
+                                     ? Icons.visibility_off
+                                     : Icons.visibility),
+                                 onPressed: viewModel.togglePasswordVisibility,
+                               ),
+                             ),
+                           ),
+                           const SizedBox(height: 16),
+ 
+                           if (!viewModel.isLoginMode) ...[
+                             TextFormField(
+                               controller: viewModel.confirmPasswordController,
+                               obscureText: !viewModel.confirmPasswordVisible,
+                               validator: viewModel.validateConfirmPassword,
+                               decoration: InputDecoration(
+                                 prefixIcon: const Icon(Icons.lock_outline),
+-                                labelText: 'Confirm Password',
++                                labelText: AppLocalizations.of(context)!
++                                    .confirmPasswordLabel,
+                                 border: const OutlineInputBorder(),
+                                 suffixIcon: IconButton(
+                                   icon: Icon(viewModel.confirmPasswordVisible
+                                       ? Icons.visibility_off
+                                       : Icons.visibility),
+                                   onPressed:
+                                       viewModel.toggleConfirmPasswordVisibility,
+                                 ),
+                               ),
+                             ),
+                             const SizedBox(height: 20),
+ 
+-                            Text('I am a', style: theme.textTheme.bodyLarge),
++                            // Role selection prompt.
++                            Text(AppLocalizations.of(context)!.iAmA,
++                                style: theme.textTheme.bodyLarge),
+                             const SizedBox(height: 8),
+                             Wrap(
+                               spacing: 12,
+                               children: UserRole.values.map((role) {
+                                 return ChoiceChip(
+                                   label: Text(role == UserRole.patient
+-                                      ? 'Patient'
+-                                      : 'Doctor'),
++                                      ? AppLocalizations.of(context)!.patient
++                                      : AppLocalizations.of(context)!.doctor),
+                                   selected: viewModel.selectedRole == role,
+                                   onSelected: (_) => viewModel.selectRole(role),
+                                 );
+                               }).toList(),
+                             ),
+                             const SizedBox(height: 16),
+                           ],
+ 
+                           CheckboxListTile(
+-                            title: const Text('Keep me logged in'),
++                            title: Text(
++                                AppLocalizations.of(context)!.keepMeLoggedIn),
+                             value: viewModel.keepMeLoggedIn,
+                             onChanged: (value) => viewModel.setKeepMeLoggedIn(value ?? false),
+                             controlAffinity: ListTileControlAffinity.leading,
+                           ),
+ 
+                           if (viewModel.errorMessage != null) ...[
+                             Text(
+                               viewModel.errorMessage!,
+                               style: theme.textTheme.bodyMedium
+                                   ?.copyWith(color: theme.colorScheme.error),
+                               textAlign: TextAlign.center,
+                             ),
+                             const SizedBox(height: 12),
+                           ],
+ 
+                           SizedBox(
+                             height: 48,
+                             child: ElevatedButton(
+                               style: ElevatedButton.styleFrom(
+                                 shape: RoundedRectangleBorder(
+                                     borderRadius: BorderRadius.circular(12)),
+                               ),
+                               onPressed: viewModel.isBusy
+                                   ? null
+                                   : () => _onAuthenticatePressed(viewModel),
+-                              child: Text(
+-                                  viewModel.isLoginMode ? 'Login' : 'Sign Up'),
++                              child: Text(viewModel.isLoginMode
++                                  ? AppLocalizations.of(context)!.login
++                                  : AppLocalizations.of(context)!.signUp),
+                             ),
+                           ),
+                           const SizedBox(height: 12),
+ 
+                           if (viewModel.isLoginMode) ...[
+                             Align(
+                               alignment: Alignment.centerRight,
+                               child: TextButton(
+                                 onPressed: viewModel.isBusy
+                                     ? null
+                                     : () => _showForgotPasswordDialog(
+                                         context, viewModel),
+-                                child: const Text('Forgot password?'),
++                                child: Text(
++                                    AppLocalizations.of(context)!.forgotPassword),
+                               ),
+                             ),
+                           ],
+ 
+                           TextButton(
+                             onPressed:
+                                 viewModel.isBusy ? null : viewModel.toggleMode,
+                             child: Text(viewModel.isLoginMode
+-                                ? "Don't have an account? Sign Up"
+-                                : 'Already have an account? Login'),
++                                ? AppLocalizations.of(context)!.dontHaveAccount
++                                : AppLocalizations.of(context)!
++                                    .alreadyHaveAccount),
+                           ),
+ 
+                           if (viewModel.isBusy) ...[
+                             const SizedBox(height: 16),
+                             const Center(child: CircularProgressIndicator()),
+                           ],
+                         ],
+                       ),
+                     ),
+                   ),
+                 ),
+               ),
+             ),
+           ),
+         ),
+       ),
+     );
+   }
+ 
+   @override
+   LoginViewModel viewModelBuilder(BuildContext context) => LoginViewModel();
+ 
+   void _showForgotPasswordDialog(
+       BuildContext context, LoginViewModel viewModel) {
+     final TextEditingController emailCtrl = TextEditingController();
+ 
+     showDialog<void>(
+       context: context,
+       builder: (BuildContext dialogContext) {
+         return AlertDialog(
+           shape:
+               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+-          title: const Text('Password Recovery'),
++          title: Text(AppLocalizations.of(context)!.passwordRecovery),
+           content: TextField(
+             controller: emailCtrl,
+             keyboardType: TextInputType.emailAddress,
+-            decoration: const InputDecoration(
+-              labelText: 'Email',
+-              prefixIcon: Icon(Icons.email_outlined),
+-              border: OutlineInputBorder(),
++            decoration: InputDecoration(
++              labelText: AppLocalizations.of(context)!.emailLabel,
++              prefixIcon: const Icon(Icons.email_outlined),
++              border: const OutlineInputBorder(),
+             ),
+           ),
+           actions: [
+             TextButton(
+               onPressed: () {
+                 Navigator.of(dialogContext).pop();
+               },
+-              child: const Text('Cancel'),
++              child: Text(AppLocalizations.of(context)!.cancel),
+             ),
+             ElevatedButton(
+               onPressed: () async {
+                 await viewModel.sendPasswordReset(emailCtrl.text);
+                 if (context.mounted) {
+                   Navigator.of(dialogContext).pop();
+-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+-                    content: Text(
+-                        'If the email exists, a reset link has been sent.'),
+-                  ));
++                  ScaffoldMessenger.of(context).showSnackBar(
++                    SnackBar(
++                      content: Text(
++                          AppLocalizations.of(context)!.emailSent),
++                    ),
++                  );
+                 }
+               },
+-              child: const Text('Send'),
++              child: Text(AppLocalizations.of(context)!.send),
+             ),
+           ],
+         );
+       },
+     );
+   }
+ 
+   void _onAuthenticatePressed(LoginViewModel viewModel) {
+     if (_formKey.currentState?.validate() ?? false) {
+       viewModel.authenticate(
+         email: viewModel.emailController.text,
+         password: viewModel.passwordController.text,
+         confirmPassword: viewModel.confirmPasswordController.text,
+       );
      }
    }
  }
-diff --git a/lib/ui/views/neuro_test/steps/conflicting_instructions.dart b/lib/ui/views/neuro_test/steps/conflicting_instructions.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..3afca83dc2760dbd25b3064c6ae5c930281b44be
---- /dev/null
-+++ b/lib/ui/views/neuro_test/steps/conflicting_instructions.dart
-@@ -0,0 +1,171 @@
-+import 'dart:async';
-+import 'package:flutter/material.dart';
+diff --git a/lib/ui/views/patience_view/tabs/doctor_tab.dart b/lib/ui/views/patience_view/tabs/doctor_tab.dart
+index e0cfe21a0b220f45585adca56cd6235c46213def..b62338fef2b5d453cc394296b2b3e6bf0459ad4d 100644
+--- a/lib/ui/views/patience_view/tabs/doctor_tab.dart
++++ b/lib/ui/views/patience_view/tabs/doctor_tab.dart
+@@ -1,247 +1,251 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked_services/stacked_services.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../../../app/app.locator.dart';
+ import '../../patience/patience_viewmodel.dart';
+ import '../../../../models/app_user.dart';
+ 
+ /// Tab allowing the patient to manage doctors and view reports.
+ class DoctorTab extends StatelessWidget {
+   final PatienceViewModel viewModel;
+   final ThemeData theme;
+   const DoctorTab({super.key, required this.viewModel, required this.theme});
+ 
+   @override
+   Widget build(BuildContext context) {
+     return SingleChildScrollView(
+       padding: const EdgeInsets.all(16),
+       child: Column(
+         crossAxisAlignment: CrossAxisAlignment.stretch,
+         children: [
+           if (viewModel.primaryDoctor == null)
+             ElevatedButton(
+               onPressed: () => _showDoctorSelectionDialog(
+                 context,
+                 viewModel,
+                 onSelect: (doc) => viewModel.setPrimaryDoctor(doc.uid),
+               ),
+-              child: const Text(
+-                "You haven't selected a doctor yet.\nClick to select",
++              child: Text(
++                AppLocalizations.of(context)!.noDoctorSelected,
+                 textAlign: TextAlign.center,
+               ),
+             )
+           else ...[
+             Card(
+               child: ListTile(
+                 leading: const Icon(Icons.person),
+                 title:
+                     Text(viewModel.primaryDoctor!.name ?? viewModel.primaryDoctor!.email),
+                 subtitle: Text(
+                   '${viewModel.primaryDoctor!.specialty ?? ''} ${viewModel.primaryDoctor!.location != null ? '• ${viewModel.primaryDoctor!.location}' : ''}',
+                 ),
+-                trailing: const Chip(label: Text('My Doctor')),
++                trailing:
++                    Chip(label: Text(AppLocalizations.of(context)!.myDoctor)),
+               ),
+             ),
+             const SizedBox(height: 12),
+             ElevatedButton.icon(
+               onPressed: viewModel.sendResultsToPrimaryDoctor,
+               icon: const Icon(Icons.send),
+-              label: const Text('Send Results'),
++              label: Text(AppLocalizations.of(context)!.sendResults),
+             ),
+             const SizedBox(height: 8),
+             ElevatedButton.icon(
+               onPressed: () => _showDiagnosesDialog(context, viewModel, theme),
+               icon: const Icon(Icons.receipt),
+-              label: const Text('Diagnoses'),
++              label: Text(AppLocalizations.of(context)!.diagnoses),
+             ),
+             const SizedBox(height: 8),
+             ElevatedButton.icon(
+               onPressed: () {},
+               icon: const Icon(Icons.calendar_today),
+-              label: const Text('Book Appointment'),
++              label: Text(AppLocalizations.of(context)!.bookAppointment),
+             ),
+             const SizedBox(height: 8),
+             ElevatedButton.icon(
+               onPressed: () => _showDoctorSelectionDialog(
+                 context,
+                 viewModel,
+                 excludePrimary: true,
+                 onSelect: (doc) => viewModel.sendResultsToDoctor(doc.uid),
+               ),
+               icon: const Icon(Icons.group),
+-              label: const Text('Get Second Opinion'),
++              label: Text(AppLocalizations.of(context)!.getSecondOpinion),
+             ),
+           ],
+           const SizedBox(height: 24),
+-          _buildSecondOpinions(viewModel, theme),
++          _buildSecondOpinions(context, viewModel, theme),
+         ],
+       ),
+     );
+   }
+ 
+-  Widget _buildSecondOpinions(PatienceViewModel vm, ThemeData theme) {
++  Widget _buildSecondOpinions(
++      BuildContext context, PatienceViewModel vm, ThemeData theme) {
+     final ids = vm.secondOpinionDoctorIds;
+     if (ids.isEmpty) return const SizedBox.shrink();
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+-        Text('Second Opinions', style: theme.textTheme.titleMedium),
++        Text(AppLocalizations.of(context)!.secondOpinions,
++            style: theme.textTheme.titleMedium),
+         const SizedBox(height: 8),
+         ...ids.map((id) {
+           final doc = vm.doctorById(id);
+           final reports = vm.reports.where((r) => r.doctorId == id).toList();
+           return Card(
+             child: ExpansionTile(
+               title: Text(doc?.name ?? id),
+               children: reports.map((rep) {
+                 return ListTile(
+                   title: Text(rep.status.name.toUpperCase()),
+                   subtitle: Text(rep.sentAt.toLocal().toString()),
+                 );
+               }).toList(),
+             ),
+           );
+         })
+       ],
+     );
+   }
+ 
+   void _showDiagnosesDialog(
+       BuildContext context, PatienceViewModel vm, ThemeData theme) {
+     showDialog<void>(
+       context: context,
+       builder: (ctx) {
+         return AlertDialog(
+-          title: const Text('Diagnoses'),
++          title: Text(AppLocalizations.of(context)!.diagnoses),
+           content: SizedBox(
+             width: double.maxFinite,
+-            child: _diagnosesList(vm),
++            child: _diagnosesList(context, vm),
+           ),
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.of(ctx).pop(),
+-              child: const Text('Close'),
++              child: Text(AppLocalizations.of(context)!.close),
+             )
+           ],
+         );
+       },
+     );
+   }
+ 
+-  Widget _diagnosesList(PatienceViewModel vm) {
++  Widget _diagnosesList(BuildContext context, PatienceViewModel vm) {
+     if (vm.reports.isEmpty) {
+-      return const Center(child: Text('No doctor feedback yet.'));
++      return Center(child: Text(AppLocalizations.of(context)!.noDoctorFeedback));
+     }
+     return ListView.separated(
+       shrinkWrap: true,
+       itemCount: vm.reports.length,
+       separatorBuilder: (_, __) => const SizedBox(height: 12),
+       itemBuilder: (context, index) {
+         final report = vm.reports[index];
+         return Card(
+           child: ExpansionTile(
+             leading: const Icon(Icons.person_outline),
+             title: Text(vm.doctorName(report.doctorId)),
+             subtitle: Text(report.status.name.toUpperCase()),
+             children: [
+               if (report.notes.isEmpty)
+-                const Padding(
+-                  padding: EdgeInsets.all(16.0),
+-                  child: Text('No notes yet.'),
++                Padding(
++                  padding: const EdgeInsets.all(16.0),
++                  child: Text(AppLocalizations.of(context)!.noNotesYet),
+                 )
+               else
+                 ...report.notes.map(
+                   (n) => ListTile(
+                     leading: const Icon(Icons.note),
+                     title: Text(n.note),
+                     subtitle:
+                         Text(n.createdAt.toIso8601String().substring(0, 10)),
+                   ),
+                 ),
+             ],
+           ),
+         );
+       },
+     );
+   }
+ 
+   void _showDoctorSelectionDialog(
+     BuildContext rootContext,
+     PatienceViewModel vm, {
+     required void Function(AppUser doc) onSelect,
+     bool excludePrimary = false,
+   }) {
+     if (vm.results.isEmpty && onSelect != vm.setPrimaryDoctor) {
+       ScaffoldMessenger.of(rootContext).showSnackBar(
+-        const SnackBar(content: Text('Please complete at least one test first.')),
++        SnackBar(content: Text(AppLocalizations.of(rootContext)!.completeOneTest)),
+       );
+       return;
+     }
+ 
+     showDialog<void>(
+       context: rootContext,
+       builder: (ctx) {
+         String query = '';
+         return StatefulBuilder(builder: (ctx, setState) {
+           final String q = query.toLowerCase();
+           final filtered = vm.doctors.where((d) {
+             if (excludePrimary && d.uid == vm.primaryDoctorId) return false;
+             final combined = ('${d.name ?? ''} ${d.email}').toLowerCase();
+             return combined.contains(q);
+           }).toList();
+ 
+           return AlertDialog(
+-            title: const Text('Select Doctor'),
++            title: Text(AppLocalizations.of(rootContext)!.selectDoctor),
+             content: SizedBox(
+               width: double.maxFinite,
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   TextField(
+-                    decoration: const InputDecoration(
+-                      hintText: 'Search doctor...',
+-                      prefixIcon: Icon(Icons.search),
++                    decoration: InputDecoration(
++                      hintText: AppLocalizations.of(rootContext)!.searchDoctor,
++                      prefixIcon: const Icon(Icons.search),
+                     ),
+                     onChanged: (val) => setState(() => query = val),
+                   ),
+                   const SizedBox(height: 12),
+                   Expanded(
+                     child: filtered.isEmpty
+-                        ? const Center(child: Text('No doctors found'))
++                        ? Center(child: Text(AppLocalizations.of(rootContext)!.noDoctorsFound))
+                         : ListView.builder(
+                             shrinkWrap: true,
+                             itemCount: filtered.length,
+                             itemBuilder: (context, index) {
+                               final doc = filtered[index];
+                               return ListTile(
+                                 leading: const Icon(Icons.person),
+                                 title: Text(doc.name ?? doc.email),
+                                 subtitle: Text(
+                                   '${doc.specialty ?? ''} ${doc.location != null ? '• ${doc.location}' : ''}',
+                                 ),
+                                 onTap: () async {
+                                   Navigator.of(ctx).pop();
+                                   onSelect(doc);
+                                   if (rootContext.mounted &&
+                                       onSelect != vm.setPrimaryDoctor) {
+                                     ScaffoldMessenger.of(rootContext).showSnackBar(
+                                       SnackBar(
+-                                        content:
+-                                            Text('Results sent to ${doc.name ?? doc.email}'),
++                                        content: Text(AppLocalizations.of(rootContext)!
++                                            .resultsSentTo(doc.name ?? doc.email)),
+                                       ),
+                                     );
+                                   }
+                                 },
+                               );
+                             },
+                           ),
+                   ),
+                 ],
+               ),
+             ),
+           );
+         });
+       },
+     );
+   }
+ }
+diff --git a/lib/ui/views/patience_view/tabs/profile_tab.dart b/lib/ui/views/patience_view/tabs/profile_tab.dart
+index 8115430fc6fdbbacb4898dab9bf0cf3540467a1c..4e83179facd961fd9b5fe178de3755268e0673c0 100644
+--- a/lib/ui/views/patience_view/tabs/profile_tab.dart
++++ b/lib/ui/views/patience_view/tabs/profile_tab.dart
+@@ -1,104 +1,153 @@
+ import 'package:flutter/material.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
++import 'package:parkinsondetetion/app/app.locator.dart';
++import 'package:parkinsondetetion/services/localization_service.dart';
+ 
+ import '../../patience/patience_viewmodel.dart';
+ 
+ /// ProfileTab extracts the profile editing UI from PatienceView.
+ /// It shows current user information and basic edit fields.
+ class ProfileTab extends StatelessWidget {
+   final PatienceViewModel viewModel;
+   const ProfileTab({super.key, required this.viewModel});
+ 
+   @override
+   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
+     return SingleChildScrollView(
+       padding: const EdgeInsets.all(16.0),
+       child: Column(
+         crossAxisAlignment: CrossAxisAlignment.center,
+         children: [
+           CircleAvatar(
+             radius: 48,
+             backgroundColor: theme.colorScheme.primaryContainer,
++            // Generic profile avatar icon.
+             child: const Icon(Icons.person, size: 48),
+           ),
+           const SizedBox(height: 16),
+           Text(viewModel.name, style: theme.textTheme.headlineSmall),
+           const SizedBox(height: 8),
+           Text(viewModel.email, style: theme.textTheme.bodyMedium),
+           const SizedBox(height: 24),
++          // Name editing field.
+           TextField(
+             controller: viewModel.nameController,
+-            decoration: const InputDecoration(
+-              labelText: 'Edit Name',
+-              border: OutlineInputBorder(),
++            decoration: InputDecoration(
++              labelText: AppLocalizations.of(context)!.editName,
++              border: const OutlineInputBorder(),
+             ),
+           ),
+           const SizedBox(height: 16),
++          // Date of birth field with localized hint.
+           TextField(
+             controller: viewModel.dobController,
+-            decoration: const InputDecoration(
+-              labelText: 'Date of Birth',
+-              border: OutlineInputBorder(),
+-              hintText: 'yyyy-mm-dd',
++            decoration: InputDecoration(
++              labelText: AppLocalizations.of(context)!.dateOfBirth,
++              border: const OutlineInputBorder(),
++              hintText: AppLocalizations.of(context)!.dobHint,
+             ),
+           ),
+           const SizedBox(height: 16),
++          // Medication field.
+           TextField(
+             controller: viewModel.medicationController,
+-            decoration: const InputDecoration(
+-              labelText: 'Add Medication',
+-              border: OutlineInputBorder(),
++            decoration: InputDecoration(
++              labelText: AppLocalizations.of(context)!.addMedication,
++              border: const OutlineInputBorder(),
+             ),
+           ),
+           const SizedBox(height: 16),
++          // Language picker uses localization service to change app-wide locale.
++          _LanguagePicker(localizationService: locator<LocalizationService>()),
++          const SizedBox(height: 16),
+           ElevatedButton.icon(
+             onPressed: viewModel.isBusy
+                 ? null
+                 : () async {
+                     await viewModel.saveExtraProfileFields();
+                     if (context.mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+-                        const SnackBar(content: Text('Profile saved')),
++                        SnackBar(
++                            content: Text(AppLocalizations.of(context)!
++                                .profileSaved)),
+                       );
+                     }
+                   },
+             icon: const Icon(Icons.save_alt),
+-            label: const Text('Save Profile'),
++            label: Text(AppLocalizations.of(context)!.saveProfile),
+           ),
+           const SizedBox(height: 30),
+           ElevatedButton.icon(
+             onPressed: viewModel.isBusy
+                 ? null
+                 : () async {
+                     await viewModel.saveName();
+                     if (context.mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+-                        const SnackBar(content: Text('Saved successfully')),
++                        SnackBar(
++                            content: Text(AppLocalizations.of(context)!
++                                .savedSuccessfully)),
+                       );
+                     }
+                   },
+             icon: const Icon(Icons.save),
+-            label: const Text('Save Changes'),
++            label: Text(AppLocalizations.of(context)!.saveChanges),
+           ),
+           const SizedBox(height: 24),
+           ElevatedButton(
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.white,
+               side: const BorderSide(color: Colors.red, width: 2),
+               padding: const EdgeInsets.symmetric(vertical: 16),
+             ),
+             onPressed: () => viewModel.logout(context),
+-            child: const Text(
+-              'LOG OUT',
+-              style: TextStyle(
++            child: Text(
++              AppLocalizations.of(context)!.logOut,
++              style: const TextStyle(
+                 color: Colors.red,
+                 fontWeight: FontWeight.bold,
+                 fontStyle: FontStyle.italic,
+               ),
+             ),
+           ),
+         ],
+       ),
+     );
+   }
+ }
 +
-+/// Step 4 of the Frontal Assessment Battery.
-+/// The subject must perform the opposite number of taps
-+/// to the one displayed on screen. Score is based on the
-+/// number of errors and whether the subject mirrors the
-+/// stimulus for four consecutive trials.
-+class ConflictingInstructionsStep extends StatefulWidget {
-+  final VoidCallback onNext;
-+  final Function(int score) onScored;
-+  const ConflictingInstructionsStep({
-+    super.key,
-+    required this.onNext,
-+    required this.onScored,
-+  });
-+
-+  @override
-+  State<ConflictingInstructionsStep> createState() => _ConflictingInstructionsStepState();
-+}
-+
-+class _ConflictingInstructionsStepState extends State<ConflictingInstructionsStep> {
-+  // Predefined sequence of single or double taps from the examiner.
-+  static const List<int> _sequence = [1, 1, 2, 1, 2, 2, 2, 1, 1, 2];
-+
-+  int _index = -1; // Current position within the sequence
-+  int _current = 0; // Value currently shown to the user
-+  int _tapCount = 0; // Number of taps recorded for the current stimulus
-+  int _errors = 0; // Total mistakes
-+  int _sameStreak = 0; // Times the subject copied the stimulus consecutively
-+  bool _testDone = false;
-+  int _phase = 0; // 0 = instructions, 1 = running test
-+  Timer? _timer;
-+
-+  @override
-+  void dispose() {
-+    _timer?.cancel();
-+    super.dispose();
-+  }
-+
-+  void _start() {
-+    setState(() {
-+      _phase = 1;
-+      _index = -1;
-+      _errors = 0;
-+      _sameStreak = 0;
-+      _tapCount = 0;
-+      _testDone = false;
-+    });
-+    _next();
-+  }
-+
-+  void _recordAnswer() {
-+    if (_testDone) return;
-+    setState(() => _tapCount++);
-+  }
-+
-+  void _next() {
-+    _timer?.cancel();
-+
-+    // Evaluate the previous stimulus before moving on
-+    if (_index >= 0 && !_testDone) {
-+      final stim = _sequence[_index];
-+      final expected = stim == 1 ? 2 : 1; // subject must do the opposite
-+      if (_tapCount != expected) _errors++;
-+      if (_tapCount == stim) {
-+        // Subject mirrored the examiner
-+        _sameStreak++;
-+      } else {
-+        _sameStreak = 0;
-+      }
-+    }
-+
-+    setState(() {
-+      _index += 1;
-+      if (_index >= _sequence.length) {
-+        _testDone = true;
-+        _current = 0;
-+      } else {
-+        _current = _sequence[_index];
-+        _tapCount = 0;
-+      }
-+    });
-+
-+    if (!_testDone) {
-+      // Allow 1.5s per item before auto-advancing
-+      _timer = Timer(const Duration(milliseconds: 1500), _next);
-+    }
-+  }
-+
-+  void _finish() {
-+    _timer?.cancel();
-+    int score;
-+    if (_sameStreak >= 4) {
-+      score = 0;
-+    } else if (_errors == 0) {
-+      score = 3;
-+    } else if (_errors <= 2) {
-+      score = 2;
-+    } else {
-+      score = 1;
-+    }
-+    widget.onScored(score);
-+    widget.onNext();
-+  }
++/// Dropdown that lets the user choose the desired app language.
++class _LanguagePicker extends StatelessWidget {
++  final LocalizationService localizationService;
++  const _LanguagePicker({required this.localizationService});
 +
 +  @override
 +  Widget build(BuildContext context) {
-+    if (_phase == 0) {
-+      return Scaffold(
-+        appBar: AppBar(title: const Text('Εναντιούμενα παραγγέλματα')),
-+        body: Stack(
-+          children: [
-+            const Padding(
-+              padding: EdgeInsets.all(24),
-+              child: Text(
-+                'Οδηγίες:\n'
-+                'Όταν εμφανίζεται ο αριθμός 1, πατήστε το κουμπί δύο φορές.\n'
-+                'Όταν εμφανίζεται ο αριθμός 2, πατήστε το κουμπί μία φορά.',
-+                textAlign: TextAlign.center,
-+                style: TextStyle(fontSize: 16),
-+              ),
++    return Row(
++      mainAxisAlignment: MainAxisAlignment.center,
++      children: [
++        Text(AppLocalizations.of(context)!.language),
++        const SizedBox(width: 16),
++        DropdownButton<Locale>(
++          value: localizationService.locale,
++          onChanged: (locale) {
++            if (locale != null) {
++              localizationService.setLocale(locale);
++            }
++          },
++          items: [
++            DropdownMenuItem(
++              value: const Locale('en'),
++              child: Text(AppLocalizations.of(context)!.english),
 +            ),
-+            Positioned(
-+              right: 16,
-+              bottom: 16,
-+              child: ElevatedButton(
-+                onPressed: _start,
-+                child: const Text('Έναρξη'),
-+              ),
++            DropdownMenuItem(
++              value: const Locale('el'),
++              child: Text(AppLocalizations.of(context)!.greek),
 +            ),
 +          ],
 +        ),
-+      );
-+    }
-+
-+    return Scaffold(
-+      appBar: AppBar(title: const Text('Εναντιούμενα παραγγέλματα')),
-+      body: Stack(
-+        children: [
-+          Center(
-+            child: Column(
-+              mainAxisAlignment: MainAxisAlignment.center,
-+              children: [
-+                Text(
-+                  _testDone ? '-' : '$_current',
-+                  style: const TextStyle(fontSize: 72, fontWeight: FontWeight.bold),
-+                ),
-+                const SizedBox(height: 32),
-+                ElevatedButton(
-+                  onPressed: _testDone ? null : _recordAnswer,
-+                  style: ElevatedButton.styleFrom(minimumSize: const Size(180, 48)),
-+                  child: const Text('Πάτημα'),
-+                ),
-+              ],
-+            ),
-+          ),
-+          if (_testDone)
-+            Positioned(
-+              right: 16,
-+              bottom: 16,
-+              child: ElevatedButton(
-+                onPressed: _finish,
-+                child: const Text('Επόμενο'),
-+              ),
-+            ),
-+        ],
-+      ),
++      ],
 +    );
 +  }
 +}
-diff --git a/lib/ui/views/neuro_test/steps/go_no_go.dart b/lib/ui/views/neuro_test/steps/go_no_go.dart
-new file mode 100644
-index 0000000000000000000000000000000000000000..a0af7d257ab79653e51cc22043fc5c1def408a6b
---- /dev/null
-+++ b/lib/ui/views/neuro_test/steps/go_no_go.dart
-@@ -0,0 +1,166 @@
-+import 'dart:async';
-+import 'package:flutter/material.dart';
+diff --git a/lib/ui/views/patience_view/tabs/results_tab.dart b/lib/ui/views/patience_view/tabs/results_tab.dart
+index c9b0f9885514bf5274286a6a6e389c1e0c13dc81..2bdfbaee0278425141f6991a99e07a3fe4a9d812 100644
+--- a/lib/ui/views/patience_view/tabs/results_tab.dart
++++ b/lib/ui/views/patience_view/tabs/results_tab.dart
+@@ -1,44 +1,46 @@
+ import 'package:flutter/material.dart';
+ import 'package:fl_chart/fl_chart.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../patience/patience_viewmodel.dart';
+ import '../../../../models/test_result.dart';
+ 
+ /// Displays historical scores and trend charts.
+ class ResultsTab extends StatelessWidget {
+   final PatienceViewModel viewModel;
+   const ResultsTab({super.key, required this.viewModel});
+ 
+   @override
+   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
+     final grouped = viewModel.groupedResults;
+     return ListView(
+       padding: const EdgeInsets.all(16),
+       children: [
+-        Text('Test Results', style: theme.textTheme.titleLarge),
++        Text(AppLocalizations.of(context)!.testResults,
++            style: theme.textTheme.titleLarge),
+         const SizedBox(height: 16),
+         ...grouped.entries.map((entry) {
+           final label = viewModel.labelForType(entry.key);
+           final latest = entry.value.first.score;
+           final data = entry.value
+               .map((e) => _ScorePoint(e.performedAt, e.score))
+               .toList();
+           final spots = data
+               .asMap()
+               .entries
+               .map((e) =>
+                   FlSpot(e.key.toDouble(), data[data.length - 1 - e.key].score))
+               .toList();
+           return Card(
+             child: ExpansionTile(
+               title: Row(
+                 children: [
+                   Expanded(child: Text(label)),
+                   SizedBox(
+                     width: 150,
+                     child: LinearProgressIndicator(
+                       value: latest,
+                       minHeight: 8,
+                     ),
+                   ),
+@@ -85,124 +87,127 @@ class ResultsTab extends StatelessWidget {
+                         topTitles:
+                             AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                         rightTitles:
+                             AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                       ),
+                       gridData: FlGridData(show: true),
+                       borderData: FlBorderData(show: true),
+                       lineBarsData: [
+                         LineChartBarData(
+                           spots: spots,
+                           isCurved: false,
+                           color: theme.colorScheme.primary,
+                           dotData: FlDotData(show: true),
+                           belowBarData: BarAreaData(show: false),
+                         ),
+                       ],
+                     ),
+                   ),
+                 ),
+               ],
+             ),
+           );
+         }),
+         if (grouped.isNotEmpty) ...[
+           const SizedBox(height: 24),
+-          Text('Summary', style: theme.textTheme.titleLarge),
++          Text(AppLocalizations.of(context)!.summary,
++              style: theme.textTheme.titleLarge),
+           const SizedBox(height: 12),
+           if (viewModel.resultsSummary.length >= 3)
+             SizedBox(
+               height: 220,
+               child: RadarChart(
+                 RadarChartData(
+                   dataSets: [
+                     RadarDataSet(
+                       fillColor:
+                           theme.colorScheme.primary.withOpacity(0.25),
+                       borderColor: theme.colorScheme.primary,
+                       entryRadius: 3,
+                       dataEntries: viewModel.resultsSummary.values
+                           .map((v) => RadarEntry(value: v))
+                           .toList(),
+                     ),
+                   ],
+                   radarBackgroundColor: Colors.transparent,
+                   radarBorderData: const BorderSide(color: Colors.transparent),
+                   tickCount: 10,
+                   ticksTextStyle: const TextStyle(fontSize: 10),
+                   tickBorderData: BorderSide(color: theme.dividerColor),
+                   titleTextStyle: const TextStyle(fontSize: 12),
+                   getTitle: (index, angle) {
+                     final keys = viewModel.resultsSummary.keys.toList();
+                     if (index < 0 || index >= keys.length) {
+                       return const RadarChartTitle(text: '');
+                     }
+                     return RadarChartTitle(text: keys[index], angle: angle);
+                   },
+                 ),
+               ),
+             )
+           else
+-            const Text(
+-              'Complete at least 3 different tests to view the summary chart.',
+-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
++            Text(
++              AppLocalizations.of(context)!.needThreeTests,
++              style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+             ),
+         ],
+         if (viewModel.results.isNotEmpty) ...[
+           const SizedBox(height: 24),
+           Align(
+             alignment: Alignment.centerLeft,
+             child: DropdownButton<int>(
+               value: viewModel.selectedAverageWindow,
+               items: const [3, 7, 14, 30]
+-                  .map((d) => DropdownMenuItem(value: d, child: Text('$d days')))
++                  .map((d) => DropdownMenuItem(
++                      value: d,
++                      child: Text(AppLocalizations.of(context)!.days(d))))
+                   .toList(),
+               onChanged: (val) {
+                 if (val != null) viewModel.updateAverageWindow(val);
+               },
+             ),
+           ),
+           const SizedBox(height: 8),
+           SizedBox(
+             height: 200,
+             child: LineChart(
+               LineChartData(
+                 minX: 0,
+                 maxX: (viewModel.getAverageTrend().length - 1).toDouble(),
+                 minY: 0,
+                 maxY: 1,
+                 titlesData: const FlTitlesData(show: false),
+                 gridData: FlGridData(show: true),
+                 borderData: FlBorderData(show: true),
+                 lineBarsData: [
+                   LineChartBarData(
+                     spots: viewModel.getAverageTrend(),
+                     isCurved: true,
+                     color: theme.colorScheme.primary,
+                     barWidth: 3,
+                     dotData: FlDotData(show: false),
+                     belowBarData: BarAreaData(
+                       show: true,
+                       color: theme.colorScheme.primary.withOpacity(0.2),
+                     ),
+                   ),
+                 ],
+               ),
+             ),
+           ),
+         ],
+         const SizedBox(height: 24),
+         ElevatedButton.icon(
+           onPressed: () {},
+           icon: const Icon(Icons.download),
+-          label: const Text('Export Results'),
++          label: Text(AppLocalizations.of(context)!.exportResults),
+         ),
+       ],
+     );
+   }
+ }
+ 
+ class _ScorePoint {
+   final DateTime time;
+   final double score;
+   _ScorePoint(this.time, this.score);
+ }
+diff --git a/lib/ui/views/patience_view/tabs/tests_tab.dart b/lib/ui/views/patience_view/tabs/tests_tab.dart
+index ce8ae80bc8f3e5ccabd73013903588cfa152241d..a51c376eb3996ba149f731b574c40517ad21da53 100644
+--- a/lib/ui/views/patience_view/tabs/tests_tab.dart
++++ b/lib/ui/views/patience_view/tabs/tests_tab.dart
+@@ -1,247 +1,252 @@
+ import 'package:flutter/material.dart';
+ import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart';
+ import 'package:stacked_services/stacked_services.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../../../app/app.locator.dart';
+ import '../../patience/patience_viewmodel.dart';
+ import '../widgets/drawing_options_sheet.dart';
+ import '../../camera_test/camera_test_view.dart';
+ import '../../tremor_test/tremor_test_view.dart';
+ import '../../tap_test/tap_test_view.dart';
+ import '../../questionnaire/questionnaire_view.dart';
+ import '../../voice_test/voice_test_view.dart';
+ import '../../neuro_test/neuro_test_view.dart';
+ import '../../../../models/test_type.dart';
+ import '../../../../models/test_result.dart';
+ 
+ /// TestsTab lists available tests and actions for sending results.
+ class TestsTab extends StatelessWidget {
+   final PatienceViewModel viewModel;
+   const TestsTab({super.key, required this.viewModel});
+ 
+   @override
+   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
+     final rootContext = context;
++    final l10n = AppLocalizations.of(context)!;
+     final tests = [
+       {
+-        'title': 'Camera Detection Test',
++        'title': l10n.cameraDetectionTest,
+         'icon': Icons.camera_alt,
+         'type': TestType.cameraDetection,
+       },
+       {
+-        'title': 'Tremor Test',
++        'title': l10n.tremorTest,
+         'icon': Icons.vibration,
+         'type': TestType.tremor,
+       },
+       {
+-        'title': 'Tap Test',
++        'title': l10n.tapTest,
+         'icon': Icons.touch_app,
+         'type': TestType.tap,
+       },
+       {
+-        'title': 'Drawing Test',
++        'title': l10n.drawingTest,
+         'icon': Icons.edit,
+         'type': TestType.drawing,
+       },
+       {
+-        'title': 'Questionnaire',
++        'title': l10n.questionnaire,
+         'icon': Icons.question_answer,
+         'type': TestType.questionnaire,
+       },
+       {
+-        'title': 'Voice Test',
++        'title': l10n.voiceTest,
+         'icon': Icons.mic,
+         'type': TestType.voice,
+       },
+       {
+-        'title': 'Neuropsychological Test',
++        'title': l10n.neuropsychologicalTest,
+         'icon': Icons.psychology,
+         'type': TestType.neuro,
+       },
+       {
+-        'title': 'Frontal Assessment Battery Test',
++        'title': l10n.fabTest,
+         'icon': Icons.psychology_alt_outlined,
+         'type': TestType.fab,
+       },
+     ];
+ 
+     return Padding(
+       padding: const EdgeInsets.all(16.0),
+       child: Column(
+         children: [
+           Expanded(
+             child: ListView.separated(
+               itemCount: tests.length,
+               separatorBuilder: (_, __) => const SizedBox(height: 12),
+               itemBuilder: (context, index) {
+                 final test = tests[index];
+                 return Card(
+                   shape: RoundedRectangleBorder(
+                     borderRadius: BorderRadius.circular(12),
+                   ),
+                   child: ListTile(
+                     leading: Icon(
+                       test['icon'] as IconData,
+                       color: theme.colorScheme.primary,
+                     ),
+                     title: Text(test['title'] as String),
+                     trailing: _buildTestTrailing(
+                         viewModel, test['type'] as TestType),
+                     onTap: () async {
+                       final type = test['type'] as TestType;
+                       if (type == TestType.cameraDetection) {
+                         final success = await locator<NavigationService>()
+                             .navigateToView(const CameraTestView());
+                         if (rootContext.mounted && success == false) {
+                           ScaffoldMessenger.of(rootContext).showSnackBar(
+-                            const SnackBar(
++                            SnackBar(
+                                 content:
+-                                    Text('No hands detected. Try again.')),
++                                    Text(l10n.noHandsDetected)),
+                           );
+                         }
+                       } else if (type == TestType.tremor) {
+                         await locator<NavigationService>()
+                             .navigateToView(const TremorTestView());
+                       } else if (type == TestType.tap) {
+                         await locator<NavigationService>()
+                             .navigateToView(const TapTestView());
+                       } else if (type == TestType.questionnaire) {
+                         await locator<NavigationService>()
+                             .navigateToView(const QuestionnaireView());
+                       } else if (type == TestType.drawing) {
+                         showDrawingOptions(rootContext, viewModel);
+                       } else if (type == TestType.voice) {
+                         await locator<NavigationService>()
+                             .navigateToView(const VoiceTestView());
+                       } else if (type == TestType.neuro) {
+                         await locator<NavigationService>()
+                             .navigateToView(const NeuroTestView());
+                       }else if (type == TestType.fab) {
+                         await locator<NavigationService>()
+                             .navigateToView(const FABTestView());
+                       } else {
+                         await viewModel.recordDemoResult(type);
+                         ScaffoldMessenger.of(rootContext).showSnackBar(
+-                          SnackBar(content: Text('${test['title']} completed')),
++                          SnackBar(
++                              content: Text(
++                                  l10n.testCompleted(test['title'] as String))),
+                         );
+                       }
+                     },
+                   ),
+                 );
+               },
+             ),
+           ),
+           const SizedBox(height: 12),
+           ElevatedButton.icon(
+             onPressed: () => _onSendResultsPressed(rootContext, viewModel),
+             icon: const Icon(Icons.send),
+-            label: const Text('Send Results to Doctor'),
++            label: Text(l10n.sendResultsToDoctor),
+           ),
+         ],
+       ),
+     );
+   }
+ 
+   Widget _buildTestTrailing(PatienceViewModel vm, TestType type) {
+     final matched = vm.results.firstWhere(
+       (r) => r.type == type,
+       orElse: () => TestResult(
+         id: '',
+         patientId: '',
+         type: type,
+         performedAt: DateTime(0),
+         score: 0,
+       ),
+     );
+ 
+     if (matched.performedAt.year == 0) {
+       return const Icon(Icons.chevron_right);
+     }
+ 
+     return Column(
+       mainAxisAlignment: MainAxisAlignment.center,
+       children: [
+         const Icon(Icons.check_circle, color: Colors.green),
+         Text(
+           '${matched.performedAt.month}/${matched.performedAt.day}',
+           style: const TextStyle(fontSize: 12),
+         ),
+       ],
+     );
+   }
+ 
+   void _onSendResultsPressed(BuildContext rootContext, PatienceViewModel vm) {
+     if (vm.results.isEmpty) {
+       ScaffoldMessenger.of(rootContext).showSnackBar(
+-        const SnackBar(content: Text('Please complete at least one test first.')),
++        SnackBar(content: Text(AppLocalizations.of(rootContext)!.completeOneTest)),
+       );
+       return;
+     }
+ 
+     showDialog<void>(
+       context: rootContext,
+       builder: (ctx) {
+         String query = '';
+         return StatefulBuilder(
+           builder: (ctx, setState) {
+             final String q = query.toLowerCase();
+             final filtered = vm.doctors.where((d) {
+               final combined = ('${d.name ?? ''} ${d.email}').toLowerCase();
+               return combined.contains(q);
+             }).toList();
+ 
+             return AlertDialog(
+-              title: const Text('Select Doctor'),
++              title: Text(AppLocalizations.of(rootContext)!.selectDoctor),
+               content: SizedBox(
+                 width: double.maxFinite,
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     TextField(
+-                      decoration: const InputDecoration(
+-                        hintText: 'Search doctor...',
+-                        prefixIcon: Icon(Icons.search),
++                      decoration: InputDecoration(
++                        hintText: AppLocalizations.of(rootContext)!.searchDoctor,
++                        prefixIcon: const Icon(Icons.search),
+                       ),
+                       onChanged: (val) => setState(() => query = val),
+                     ),
+                     const SizedBox(height: 12),
+                     Expanded(
+                       child: filtered.isEmpty
+-                          ? const Center(child: Text('No doctors found'))
++                          ? Center(child: Text(AppLocalizations.of(rootContext)!.noDoctorsFound))
+                           : ListView.builder(
+                               shrinkWrap: true,
+                               itemCount: filtered.length,
+                               itemBuilder: (context, index) {
+                                 final doc = filtered[index];
+                                 return ListTile(
+                                   leading: const Icon(Icons.person),
+                                   title: Text(doc.name ?? doc.email),
+                                   subtitle: Text(doc.email),
+                                   onTap: () async {
+                                     Navigator.of(ctx).pop();
+                                     await vm.sendResultsToDoctor(doc.uid);
+                                     if (rootContext.mounted) {
+                                       ScaffoldMessenger.of(rootContext).showSnackBar(
+                                         SnackBar(
+                                           content: Text(
+-                                            'Results sent to ${doc.name ?? doc.email}',
++                                            AppLocalizations.of(rootContext)!
++                                                .resultsSentTo(doc.name ?? doc.email),
+                                           ),
+                                         ),
+                                       );
+                                     }
+                                   },
+                                 );
+                               },
+                             ),
+                     ),
+                   ],
+                 ),
+               ),
+             );
+           },
+         );
+       },
+     );
+   }
+ }
+diff --git a/lib/ui/views/patience_view/widgets/drawing_options_sheet.dart b/lib/ui/views/patience_view/widgets/drawing_options_sheet.dart
+index 5ea31dfb558c0066718e9ca33643fd7776f96c5b..26f02c131d0167c498d81c10ed2dcd447d7fa441 100644
+--- a/lib/ui/views/patience_view/widgets/drawing_options_sheet.dart
++++ b/lib/ui/views/patience_view/widgets/drawing_options_sheet.dart
+@@ -1,55 +1,56 @@
+ import 'package:flutter/material.dart';
+ import 'package:parkinsondetetion/app/app.router.dart';
+ import 'package:stacked_services/stacked_services.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../../../app/app.locator.dart';
+ import '../../patience/patience_viewmodel.dart';
+ import '../../drawing_test/signature_canvas_view.dart';
+ import '../../drawing_test/camera_draw_view.dart';
+ import '../../drawing_test/gallery_draw_view.dart';
+ 
+ /// Shows options for drawing input and forwards the image to [vm].
+ void showDrawingOptions(BuildContext ctx, PatienceViewModel vm) {
+   showModalBottomSheet<void>(
+     context: ctx,
+     builder: (c) {
+       return SafeArea(
+         child: Column(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+             ListTile(
+               leading: const Icon(Icons.draw),
+-              title: const Text('Draw on phone'),
++              title: Text(AppLocalizations.of(ctx)!.drawOnPhone),
+               onTap: () {
+                 Navigator.of(c).pop();
+                 locator<NavigationService>().navigateToSignatureCanvasView(
+                   onImageReady: vm.handleCanvasDrawing,
+                 );
+               },
+             ),
+             ListTile(
+               leading: const Icon(Icons.camera_alt),
+-              title: const Text('Take picture'),
++              title: Text(AppLocalizations.of(ctx)!.takePicture),
+               onTap: () {
+                 Navigator.of(c).pop();
+                 locator<NavigationService>().navigateToCameraDrawView(
+                   onImageReady: vm.handleCameraImage,
+                 );
+               },
+             ),
+             ListTile(
+               leading: const Icon(Icons.photo_library),
+-              title: const Text('Upload picture'),
++              title: Text(AppLocalizations.of(ctx)!.uploadPicture),
+               onTap: () {
+                 Navigator.of(c).pop();
+                 locator<NavigationService>().navigateToGalleryDrawView(
+                   onImageReady: vm.handleGalleryImage,
+                 );
+               },
+             ),
+           ],
+         ),
+       );
+     },
+   );
+ }
+diff --git a/lib/ui/views/questionnaire/questionnaire_form.dart b/lib/ui/views/questionnaire/questionnaire_form.dart
+index 5bb3728f684d7547242fe783b09776908c442447..75a052d047103517e4da62a33116645b1fc6e0b7 100644
+--- a/lib/ui/views/questionnaire/questionnaire_form.dart
++++ b/lib/ui/views/questionnaire/questionnaire_form.dart
+@@ -1,88 +1,89 @@
+ import 'package:flutter/material.dart';
+ import 'package:responsive_builder/responsive_builder.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import 'questionnaire_schema.dart';
+ 
+ /// Callback invoked when the form is submitted with all responses.
+ typedef SubmitCallback = Future<void> Function(Map<String, dynamic> responses);
+ 
+ /// A dynamic questionnaire form that renders fields from [questionnaireSchema].
+ class QuestionnaireForm extends StatefulWidget {
+   const QuestionnaireForm({Key? key, required this.onSubmit}) : super(key: key);
+ 
+   final SubmitCallback onSubmit;
+ 
+   @override
+   State<QuestionnaireForm> createState() => _QuestionnaireFormState();
+ }
+ 
+ class _QuestionnaireFormState extends State<QuestionnaireForm> {
+   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+   final Map<String, dynamic> _responses = {};
+   @override
+   void initState() {
+     super.initState();
+     // Initialize all boolean fields to false so “No” is recorded by default.
+     for (final q in questionnaireSchema) {
+       if (q['type'] == 'boolean') {
+         _responses[q['id'] as String] = false;
+       }
+     }
+   }
+   @override
+   Widget build(BuildContext context) {
+     // Group visible questions by section.
+     final sections = <String, List<Map<String, dynamic>>>{};
+     for (final q in questionnaireSchema) {
+       if (_shouldShow(q)) {
+         sections.putIfAbsent(q['section'] as String, () => []).add(q);
+       }
+     }
+ 
+     return ResponsiveBuilder(
+       builder: (context, _) => Scaffold(
+-        appBar: AppBar(title: const Text('Questionnaire')),
++        appBar: AppBar(title: Text(AppLocalizations.of(context)!.questionnaire)),
+         body: Form(
+           key: _formKey,
+           child: ListView(
+             padding: const EdgeInsets.all(16),
+             children: [
+               for (final entry in sections.entries) ...[
+                 Padding(
+                   padding: const EdgeInsets.symmetric(vertical: 8),
+                   child: Text(
+                     entry.key,
+                     style: Theme.of(context).textTheme.titleMedium,
+                   ),
+                 ),
+                 ...entry.value.map(_buildField),
+               ],
+               const SizedBox(height: 24),
+               ElevatedButton(
+                 onPressed: _isValid() ? _submit : null,
+-                child: const Text('Submit'),
++                child: Text(AppLocalizations.of(context)!.submit),
+               ),
+             ],
+           ),
+         ),
+       ),
+     );
+   }
+ 
+   bool _isValid() => _formKey.currentState?.validate() ?? false;
+ 
+   Future<void> _submit() async {
+     if (!_isValid()) return;
+     // Only include keys defined in the current schema
+     final allowedIds = questionnaireSchema.map((q) => q['id'] as String).toSet();
+     final filtered = <String, dynamic>{};
+     for (final entry in _responses.entries) {
+       if (allowedIds.contains(entry.key)) {
+         filtered[entry.key] = entry.value;
+       }
+     }
+     // 2. call the injected submit callback
+     await widget.onSubmit(filtered);
+ 
+     // 3. then pop back to the previous screen
+     if (mounted) {
+diff --git a/lib/ui/views/tap_test/tap_test_view.dart b/lib/ui/views/tap_test/tap_test_view.dart
+index c8e32e78034e24c995a30560d9924b2e6124efdc..e5452df4bfdb270d43a71f40362a02f49f04f442 100644
+--- a/lib/ui/views/tap_test/tap_test_view.dart
++++ b/lib/ui/views/tap_test/tap_test_view.dart
+@@ -1,98 +1,100 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import 'tap_test_viewmodel.dart';
+ 
+ class TapTestView extends StackedView<TapTestViewModel> {
+   const TapTestView({Key? key}) : super(key: key);
+ 
+   @override
+   Widget builder(
+     BuildContext context,
+     TapTestViewModel viewModel,
+     Widget? child,
+   ) {
+     return Scaffold(
+-      appBar: AppBar(title: const Text('Tap Test')),
++      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tapTest)),
+       body: Padding(
+         padding: const EdgeInsets.all(20),
+         child: Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             Text(
+-              viewModel.status,
++              viewModel.statusText(AppLocalizations.of(context)!),
+               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+               textAlign: TextAlign.center,
+             ),
+             const SizedBox(height: 20),
+             if (viewModel.isTesting)
+               Column(
+                 children: [
+-                  Text('Time left: ${viewModel.secondsLeft}s'),
++                  Text(AppLocalizations.of(context)!
++                      .timeLeft(viewModel.secondsLeft)),
+                   const SizedBox(height: 10),
+                   LinearProgressIndicator(
+                     value: viewModel.progress,
+                     minHeight: 8,
+                   ),
+                 ],
+               ),
+             const SizedBox(height: 20),
+             GestureDetector(
+               onTapDown: (_) => viewModel.onTapDown(),
+               onTapUp: (_) => viewModel.onTapUp(),
+               child: Container(
+                 width: 150,
+                 height: 150,
+                 decoration: BoxDecoration(
+                   shape: BoxShape.circle,
+                   color: viewModel.isTesting
+                       ? Colors.blueAccent
+                       : Colors.grey.shade400,
+                 ),
+-                child: const Center(
++                child: Center(
+                   child: Text(
+-                    'TAP',
+-                    style: TextStyle(
++                    AppLocalizations.of(context)!.tap,
++                    style: const TextStyle(
+                       color: Colors.white,
+                       fontSize: 24,
+                       fontWeight: FontWeight.bold,
+                     ),
+                   ),
+                 ),
+               ),
+             ),
+             const SizedBox(height: 20),
+             ElevatedButton.icon(
+               onPressed: viewModel.isTesting ? null : viewModel.startTest,
+               icon: const Icon(Icons.play_arrow),
+-              label: const Text('Start Test'),
++              label: Text(AppLocalizations.of(context)!.startTest),
+             ),
+             const SizedBox(height: 10),
+             ElevatedButton.icon(
+               onPressed: viewModel.stopTest,
+               icon: const Icon(Icons.stop),
+               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+-              label: const Text('Stop'),
++              label: Text(AppLocalizations.of(context)!.stop),
+             ),
+             const SizedBox(height: 30),
+             if (viewModel.resultHand1.isNotEmpty)
+               Text(viewModel.resultHand1,
+                   style: const TextStyle(fontSize: 16)),
+             if (viewModel.resultHand2.isNotEmpty)
+               Text(viewModel.resultHand2,
+                   style: const TextStyle(fontSize: 16)),
+           ],
+         ),
+       ),
+     );
+   }
+ 
+   @override
+   TapTestViewModel viewModelBuilder(BuildContext context) => TapTestViewModel();
+ 
+   @override
+   void onViewModelReady(TapTestViewModel viewModel) {
+     viewModel.loadModel();
+     super.onViewModelReady(viewModel);
+   }
+ }
+diff --git a/lib/ui/views/tap_test/tap_test_viewmodel.dart b/lib/ui/views/tap_test/tap_test_viewmodel.dart
+index 6325b4c46c9c281cf0cd5947fd1224678811a899..f0a5793ad521b83bd19c072e07d6535a26657413 100644
+--- a/lib/ui/views/tap_test/tap_test_viewmodel.dart
++++ b/lib/ui/views/tap_test/tap_test_viewmodel.dart
+@@ -1,153 +1,173 @@
+ import 'dart:async';
+ import 'dart:math';
+ import 'dart:typed_data';
+ import 'package:stacked/stacked.dart';
+ import 'package:tflite_flutter/tflite_flutter.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ import '../../../app/app.locator.dart';
+ import '../../../services/test_service.dart';
+ import '../../../services/authentication_service.dart';
+ import '../../../models/test_result.dart';
+ import '../../../models/test_type.dart';
+ 
++enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed }
 +
-+/// Step 5 of the Frontal Assessment Battery.
-+/// The participant taps once when "1" appears and
-+/// must withhold any tap when "2" appears. The
-+/// same scoring rules as the conflicting step apply.
-+class GoNoGoStep extends StatefulWidget {
-+  final VoidCallback onNext;
-+  final Function(int score) onScored;
-+  const GoNoGoStep({
-+    super.key,
-+    required this.onNext,
-+    required this.onScored,
-+  });
+ class TapTestViewModel extends BaseViewModel {
+   // Services used to persist results and fetch the current user
+   final TestService _tests = locator<TestService>();
+   final AuthenticationService _auth = locator<AuthenticationService>();
+   final int testDuration = 10; // seconds per hand
+   final int pauseDuration = 5;
+ 
+   int secondsLeft = 0;
+   bool isTesting = false;
+-  String status = 'Press start to begin';
++  TapTestStatus status = TapTestStatus.initial;
+   String resultHand1 = '';
+   String resultHand2 = '';
+ 
+   double _score1 = 0.0;
+   double _score2 = 0.0;
+ 
+   int _phase = 0; // 0=hand1,1=pause,2=hand2,3=done
+   Timer? _timer;
+   final List<DateTime> _tapTimes = [];
+   final List<Map<String, DateTime>> _tapPairs = [];
+   final List<Map<String, DateTime>> _historyHand1 = [];
+   final List<Map<String, DateTime>> _historyHand2 = [];
+   late final Interpreter _interpreter;
+   bool _modelLoaded = false;
+ 
+   double get progress => secondsLeft / testDuration;
+ 
++  String statusText(AppLocalizations l10n) {
++    switch (status) {
++      case TapTestStatus.initial:
++        return l10n.pressStart;
++      case TapTestStatus.starting:
++        return l10n.startingTest;
++      case TapTestStatus.rightHand:
++        return l10n.tapRightHand;
++      case TapTestStatus.switchHands:
++        return l10n.switchHands;
++      case TapTestStatus.leftHand:
++        return l10n.tapLeftHand;
++      case TapTestStatus.completed:
++        return l10n.testCompleted;
++    }
++  }
 +
-+  @override
-+  State<GoNoGoStep> createState() => _GoNoGoStepState();
+   Future<void> initModel() async {
+     try {
+       _interpreter = await Interpreter.fromAsset('assets/tapping_model.tflite');
+       _modelLoaded = true;
+       print('✅ Model loaded');
+     } catch (e) {
+       print('❌ Failed to load model: $e');
+     }
+   }
+ 
+   Future<void> loadModel() => initModel();
+ 
+   void onTapDown() {
+     if (isTesting && (_phase == 0 || _phase == 2)) {
+       _tapPairs.add({'down': DateTime.now()});
+     }
+   }
+ 
+   void onTapUp() {
+     if (isTesting && (_phase == 0 || _phase == 2)) {
+       if (_tapPairs.isNotEmpty && !_tapPairs.last.containsKey('up')) {
+         _tapPairs.last['up'] = DateTime.now();
+       }
+     }
+   }
+ 
+   Future<void> startTest() async {
+     if (!_modelLoaded) {
+       await initModel();
+     }
+     _reset();
+     _startHand1();
+   }
+ 
+   void _reset() {
+     resultHand1 = '';
+     resultHand2 = '';
+     _historyHand1.clear();
+     _historyHand2.clear();
+     _score1 = 0.0;
+     _score2 = 0.0;
+-    status = 'Starting test...';
++    status = TapTestStatus.starting;
+     isTesting = true;
+     _phase = 0;
+     notifyListeners();
+   }
+ 
+   void _startHand1() {
+     _phase = 0;
+-    status = 'Tap with right hand';
++    status = TapTestStatus.rightHand;
+     secondsLeft = testDuration;
+     _tapTimes.clear();
+     _tapPairs.clear();
+ 
+     _startTimer(() async {
+       resultHand1 = await _predictFromTaps(
+         "Right hand",
+         List.of(_tapPairs),
+         storeInHand1: true,
+       );
+       _historyHand1.addAll(List.of(_tapPairs));
+       _startPause();
+     });
+   }
+ 
+   void _startPause() {
+     _phase = 1;
+-    status = 'Switch hands';
++    status = TapTestStatus.switchHands;
+     secondsLeft = pauseDuration;
+     _tapTimes.clear();
+     _tapPairs.clear();
+ 
+     _startTimer(_startHand2);
+   }
+ 
+   void _startHand2() {
+     _phase = 2;
+-    status = 'Tap with left hand';
++    status = TapTestStatus.leftHand;
+     secondsLeft = testDuration;
+     _tapTimes.clear();
+     _tapPairs.clear();
+ 
+     _startTimer(() async {
+       resultHand2 = await _predictFromTaps(
+         "Left hand",
+         List.of(_tapPairs),
+         storeInHand1: false,
+       );
+       _historyHand2.addAll(List.of(_tapPairs));
+-      status = 'Test completed';
++      status = TapTestStatus.completed;
+       isTesting = false;
+       _phase = 3;
+       notifyListeners();
+       await _saveResult(max(_score1, _score2));
+     });
+   }
+ 
+   void _startTimer(Function onFinish) {
+     _timer?.cancel();
+     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+       secondsLeft--;
+       notifyListeners();
+ 
+       if (secondsLeft <= 0) {
+         timer.cancel();
+         onFinish();
+       }
+     });
+   }
+ 
+   // Runs the ML model on the collected tap data. The score is stored so
+   // we can later upload it to Firestore. The method still returns a
+   // human readable string for display.
+   Future<String> _predictFromTaps(
+     String label,
+diff --git a/lib/ui/views/voice_test/voice_test_view.dart b/lib/ui/views/voice_test/voice_test_view.dart
+index a985305b2e4498fd9504d877c3993ab87198e430..541e2b3d9913f8b7df7a32769972963c96e38df0 100644
+--- a/lib/ui/views/voice_test/voice_test_view.dart
++++ b/lib/ui/views/voice_test/voice_test_view.dart
+@@ -1,56 +1,58 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import 'voice_test_viewmodel.dart';
+ 
+ /// Simple UI for recording and analyzing a short voice sample.
+ class VoiceTestView extends StackedView<VoiceTestViewModel> {
+   const VoiceTestView({super.key});
+ 
+   @override
+   Widget builder(
+       BuildContext context, VoiceTestViewModel viewModel, Widget? child) {
+     return Scaffold(
+-      appBar: AppBar(title: const Text('Voice Test')),
++      appBar: AppBar(title: Text(AppLocalizations.of(context)!.voiceTest)),
+       body: Padding(
+         padding: const EdgeInsets.all(20),
+         child: Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             Text(
+-              viewModel.status,
++              viewModel.statusText(AppLocalizations.of(context)!),
+               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+               textAlign: TextAlign.center,
+             ),
+             const SizedBox(height: 20),
+             if (viewModel.isRecording)
+               Column(
+                 children: [
+-                  Text('Time left: ${viewModel.secondsLeft}s'),
++                  Text(AppLocalizations.of(context)!
++                      .timeLeft(viewModel.secondsLeft)),
+                   const SizedBox(height: 10),
+                   LinearProgressIndicator(value: viewModel.progress, minHeight: 8),
+                 ],
+               ),
+             const SizedBox(height: 20),
+             ElevatedButton.icon(
+               onPressed: viewModel.isRecording ? null : viewModel.startTest,
+               icon: const Icon(Icons.mic),
+-              label: const Text('Start Test'),
++              label: Text(AppLocalizations.of(context)!.startTest),
+             ),
+             const SizedBox(height: 10),
+             ElevatedButton.icon(
+               onPressed: viewModel.stopTest,
+               icon: const Icon(Icons.stop),
+               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+-              label: const Text('Stop'),
++              label: Text(AppLocalizations.of(context)!.stop),
+             ),
+           ],
+         ),
+       ),
+     );
+   }
+ 
+   @override
+   VoiceTestViewModel viewModelBuilder(BuildContext context) =>
+       VoiceTestViewModel();
+ }
+\ No newline at end of file
+diff --git a/lib/ui/views/voice_test/voice_test_viewmodel.dart b/lib/ui/views/voice_test/voice_test_viewmodel.dart
+index fb5475796fe01c82630deaed3ca236b7b595b6cc..049b9f00252051346b164586ce31a59c5cd82418 100644
+--- a/lib/ui/views/voice_test/voice_test_viewmodel.dart
++++ b/lib/ui/views/voice_test/voice_test_viewmodel.dart
+@@ -1,117 +1,147 @@
+ import 'dart:async';
+ import 'dart:io';
+ 
+ import 'package:path_provider/path_provider.dart';
+ import 'package:record/record.dart';
+ import 'package:stacked/stacked.dart';
++import 'package:parkinsondetetion/l10n/app_localizations.dart';
+ 
+ import '../../../app/app.locator.dart';
+ import '../../../models/test_result.dart';
+ import '../../../models/test_type.dart';
+ import '../../../services/authentication_service.dart';
+ import '../../../services/test_service.dart';
+ import '../../../services/voice_api_service.dart';
+ 
++enum VoiceStatus {
++  initial,
++  permissionDenied,
++  recording,
++  processing,
++  resultWarning,
++  resultNormal,
++  recordingFailed,
 +}
 +
-+class _GoNoGoStepState extends State<GoNoGoStep> {
-+  static const List<int> _sequence = [1, 1, 2, 1, 2, 2, 2, 1, 1, 2];
-+
-+  int _index = -1; // index of current stimulus
-+  int _current = 0; // number displayed to user
-+  int _tapCount = 0; // taps recorded during current window
-+  int _errors = 0; // total mistakes
-+  int _sameStreak = 0; // consecutive trials copying the stimulus
-+  bool _testDone = false;
-+  int _phase = 0;
-+  Timer? _timer;
-+
-+  @override
-+  void dispose() {
-+    _timer?.cancel();
-+    super.dispose();
-+  }
-+
-+  void _start() {
-+    setState(() {
-+      _phase = 1;
-+      _index = -1;
-+      _errors = 0;
-+      _sameStreak = 0;
-+      _tapCount = 0;
-+      _testDone = false;
-+    });
-+    _next();
-+  }
-+
-+  void _recordAnswer() {
-+    if (_testDone) return;
-+    setState(() => _tapCount++);
-+  }
-+
-+  void _next() {
-+    _timer?.cancel();
-+
-+    if (_index >= 0 && !_testDone) {
-+      final stim = _sequence[_index];
-+      final expected = stim == 1 ? 1 : 0; // tap for 1, inhibit for 2
-+      if (_tapCount != expected) _errors++;
-+      if (_tapCount == stim) {
-+        _sameStreak++;
-+      } else {
-+        _sameStreak = 0;
-+      }
-+    }
-+
-+    setState(() {
-+      _index += 1;
-+      if (_index >= _sequence.length) {
-+        _testDone = true;
-+        _current = 0;
-+      } else {
-+        _current = _sequence[_index];
-+        _tapCount = 0;
-+      }
-+    });
-+
-+    if (!_testDone) {
-+      _timer = Timer(const Duration(milliseconds: 1500), _next);
+ /// ViewModel controlling the 5-second voice recording and analysis.
+ class VoiceTestViewModel extends BaseViewModel {
+   final TestService _tests = locator<TestService>();
+   final AuthenticationService _auth = locator<AuthenticationService>();
+   // Handles network calls to the Python model
+   final VoiceApiService _api = locator<VoiceApiService>();
+   final AudioRecorder _recorder = AudioRecorder();
+ 
+   int secondsLeft = 0;
+   bool isRecording = false;
+-  String status = 'Press start to begin';
++  VoiceStatus status = VoiceStatus.initial;
+   Timer? _timer;
+   String _result = '';
+ 
+   String get result => _result;
+ 
+   double get progress => secondsLeft / 5.0;
+ 
++  String statusText(AppLocalizations l10n) {
++    switch (status) {
++      case VoiceStatus.initial:
++        return l10n.pressStart;
++      case VoiceStatus.permissionDenied:
++        return l10n.microphonePermissionDenied;
++      case VoiceStatus.recording:
++        return l10n.recording;
++      case VoiceStatus.processing:
++        return l10n.processing;
++      case VoiceStatus.resultWarning:
++        return l10n.possibleParkinson(_result);
++      case VoiceStatus.resultNormal:
++        return l10n.normalVoice(_result);
++      case VoiceStatus.recordingFailed:
++        return l10n.recordingFailed;
 +    }
 +  }
 +
-+  void _finish() {
-+    _timer?.cancel();
-+    int score;
-+    if (_sameStreak >= 4) {
-+      score = 0;
-+    } else if (_errors == 0) {
-+      score = 3;
-+    } else if (_errors <= 2) {
-+      score = 2;
-+    } else {
-+      score = 1;
-+    }
-+    widget.onScored(score);
-+    widget.onNext();
-+  }
-+
-+  @override
-+  Widget build(BuildContext context) {
-+    if (_phase == 0) {
-+      return Scaffold(
-+        appBar: AppBar(title: const Text('Go-No-Go')), 
-+        body: Stack(
-+          children: [
-+            const Padding(
-+              padding: EdgeInsets.all(24),
-+              child: Text(
-+                'Οδηγίες:\n'
-+                'Πατήστε μία φορά όταν εμφανίζεται ο αριθμός 1.\n'
-+                'Μην πατάτε όταν εμφανίζεται ο αριθμός 2.',
-+                textAlign: TextAlign.center,
-+                style: TextStyle(fontSize: 16),
-+              ),
-+            ),
-+            Positioned(
-+              right: 16,
-+              bottom: 16,
-+              child: ElevatedButton(
-+                onPressed: _start,
-+                child: const Text('Έναρξη'),
-+              ),
-+            ),
-+          ],
-+        ),
-+      );
-+    }
-+
-+    return Scaffold(
-+      appBar: AppBar(title: const Text('Go-No-Go')),
-+      body: Stack(
-+        children: [
-+          Center(
-+            child: Column(
-+              mainAxisAlignment: MainAxisAlignment.center,
-+              children: [
-+                Text(
-+                  _testDone ? '-' : '$_current',
-+                  style: const TextStyle(fontSize: 72, fontWeight: FontWeight.bold),
-+                ),
-+                const SizedBox(height: 32),
-+                ElevatedButton(
-+                  onPressed: _testDone ? null : _recordAnswer,
-+                  style: ElevatedButton.styleFrom(minimumSize: const Size(180, 48)),
-+                  child: const Text('Πάτημα'),
-+                ),
-+              ],
-+            ),
-+          ),
-+          if (_testDone)
-+            Positioned(
-+              right: 16,
-+              bottom: 16,
-+              child: ElevatedButton(
-+                onPressed: _finish,
-+                child: const Text('Επόμενο'),
-+              ),
-+            ),
-+        ],
-+      ),
-+    );
-+  }
-+}
+   Future<void> startTest() async {
+     if (isRecording) return;
+ 
+     final hasPermission = await _recorder.hasPermission();
+     if (!hasPermission) {
+-      status = 'Microphone permission denied';
++      status = VoiceStatus.permissionDenied;
+       notifyListeners();
+       return;
+     }
+ 
+     final dir = await getTemporaryDirectory();
+     final path = '${dir.path}/voice_test.wav';
+ 
+     final config = RecordConfig(
+       encoder: AudioEncoder.wav,
+       sampleRate: 44100,
+       bitRate: 128000,
+     );
+ 
+     await _recorder.start(config, path: path);
+ 
+     secondsLeft = 5;
+-       isRecording = true;
+-    status = 'Recording...';
++    isRecording = true;
++    status = VoiceStatus.recording;
+     notifyListeners();
+ 
+     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+       secondsLeft--;
+       notifyListeners();
+       if (secondsLeft <= 0) {
+         await stopTest();
+       }
+     });
+   }
+ 
+   /// Stops the recording and runs prediction
+   Future<void> stopTest() async {
+     if (!isRecording) return;
+ 
+     _timer?.cancel();
+     final path = await _recorder.stop(); // Returns the path to recorded file
+     isRecording = false;
+-    status = 'Processing...';
++    status = VoiceStatus.processing;
+     notifyListeners();
+ 
+     if (path != null) {
+       // Send the audio to the backend and retrieve the PD probability
+       final wavFile = File(path);
+       final pdScore = await _api.predict(wavFile);
+ 
+       _result = (pdScore * 100).toStringAsFixed(1);
+ 
+       status = pdScore >= 0.5
+-          ? '⚠️ Possible Parkinson pattern ($_result%)'
+-          : '✅ Normal voice ($_result%)';
++          ? VoiceStatus.resultWarning
++          : VoiceStatus.resultNormal;
+ 
+       notifyListeners();
+       await _saveResult(pdScore, wavFile); // persist probability and audio
+     } else {
+-      status = 'Recording failed';
++      status = VoiceStatus.recordingFailed;
+       notifyListeners();
+     }
+   }
+ 
+   /// Saves the test result to Firebase
+   Future<void> _saveResult(double score, File wavFile) async {
+     final uid = _auth.currentUser?.uid;
+     if (uid == null) return;
+ 
+     final result = TestResult(
+       id: '',
+       patientId: uid,
+       type: TestType.voice,
+       performedAt: DateTime.now(),
+       score: score.clamp(0, 1),
+     );
+ 
+     await _tests.addResult(result: result, audioWav: wavFile);
+   }
+ 
+   @override
+   void dispose() {
+     _timer?.cancel();
+     _recorder.dispose();
+     super.dispose();
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 59da66c703e1f454483fd0b9500f95f826412c0b..975560242e6d123f4af192c7ba341b816ae7eca0 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -15,50 +15,53 @@ dependencies:
+   firebase_core: ^3.13.0
+   firebase_auth: ^5.5.2
+   cloud_firestore: ^5.6.6
+   firebase_storage: ^12.4.5
+   cloud_functions: ^5.4.0
+   responsive_builder: ^0.7.0
+   sensors_plus: ^3.0.3
+   fftea: ^1.5.0+1
+   fl_chart: ^0.64.0
+   tflite_flutter: ^0.11.0
+   shared_preferences: ^2.2.2
+   image_picker: ^1.0.4
+   image: ^4.0.17
+   record: ^6.0.0
+   path_provider: ^2.1.5
+   share_plus: ^11.0.0
+   http: ^1.1.0
+   archive: ^4.0.7
+   cognition_package: ^1.7.0
+   research_package: ^2.0.0
+   signature: ^5.5.0
+   speech_to_text: ^7.1.0
+   flutter_tts: ^4.2.3
+   geolocator: ^10.1.0
+   geocoding: ^3.0.0
++  flutter_localizations:
++    sdk: flutter
++  intl: ^0.18.0
+ 
+ 
+ dependency_overrides:
+   speech_to_text: 7.1.0
+ 
+ 
+ dev_dependencies:
+   build_runner: ^2.4.5
+   flutter_test:
+     sdk: flutter
+   flutter_lints: ^5.0.0
+   mockito: ^5.4.1
+   stacked_generator: ^1.3.3
+   golden_toolkit: ^0.15.0
+   flutter_launcher_icons: ^0.13.1  
+   flutter_native_splash: ^2.3.9
+ 
+ flutter:
+   uses-material-design: true
+   assets:
+     - assets/images/loading_screen.png
+     - assets/images/icon.png
+     - assets/images/logo128x128.png    
+     - assets/images/logo192x192.png
+     - assets/images/cube_reference.png
  
 EOF
 )

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:stacked/stacked.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../models/test_result.dart';
@@ -11,6 +12,16 @@ import '../../../models/test_type.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/test_service.dart';
 import '../../../services/voice_api_service.dart';
+
+enum VoiceStatus {
+  initial,
+  permissionDenied,
+  recording,
+  processing,
+  resultWarning,
+  resultNormal,
+  recordingFailed,
+}
 
 /// ViewModel controlling the 5-second voice recording and analysis.
 class VoiceTestViewModel extends BaseViewModel {
@@ -22,7 +33,7 @@ class VoiceTestViewModel extends BaseViewModel {
 
   int secondsLeft = 0;
   bool isRecording = false;
-  String status = 'Press start to begin';
+  VoiceStatus status = VoiceStatus.initial;
   Timer? _timer;
   String _result = '';
 
@@ -30,12 +41,31 @@ class VoiceTestViewModel extends BaseViewModel {
 
   double get progress => secondsLeft / 5.0;
 
+  String statusText(AppLocalizations l10n) {
+    switch (status) {
+      case VoiceStatus.initial:
+        return l10n.pressStart;
+      case VoiceStatus.permissionDenied:
+        return l10n.microphonePermissionDenied;
+      case VoiceStatus.recording:
+        return l10n.recording;
+      case VoiceStatus.processing:
+        return l10n.processing;
+      case VoiceStatus.resultWarning:
+        return l10n.possibleParkinson(_result);
+      case VoiceStatus.resultNormal:
+        return l10n.normalVoice(_result);
+      case VoiceStatus.recordingFailed:
+        return l10n.recordingFailed;
+    }
+  }
+
   Future<void> startTest() async {
     if (isRecording) return;
 
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
-      status = 'Microphone permission denied';
+      status = VoiceStatus.permissionDenied;
       notifyListeners();
       return;
     }
@@ -52,8 +82,8 @@ class VoiceTestViewModel extends BaseViewModel {
     await _recorder.start(config, path: path);
 
     secondsLeft = 5;
-       isRecording = true;
-    status = 'Recording...';
+    isRecording = true;
+    status = VoiceStatus.recording;
     notifyListeners();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
@@ -72,7 +102,7 @@ class VoiceTestViewModel extends BaseViewModel {
     _timer?.cancel();
     final path = await _recorder.stop(); // Returns the path to recorded file
     isRecording = false;
-    status = 'Processing...';
+    status = VoiceStatus.processing;
     notifyListeners();
 
     if (path != null) {
@@ -83,13 +113,13 @@ class VoiceTestViewModel extends BaseViewModel {
       _result = (pdScore * 100).toStringAsFixed(1);
 
       status = pdScore >= 0.5
-          ? '⚠️ Possible Parkinson pattern ($_result%)'
-          : '✅ Normal voice ($_result%)';
+          ? VoiceStatus.resultWarning
+          : VoiceStatus.resultNormal;
 
       notifyListeners();
       await _saveResult(pdScore, wavFile); // persist probability and audio
     } else {
-      status = 'Recording failed';
+      status = VoiceStatus.recordingFailed;
       notifyListeners();
     }
   }

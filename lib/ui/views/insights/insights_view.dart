@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../models/raison_result.dart';
 import 'insights_viewmodel.dart';
@@ -14,14 +15,15 @@ class InsightsView extends StackedView<InsightsViewModel> {
   Widget builder(
     BuildContext context, InsightsViewModel viewModel, Widget? child) {
     if (viewModel.results.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.insights)),
+        body: Center(
+            child: Text(AppLocalizations.of(context)!.noRecommendations)),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Insights')),
-      body: Center(child: Text('No recommendations returned')),
-    );
-  }
-    
-    return Scaffold(
-      appBar: AppBar(title: const Text('Insights')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.insights)),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: viewModel.results.length,

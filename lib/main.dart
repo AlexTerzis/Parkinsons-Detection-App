@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/app/app.bottomsheets.dart';
 import 'package:parkinsondetetion/app/app.dialogs.dart';
 import 'package:parkinsondetetion/app/app.locator.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
+import 'package:parkinsondetetion/services/localization_service.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
 import 'package:parkinsondetetion/firebase_options.dart';
 import 'package:parkinsondetetion/ui/views/login/login_view.dart';
@@ -21,6 +24,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await setupLocator();
+  // Load persisted locale before the UI starts so the correct language
+  // renders immediately. The service notifies listeners on changes.
+  await locator<LocalizationService>().init();
   setupDialogUi();
   setupBottomSheetUi();
 
@@ -32,19 +38,36 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveApp(
-      builder: (_) => MaterialApp(
-        title: "Parkinson AI Detector",
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color.fromARGB(255, 7, 24, 51),
+    // Obtain the localization service which holds the current locale.
+    final localizationService = locator<LocalizationService>();
+
+    // AnimatedBuilder rebuilds MaterialApp whenever the locale changes.
+    return AnimatedBuilder(
+      animation: localizationService,
+      builder: (context, _) => ResponsiveApp(
+        builder: (_) => MaterialApp(
+          // onGenerateTitle uses the localized string at runtime.
+          onGenerateTitle: (context) =>
+              AppLocalizations.of(context)!.appTitle,
+          locale: localizationService.locale,
+          supportedLocales: const [Locale('en'), Locale('el')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color.fromARGB(255, 7, 24, 51),
+            ),
+            useMaterial3: true,
           ),
-          useMaterial3: true,
+          debugShowCheckedModeBanner: false,
+          home: const SplashScreen(),
+          onGenerateRoute: StackedRouter().onGenerateRoute,
+          navigatorKey: StackedService.navigatorKey,
         ),
-        debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
-        onGenerateRoute: StackedRouter().onGenerateRoute,
-        navigatorKey: StackedService.navigatorKey,
       ),
     );
   }

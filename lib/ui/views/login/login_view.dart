@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:stacked/stacked.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -46,10 +47,11 @@ class LoginView extends StackedView<LoginViewModel> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Header switches text based on authentication mode.
                           Text(
                             viewModel.isLoginMode
-                                ? 'Welcome '
-                                : 'Create Account',
+                                ? AppLocalizations.of(context)!.welcome
+                                : AppLocalizations.of(context)!.createAccount,
                             style: theme.textTheme.headlineMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.center,
@@ -60,10 +62,12 @@ class LoginView extends StackedView<LoginViewModel> {
                             TextFormField(
                               controller: viewModel.nameController,
                               validator: viewModel.validateName,
-                              decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.person_outline),
-                                labelText: 'Name',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.person_outline),
+                                // Localized label for user's name.
+                                labelText:
+                                    AppLocalizations.of(context)!.nameLabel,
+                                border: const OutlineInputBorder(),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -73,10 +77,11 @@ class LoginView extends StackedView<LoginViewModel> {
                             controller: viewModel.emailController,
                             keyboardType: TextInputType.emailAddress,
                             validator: viewModel.validateEmail,
-                            decoration: const InputDecoration(
-                              prefixIcon: Icon(Icons.email_outlined),
-                              labelText: 'Email',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              labelText:
+                                  AppLocalizations.of(context)!.emailLabel,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -87,7 +92,8 @@ class LoginView extends StackedView<LoginViewModel> {
                             validator: viewModel.validatePassword,
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.lock_outline),
-                              labelText: 'Password',
+                              labelText:
+                                  AppLocalizations.of(context)!.passwordLabel,
                               border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
                                 icon: Icon(viewModel.passwordVisible
@@ -106,7 +112,8 @@ class LoginView extends StackedView<LoginViewModel> {
                               validator: viewModel.validateConfirmPassword,
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.lock_outline),
-                                labelText: 'Confirm Password',
+                                labelText: AppLocalizations.of(context)!
+                                    .confirmPasswordLabel,
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: Icon(viewModel.confirmPasswordVisible
@@ -119,15 +126,17 @@ class LoginView extends StackedView<LoginViewModel> {
                             ),
                             const SizedBox(height: 20),
 
-                            Text('I am a', style: theme.textTheme.bodyLarge),
+                            // Role selection prompt.
+                            Text(AppLocalizations.of(context)!.iAmA,
+                                style: theme.textTheme.bodyLarge),
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 12,
                               children: UserRole.values.map((role) {
                                 return ChoiceChip(
                                   label: Text(role == UserRole.patient
-                                      ? 'Patient'
-                                      : 'Doctor'),
+                                      ? AppLocalizations.of(context)!.patient
+                                      : AppLocalizations.of(context)!.doctor),
                                   selected: viewModel.selectedRole == role,
                                   onSelected: (_) => viewModel.selectRole(role),
                                 );
@@ -137,7 +146,8 @@ class LoginView extends StackedView<LoginViewModel> {
                           ],
 
                           CheckboxListTile(
-                            title: const Text('Keep me logged in'),
+                            title: Text(
+                                AppLocalizations.of(context)!.keepMeLoggedIn),
                             value: viewModel.keepMeLoggedIn,
                             onChanged: (value) => viewModel.setKeepMeLoggedIn(value ?? false),
                             controlAffinity: ListTileControlAffinity.leading,
@@ -163,8 +173,9 @@ class LoginView extends StackedView<LoginViewModel> {
                               onPressed: viewModel.isBusy
                                   ? null
                                   : () => _onAuthenticatePressed(viewModel),
-                              child: Text(
-                                  viewModel.isLoginMode ? 'Login' : 'Sign Up'),
+                              child: Text(viewModel.isLoginMode
+                                  ? AppLocalizations.of(context)!.login
+                                  : AppLocalizations.of(context)!.signUp),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -177,7 +188,8 @@ class LoginView extends StackedView<LoginViewModel> {
                                     ? null
                                     : () => _showForgotPasswordDialog(
                                         context, viewModel),
-                                child: const Text('Forgot password?'),
+                                child: Text(
+                                    AppLocalizations.of(context)!.forgotPassword),
                               ),
                             ),
                           ],
@@ -186,8 +198,9 @@ class LoginView extends StackedView<LoginViewModel> {
                             onPressed:
                                 viewModel.isBusy ? null : viewModel.toggleMode,
                             child: Text(viewModel.isLoginMode
-                                ? "Don't have an account? Sign Up"
-                                : 'Already have an account? Login'),
+                                ? AppLocalizations.of(context)!.dontHaveAccount
+                                : AppLocalizations.of(context)!
+                                    .alreadyHaveAccount),
                           ),
 
                           if (viewModel.isBusy) ...[
@@ -220,14 +233,14 @@ class LoginView extends StackedView<LoginViewModel> {
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Password Recovery'),
+          title: Text(AppLocalizations.of(context)!.passwordRecovery),
           content: TextField(
             controller: emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.emailLabel,
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: const OutlineInputBorder(),
             ),
           ),
           actions: [
@@ -235,20 +248,22 @@ class LoginView extends StackedView<LoginViewModel> {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () async {
                 await viewModel.sendPasswordReset(emailCtrl.text);
                 if (context.mounted) {
                   Navigator.of(dialogContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'If the email exists, a reset link has been sent.'),
-                  ));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          AppLocalizations.of(context)!.emailSent),
+                    ),
+                  );
                 }
               },
-              child: const Text('Send'),
+              child: Text(AppLocalizations.of(context)!.send),
             ),
           ],
         );
