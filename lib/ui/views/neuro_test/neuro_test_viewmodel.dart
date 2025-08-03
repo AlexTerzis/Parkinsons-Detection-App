@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-import 'steps/gestures.dart';
+
 import 'steps/draw_cube.dart';
 import 'steps/connect_cube.dart';
 import 'steps/clock.dart';
@@ -16,8 +16,6 @@ import 'steps/fluency.dart';
 import 'steps/trails.dart';
 import 'steps/immediate_recall.dart';
 import 'steps/delayed_recall.dart';
-import 'steps/conflicting_instructions.dart';
-import 'steps/go_no_go.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
@@ -28,15 +26,8 @@ class NeuroTestViewModel extends BaseViewModel {
   // ✅ Constructor: define the steps
   NeuroTestViewModel() {
     _steps = [
-      
-      GoNoGoStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
-      ConflictingInstructionsStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,
-      ),
+      // Define the steps for the MoCA test
+      // Each step is a widget that can handle scoring and navigation
       DigitsForwardStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
@@ -100,9 +91,6 @@ class NeuroTestViewModel extends BaseViewModel {
       ConnectCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),
-      GesturesStep(
-        onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,),
     ];
   }
 
