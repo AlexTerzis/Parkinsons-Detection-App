@@ -1,276 +1,464 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/lib/ui/views/neuro_test/steps/repeat_sentences.dart b/lib/ui/views/neuro_test/steps/repeat_sentences.dart
-index 6ece4a2d3893b65b0a5e41a58249bda1c2eb68b2..7b4e11fa77f7720867b07de38831cff05a2976df 100644
---- a/lib/ui/views/neuro_test/steps/repeat_sentences.dart
-+++ b/lib/ui/views/neuro_test/steps/repeat_sentences.dart
-@@ -41,141 +41,151 @@ class _RepeatSentencesStepInternal extends StatefulWidget {
+diff --git a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+index 8f1383dbc616f17d3d4d1445ba6e3ba36f33c2e1..6a44767d1bd4a324f33e45a9b7deaca483086ad9 100644
+--- a/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
++++ b/lib/ui/views/neuro_test/neuro_test_viewmodel.dart
+@@ -1,43 +1,45 @@
+ import 'package:flutter/material.dart';
+ import 'package:stacked/stacked.dart';
+ import 'steps/gestures.dart';
+ import 'steps/draw_cube.dart';
+ import 'steps/connect_cube.dart';
+ import 'steps/clock.dart';
+ import 'steps/naming.dart';
+ import 'steps/digits_forward.dart';
+ import 'steps/digits_backward.dart';
+ import 'steps/repeat_sentences.dart';
+ import 'steps/vigilance.dart';
+ import 'steps/subtract.dart';
+ import 'steps/similarities.dart';
+ import 'steps/orientation.dart';
+ import 'steps/fluency.dart';
+ import 'steps/trails.dart';
+ import 'steps/immediate_recall.dart';
+ import 'steps/delayed_recall.dart';
++import 'steps/conflicting_instructions.dart';
++import 'steps/go_no_go.dart';
  
-   @override
-   State<_RepeatSentencesStepInternal> createState() => _RepeatSentencesStepInternalState();
+ class NeuroTestViewModel extends BaseViewModel {
+   int _currentStep = 0;
+   double totalMocaScore = 0.0;
+   late List<Widget> _steps;
+   List<String> _immediateAnswers = [];
+ 
+   // ✅ Constructor: define the steps
+   NeuroTestViewModel() {
+     _steps = [
+       
+       DigitsForwardStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       DigitsBackwardStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       ImmediateRecallStep(
+         onFinished: (resp,__) {
+           _immediateAnswers = resp;
+           nextStep();
+         },
+       ),
+@@ -67,49 +69,57 @@ class NeuroTestViewModel extends BaseViewModel {
+       ),
+       NamingStep(        
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       FluencyStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       RepeatSentencesStep(
+         onNext: nextStep,
+         onScored: (score) => totalMocaScore += score,
+       ),
+       DelayedRecallStep(
+         onFinished: (score, result) {
+           totalMocaScore += score.toDouble();
+           nextStep();
+         },
+         immediateTrials: _immediateAnswers,
+       ),
+       DrawCubeStep(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+         },),
+       ConnectCubeStep(onNext: nextStep,onScored: (score) {
+           totalMocaScore += score;
+-        },),      
+-      GesturesStep(        
++        },),
++      GesturesStep(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,),
++      ConflictingInstructionsStep(
+         onNext: nextStep,
+-        onScored: (score) => totalMocaScore += score,),  
++        onScored: (score) => totalMocaScore += score,
++      ),
++      GoNoGoStep(
++        onNext: nextStep,
++        onScored: (score) => totalMocaScore += score,
++      ),
+     ];
+   }
+ 
+   // ✅ Getter to expose current step
+   Widget get currentStepWidget => _steps[_currentStep];
+ 
+   // ✅ Move to the next step
+   void nextStep() {
+     if (_currentStep < _steps.length - 1) {
+       _currentStep++;
+       print('Total MoCA Score: $totalMocaScore');
+       notifyListeners();
+     } else {
+       // End of test
+       print('Test complete!');
+       
+       print('Total MoCA Score: $totalMocaScore');
+     }
+   }
  }
- 
- class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepInternal> {
-   final SpeechToText _speech = SpeechToText();
-   final List<String> _phrases = const [
-     'Το μόνο που ξέρω είναι ότι ο Γιάννης είναι αυτός που θα βοηθήσει σήμερα.',
-     'Η γάτα κρυβόταν πάντα κάτω από τον καναπέ όταν βρίσκονταν σκυλιά μέσα στο δωμάτιο.',
-   ];
- 
-   int _index = 0;
-   bool _previewPhase = true;
-   bool _hintUsed = false;
-   bool _showHint = false;
-   int _previewSeconds = 20;
-   int _listenSeconds = 60;
-   double _totalScore = 0;
-   Timer? _previewTimer;
-   Timer? _listenTimer;
-   Timer? _hintTimer;
-   bool _speechAvailable = false;
-   bool _finished = false;
- 
--  // Collects all recognized text segments from mic restarts (no dupe)
-+  // --- Speech recognition buffering ---
-+  // Stores complete segments returned by the recognizer
-+  final List<String> _segments = [];
-+  // Current partial phrase from the active listening session
-+  String _currentPartial = '';
-+  // Combined text of [_segments] and [_currentPartial]
-   String _recognizedText = '';
-+  // Prevents overlapping restart attempts when onStatus fires rapidly
-+  bool _restartLock = false;
- 
-   @override
-   void initState() {
-     super.initState();
-     _initSpeech();
-     _startPreview();
-   }
- 
-   Future<void> _initSpeech() async {
-     _speechAvailable = await _speech.initialize(
-       onStatus: (status) async {
-+        // When Android stops listening after a pause the status changes to
-+        // "notListening". Restart immediately unless the user already
-+        // finished or time ran out.
-         if (!_previewPhase &&
-             !_finished &&
-+            !_restartLock &&
-             _listenSeconds > 0 &&
-             _scoreRecognized(_recognizedText) < 1.0 &&
-             status == 'notListening') {
--          // Mic stopped (by itself) – restart unless correct or finished
-+          _restartLock = true;
-           await Future.delayed(const Duration(milliseconds: 100));
--          if (!_finished) _startOrRestartListening();
-+          if (!_finished) await _startOrRestartListening();
-+          _restartLock = false;
-         }
-       },
-     );
-     setState(() {});
-   }
- 
-   void _startPreview() {
-     setState(() {
-       _previewPhase = true;
-       _previewSeconds = 20;
-       _hintUsed = false;
-+      _segments.clear();
-+      _currentPartial = '';
-       _recognizedText = '';
-       _showHint = false;
-       _finished = false;
-     });
-     _previewTimer?.cancel();
-     _previewTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-       if (_previewSeconds == 0) {
-         timer.cancel();
-         _startListening();
-       } else {
-         setState(() => _previewSeconds--);
-       }
-     });
-   }
- 
-   void _startOrRestartListening() {
-     if (!_speechAvailable || _finished) return;
-+    // Stop any existing session before starting a new one
-+    if (_speech.isListening) _speech.stop();
+diff --git a/lib/ui/views/neuro_test/steps/conflicting_instructions.dart b/lib/ui/views/neuro_test/steps/conflicting_instructions.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..3afca83dc2760dbd25b3064c6ae5c930281b44be
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/conflicting_instructions.dart
+@@ -0,0 +1,171 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
 +
-+    _currentPartial = '';
-     _speech.listen(
-       localeId: 'el_GR',
--      onResult: (result) {
--        setState(() {
--          // Always append any new words to the recognized text
--          // If result is empty, do nothing
--          if (result.recognizedWords.isNotEmpty) {
--            // Avoid repeated phrases: if new part is at the end, just append the difference
--            if (_recognizedText.isEmpty) {
--              _recognizedText = result.recognizedWords;
--            } else {
--              final prev = _recognizedText.trim();
--              final current = result.recognizedWords.trim();
--              // Don't append if current is substring of end of prev
--              if (!prev.endsWith(current)) {
--                // Try to append only new part
--                var newPart = current;
--                if (current.startsWith(prev)) {
--                  newPart = current.substring(prev.length).trim();
--                }
--                if (newPart.isNotEmpty) {
--                  _recognizedText = (prev + ' ' + newPart).trim();
--                }
--              }
--            }
--          }
--          if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
--        });
--      },
-+      // Every recognition update (partial or final) passes here
-+      onResult: _processResult,
-       listenFor: Duration(seconds: _listenSeconds),
-       pauseFor: Duration(seconds: _listenSeconds),
-       listenMode: ListenMode.dictation,
-       partialResults: true,
-     );
-   }
- 
-+  // Consolidates the words from [_segments] and the current partial result
-+  void _processResult(SpeechRecognitionResult result) {
-+    setState(() {
-+      _currentPartial = result.recognizedWords;
-+      if (result.finalResult) {
-+        // Save completed phrase before restart
-+        final trimmed = _currentPartial.trim();
-+        if (trimmed.isNotEmpty) _segments.add(trimmed);
-+        _currentPartial = '';
-+      }
-+      _recognizedText = (_segments + [_currentPartial]).join(' ').trim();
-+      if (_scoreRecognized(_recognizedText) >= 1.0) _stopListening();
-+    });
++/// Step 4 of the Frontal Assessment Battery.
++/// The subject must perform the opposite number of taps
++/// to the one displayed on screen. Score is based on the
++/// number of errors and whether the subject mirrors the
++/// stimulus for four consecutive trials.
++class ConflictingInstructionsStep extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const ConflictingInstructionsStep({
++    super.key,
++    required this.onNext,
++    required this.onScored,
++  });
++
++  @override
++  State<ConflictingInstructionsStep> createState() => _ConflictingInstructionsStepState();
++}
++
++class _ConflictingInstructionsStepState extends State<ConflictingInstructionsStep> {
++  // Predefined sequence of single or double taps from the examiner.
++  static const List<int> _sequence = [1, 1, 2, 1, 2, 2, 2, 1, 1, 2];
++
++  int _index = -1; // Current position within the sequence
++  int _current = 0; // Value currently shown to the user
++  int _tapCount = 0; // Number of taps recorded for the current stimulus
++  int _errors = 0; // Total mistakes
++  int _sameStreak = 0; // Times the subject copied the stimulus consecutively
++  bool _testDone = false;
++  int _phase = 0; // 0 = instructions, 1 = running test
++  Timer? _timer;
++
++  @override
++  void dispose() {
++    _timer?.cancel();
++    super.dispose();
 +  }
 +
-   Future<void> _startListening() async {
-     if (!_speechAvailable) return;
-     setState(() {
-       _previewPhase = false;
-       _listenSeconds = 60;
-       _showHint = false;
-+      _segments.clear();
-+      _currentPartial = '';
-       _recognizedText = '';
-       _finished = false;
-     });
-     _startOrRestartListening();
-     _listenTimer?.cancel();
-     _listenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-       if (_listenSeconds == 0) {
-         timer.cancel();
-         _stopListening();
-       } else {
-         setState(() => _listenSeconds--);
-       }
-     });
-   }
- 
-   String normalizeGreek(String s) {
-     return s
-         .replaceAll('ά', 'α')
-         .replaceAll('έ', 'ε')
-         .replaceAll('ή', 'η')
-         .replaceAll('ί', 'ι')
-         .replaceAll('ό', 'ο')
-         .replaceAll('ύ', 'υ')
-         .replaceAll('ώ', 'ω')
-         .replaceAll('Ά', 'Α')
-@@ -190,78 +200,85 @@ class _RepeatSentencesStepInternalState extends State<_RepeatSentencesStepIntern
-         .replaceAll('Ϊ', 'Ι')
-         .replaceAll('ϋ', 'υ')
-         .replaceAll('ΰ', 'υ')
-         .replaceAll('Ϋ', 'Υ')
-         .replaceAll(RegExp(r'[^\p{L}]', unicode: true), '')
-         .toLowerCase()
-         .trim();
-   }
- 
-   double _scoreRecognized(String spoken) {
-     final phrase = _phrases[_index];
-     final targetWords = Set<String>.from(normalizeGreek(phrase).split(RegExp(r'\s+')));
-     final userWords = Set<String>.from(normalizeGreek(spoken).split(RegExp(r'\s+')));
-     final correctCount = targetWords.intersection(userWords).length;
-     final totalWords = targetWords.length;
-     final half = (totalWords / 2).ceil();
- 
-     if (correctCount >= totalWords - 1) return 1.0;
-     if (correctCount >= half) return 0.5;
-     return 0.0;
-   }
- 
-   Future<void> _stopListening() async {
-     if (_finished) return;
-     _finished = true;
-+    // Include the latest partial words before stopping
-+    final trimmed = _currentPartial.trim();
-+    if (trimmed.isNotEmpty) _segments.add(trimmed);
-+    _currentPartial = '';
-+    _recognizedText = _segments.join(' ').trim();
-     await _speech.stop();
-     _listenTimer?.cancel();
-     _evaluate();
-   }
- 
-   void _evaluate() {
-     double base = _scoreRecognized(_recognizedText);
-     double score = base;
-     if (_hintUsed) score /= 2;
-     _totalScore += score;
-   }
- 
-   void _showHintPressed() {
-     if (_previewPhase) return;
-     setState(() {
-       _showHint = true;
-       _hintUsed = true;
-     });
-     _hintTimer?.cancel();
-     _hintTimer = Timer(const Duration(seconds: 3), () {
-       setState(() {
-         _showHint = false;
-       });
-     });
-   }
- 
-   void _clear() {
-     setState(() {
-+      _segments.clear();
-+      _currentPartial = '';
-       _recognizedText = '';
-     });
-   }
- 
-   void _next() {
-     if (_previewPhase) {
-       _previewTimer?.cancel();
-       _startListening();
-       return;
-     }
-     if (_speech.isListening) return;
-     if (_index < _phrases.length - 1) {
-       setState(() => _index++);
-       _startPreview();
-     } else {
-       widget.onScored(_totalScore);
-       widget.onNext();
-     }
-   }
- 
-   @override
-   void dispose() {
-     _previewTimer?.cancel();
-     _listenTimer?.cancel();
-     _hintTimer?.cancel();
++  void _start() {
++    setState(() {
++      _phase = 1;
++      _index = -1;
++      _errors = 0;
++      _sameStreak = 0;
++      _tapCount = 0;
++      _testDone = false;
++    });
++    _next();
++  }
++
++  void _recordAnswer() {
++    if (_testDone) return;
++    setState(() => _tapCount++);
++  }
++
++  void _next() {
++    _timer?.cancel();
++
++    // Evaluate the previous stimulus before moving on
++    if (_index >= 0 && !_testDone) {
++      final stim = _sequence[_index];
++      final expected = stim == 1 ? 2 : 1; // subject must do the opposite
++      if (_tapCount != expected) _errors++;
++      if (_tapCount == stim) {
++        // Subject mirrored the examiner
++        _sameStreak++;
++      } else {
++        _sameStreak = 0;
++      }
++    }
++
++    setState(() {
++      _index += 1;
++      if (_index >= _sequence.length) {
++        _testDone = true;
++        _current = 0;
++      } else {
++        _current = _sequence[_index];
++        _tapCount = 0;
++      }
++    });
++
++    if (!_testDone) {
++      // Allow 1.5s per item before auto-advancing
++      _timer = Timer(const Duration(milliseconds: 1500), _next);
++    }
++  }
++
++  void _finish() {
++    _timer?.cancel();
++    int score;
++    if (_sameStreak >= 4) {
++      score = 0;
++    } else if (_errors == 0) {
++      score = 3;
++    } else if (_errors <= 2) {
++      score = 2;
++    } else {
++      score = 1;
++    }
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    if (_phase == 0) {
++      return Scaffold(
++        appBar: AppBar(title: const Text('Εναντιούμενα παραγγέλματα')),
++        body: Stack(
++          children: [
++            const Padding(
++              padding: EdgeInsets.all(24),
++              child: Text(
++                'Οδηγίες:\n'
++                'Όταν εμφανίζεται ο αριθμός 1, πατήστε το κουμπί δύο φορές.\n'
++                'Όταν εμφανίζεται ο αριθμός 2, πατήστε το κουμπί μία φορά.',
++                textAlign: TextAlign.center,
++                style: TextStyle(fontSize: 16),
++              ),
++            ),
++            Positioned(
++              right: 16,
++              bottom: 16,
++              child: ElevatedButton(
++                onPressed: _start,
++                child: const Text('Έναρξη'),
++              ),
++            ),
++          ],
++        ),
++      );
++    }
++
++    return Scaffold(
++      appBar: AppBar(title: const Text('Εναντιούμενα παραγγέλματα')),
++      body: Stack(
++        children: [
++          Center(
++            child: Column(
++              mainAxisAlignment: MainAxisAlignment.center,
++              children: [
++                Text(
++                  _testDone ? '-' : '$_current',
++                  style: const TextStyle(fontSize: 72, fontWeight: FontWeight.bold),
++                ),
++                const SizedBox(height: 32),
++                ElevatedButton(
++                  onPressed: _testDone ? null : _recordAnswer,
++                  style: ElevatedButton.styleFrom(minimumSize: const Size(180, 48)),
++                  child: const Text('Πάτημα'),
++                ),
++              ],
++            ),
++          ),
++          if (_testDone)
++            Positioned(
++              right: 16,
++              bottom: 16,
++              child: ElevatedButton(
++                onPressed: _finish,
++                child: const Text('Επόμενο'),
++              ),
++            ),
++        ],
++      ),
++    );
++  }
++}
+diff --git a/lib/ui/views/neuro_test/steps/go_no_go.dart b/lib/ui/views/neuro_test/steps/go_no_go.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..a0af7d257ab79653e51cc22043fc5c1def408a6b
+--- /dev/null
++++ b/lib/ui/views/neuro_test/steps/go_no_go.dart
+@@ -0,0 +1,166 @@
++import 'dart:async';
++import 'package:flutter/material.dart';
++
++/// Step 5 of the Frontal Assessment Battery.
++/// The participant taps once when "1" appears and
++/// must withhold any tap when "2" appears. The
++/// same scoring rules as the conflicting step apply.
++class GoNoGoStep extends StatefulWidget {
++  final VoidCallback onNext;
++  final Function(int score) onScored;
++  const GoNoGoStep({
++    super.key,
++    required this.onNext,
++    required this.onScored,
++  });
++
++  @override
++  State<GoNoGoStep> createState() => _GoNoGoStepState();
++}
++
++class _GoNoGoStepState extends State<GoNoGoStep> {
++  static const List<int> _sequence = [1, 1, 2, 1, 2, 2, 2, 1, 1, 2];
++
++  int _index = -1; // index of current stimulus
++  int _current = 0; // number displayed to user
++  int _tapCount = 0; // taps recorded during current window
++  int _errors = 0; // total mistakes
++  int _sameStreak = 0; // consecutive trials copying the stimulus
++  bool _testDone = false;
++  int _phase = 0;
++  Timer? _timer;
++
++  @override
++  void dispose() {
++    _timer?.cancel();
++    super.dispose();
++  }
++
++  void _start() {
++    setState(() {
++      _phase = 1;
++      _index = -1;
++      _errors = 0;
++      _sameStreak = 0;
++      _tapCount = 0;
++      _testDone = false;
++    });
++    _next();
++  }
++
++  void _recordAnswer() {
++    if (_testDone) return;
++    setState(() => _tapCount++);
++  }
++
++  void _next() {
++    _timer?.cancel();
++
++    if (_index >= 0 && !_testDone) {
++      final stim = _sequence[_index];
++      final expected = stim == 1 ? 1 : 0; // tap for 1, inhibit for 2
++      if (_tapCount != expected) _errors++;
++      if (_tapCount == stim) {
++        _sameStreak++;
++      } else {
++        _sameStreak = 0;
++      }
++    }
++
++    setState(() {
++      _index += 1;
++      if (_index >= _sequence.length) {
++        _testDone = true;
++        _current = 0;
++      } else {
++        _current = _sequence[_index];
++        _tapCount = 0;
++      }
++    });
++
++    if (!_testDone) {
++      _timer = Timer(const Duration(milliseconds: 1500), _next);
++    }
++  }
++
++  void _finish() {
++    _timer?.cancel();
++    int score;
++    if (_sameStreak >= 4) {
++      score = 0;
++    } else if (_errors == 0) {
++      score = 3;
++    } else if (_errors <= 2) {
++      score = 2;
++    } else {
++      score = 1;
++    }
++    widget.onScored(score);
++    widget.onNext();
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    if (_phase == 0) {
++      return Scaffold(
++        appBar: AppBar(title: const Text('Go-No-Go')), 
++        body: Stack(
++          children: [
++            const Padding(
++              padding: EdgeInsets.all(24),
++              child: Text(
++                'Οδηγίες:\n'
++                'Πατήστε μία φορά όταν εμφανίζεται ο αριθμός 1.\n'
++                'Μην πατάτε όταν εμφανίζεται ο αριθμός 2.',
++                textAlign: TextAlign.center,
++                style: TextStyle(fontSize: 16),
++              ),
++            ),
++            Positioned(
++              right: 16,
++              bottom: 16,
++              child: ElevatedButton(
++                onPressed: _start,
++                child: const Text('Έναρξη'),
++              ),
++            ),
++          ],
++        ),
++      );
++    }
++
++    return Scaffold(
++      appBar: AppBar(title: const Text('Go-No-Go')),
++      body: Stack(
++        children: [
++          Center(
++            child: Column(
++              mainAxisAlignment: MainAxisAlignment.center,
++              children: [
++                Text(
++                  _testDone ? '-' : '$_current',
++                  style: const TextStyle(fontSize: 72, fontWeight: FontWeight.bold),
++                ),
++                const SizedBox(height: 32),
++                ElevatedButton(
++                  onPressed: _testDone ? null : _recordAnswer,
++                  style: ElevatedButton.styleFrom(minimumSize: const Size(180, 48)),
++                  child: const Text('Πάτημα'),
++                ),
++              ],
++            ),
++          ),
++          if (_testDone)
++            Positioned(
++              right: 16,
++              bottom: 16,
++              child: ElevatedButton(
++                onPressed: _finish,
++                child: const Text('Επόμενο'),
++              ),
++            ),
++        ],
++      ),
++    );
++  }
++}
  
 EOF
 )

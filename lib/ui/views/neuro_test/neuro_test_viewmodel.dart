@@ -16,6 +16,8 @@ import 'steps/fluency.dart';
 import 'steps/trails.dart';
 import 'steps/immediate_recall.dart';
 import 'steps/delayed_recall.dart';
+import 'steps/conflicting_instructions.dart';
+import 'steps/go_no_go.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   int _currentStep = 0;
@@ -27,6 +29,14 @@ class NeuroTestViewModel extends BaseViewModel {
   NeuroTestViewModel() {
     _steps = [
       
+      GoNoGoStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
+      ConflictingInstructionsStep(
+        onNext: nextStep,
+        onScored: (score) => totalMocaScore += score,
+      ),
       DigitsForwardStep(
         onNext: nextStep,
         onScored: (score) => totalMocaScore += score,
@@ -89,10 +99,10 @@ class NeuroTestViewModel extends BaseViewModel {
         },),
       ConnectCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
-        },),      
-      GesturesStep(        
+        },),
+      GesturesStep(
         onNext: nextStep,
-        onScored: (score) => totalMocaScore += score,),  
+        onScored: (score) => totalMocaScore += score,),
     ];
   }
 
