@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart';
 import 'package:stacked_services/stacked_services.dart';
 
 import '../../../../app/app.locator.dart';
@@ -58,6 +59,11 @@ class TestsTab extends StatelessWidget {
         'icon': Icons.psychology,
         'type': TestType.neuro,
       },
+      {
+        'title': 'Frontal Assessment Battery Test',
+        'icon': Icons.psychology_alt_outlined,
+        'type': TestType.fab,
+      },
     ];
 
     return Padding(
@@ -111,6 +117,9 @@ class TestsTab extends StatelessWidget {
                       } else if (type == TestType.neuro) {
                         await locator<NavigationService>()
                             .navigateToView(const NeuroTestView());
+                      }else if (type == TestType.fab) {
+                        await locator<NavigationService>()
+                            .navigateToView(const FABTestView());
                       } else {
                         await viewModel.recordDemoResult(type);
                         ScaffoldMessenger.of(rootContext).showSnackBar(

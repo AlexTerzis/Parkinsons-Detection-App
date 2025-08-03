@@ -5,13 +5,13 @@
 // **************************************************************************
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i18;
-import 'dart:io' as _i21;
-import 'dart:ui' as _i20;
+import 'dart:async' as _i19;
+import 'dart:io' as _i22;
+import 'dart:ui' as _i21;
 
-import 'package:flutter/material.dart' as _i17;
+import 'package:flutter/material.dart' as _i18;
 import 'package:flutter/material.dart';
-import 'package:parkinsondetetion/models/raison_result.dart' as _i19;
+import 'package:parkinsondetetion/models/raison_result.dart' as _i20;
 import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart'
     as _i7;
 import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart' as _i5;
@@ -21,8 +21,9 @@ import 'package:parkinsondetetion/ui/views/drawing_test/gallery_draw_view.dart'
     as _i14;
 import 'package:parkinsondetetion/ui/views/drawing_test/signature_canvas_view.dart'
     as _i12;
+import 'package:parkinsondetetion/ui/views/fab_test/fab_test_view.dart' as _i16;
 import 'package:parkinsondetetion/ui/views/home/home_view.dart' as _i2;
-import 'package:parkinsondetetion/ui/views/insights/insights_view.dart' as _i16;
+import 'package:parkinsondetetion/ui/views/insights/insights_view.dart' as _i17;
 import 'package:parkinsondetetion/ui/views/login/login_view.dart' as _i4;
 import 'package:parkinsondetetion/ui/views/neuro_test/neuro_test_view.dart'
     as _i15;
@@ -36,7 +37,7 @@ import 'package:parkinsondetetion/ui/views/tremor_test/tremor_test_view.dart'
 import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart'
     as _i11;
 import 'package:stacked/stacked.dart' as _i1;
-import 'package:stacked_services/stacked_services.dart' as _i22;
+import 'package:stacked_services/stacked_services.dart' as _i23;
 
 class Routes {
   static const homeView = '/home-view';
@@ -67,6 +68,8 @@ class Routes {
 
   static const neuroTestView = '/neuro-test-view';
 
+  static const fABTestView = '/f-ab-test-view';
+
   static const insightsView = '/insights-view';
 
   static const all = <String>{
@@ -84,6 +87,7 @@ class Routes {
     cameraDrawView,
     galleryDrawView,
     neuroTestView,
+    fABTestView,
     insightsView,
   };
 }
@@ -147,20 +151,24 @@ class StackedRouter extends _i1.RouterBase {
       page: _i15.NeuroTestView,
     ),
     _i1.RouteDef(
+      Routes.fABTestView,
+      page: _i16.FABTestView,
+    ),
+    _i1.RouteDef(
       Routes.insightsView,
-      page: _i16.InsightsView,
+      page: _i17.InsightsView,
     ),
   ];
 
   final _pagesMap = <Type, _i1.StackedRouteFactory>{
     _i2.HomeView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i2.HomeView(),
         settings: data,
       );
     },
     _i3.StartupView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i3.StartupView(),
         settings: data,
       );
@@ -169,13 +177,13 @@ class StackedRouter extends _i1.RouterBase {
       final args = data.getArgs<LoginViewArguments>(
         orElse: () => const LoginViewArguments(),
       );
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => _i4.LoginView(key: args.key),
         settings: data,
       );
     },
     _i5.DoctorView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i5.DoctorView(),
         settings: data,
       );
@@ -184,7 +192,7 @@ class StackedRouter extends _i1.RouterBase {
       final args = data.getArgs<PatienceViewArguments>(
         orElse: () => const PatienceViewArguments(),
       );
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => _i6.PatienceView(
             key: args.key,
             initialTab: args.initialTab,
@@ -193,38 +201,38 @@ class StackedRouter extends _i1.RouterBase {
       );
     },
     _i7.CameraTestView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i7.CameraTestView(),
         settings: data,
       );
     },
     _i8.TremorTestView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i8.TremorTestView(),
         settings: data,
       );
     },
     _i9.TapTestView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i9.TapTestView(),
         settings: data,
       );
     },
     _i10.QuestionnaireView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i10.QuestionnaireView(),
         settings: data,
       );
     },
     _i11.VoiceTestView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i11.VoiceTestView(),
         settings: data,
       );
     },
     _i12.SignatureCanvasView: (data) {
       final args = data.getArgs<SignatureCanvasViewArguments>(nullOk: false);
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => _i12.SignatureCanvasView(
             key: args.key, onImageReady: args.onImageReady),
         settings: data,
@@ -232,7 +240,7 @@ class StackedRouter extends _i1.RouterBase {
     },
     _i13.CameraDrawView: (data) {
       final args = data.getArgs<CameraDrawViewArguments>(nullOk: false);
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) =>
             _i13.CameraDrawView(key: args.key, onImageReady: args.onImageReady),
         settings: data,
@@ -240,23 +248,29 @@ class StackedRouter extends _i1.RouterBase {
     },
     _i14.GalleryDrawView: (data) {
       final args = data.getArgs<GalleryDrawViewArguments>(nullOk: false);
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => _i14.GalleryDrawView(
             key: args.key, onImageReady: args.onImageReady),
         settings: data,
       );
     },
     _i15.NeuroTestView: (data) {
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) => const _i15.NeuroTestView(),
         settings: data,
       );
     },
-    _i16.InsightsView: (data) {
+    _i16.FABTestView: (data) {
+      return _i18.MaterialPageRoute<dynamic>(
+        builder: (context) => const _i16.FABTestView(),
+        settings: data,
+      );
+    },
+    _i17.InsightsView: (data) {
       final args = data.getArgs<InsightsViewArguments>(nullOk: false);
-      return _i17.MaterialPageRoute<dynamic>(
+      return _i18.MaterialPageRoute<dynamic>(
         builder: (context) =>
-            _i16.InsightsView(key: args.key, results: args.results),
+            _i17.InsightsView(key: args.key, results: args.results),
         settings: data,
       );
     },
@@ -272,7 +286,7 @@ class StackedRouter extends _i1.RouterBase {
 class LoginViewArguments {
   const LoginViewArguments({this.key});
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
   @override
   String toString() {
@@ -298,11 +312,11 @@ class PatienceViewArguments {
     this.resultsFuture,
   });
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
   final int initialTab;
 
-  final _i18.Future<List<_i19.RaisonResult>>? resultsFuture;
+  final _i19.Future<List<_i20.RaisonResult>>? resultsFuture;
 
   @override
   String toString() {
@@ -329,9 +343,9 @@ class SignatureCanvasViewArguments {
     required this.onImageReady,
   });
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
-  final void Function(_i20.Image) onImageReady;
+  final void Function(_i21.Image) onImageReady;
 
   @override
   String toString() {
@@ -356,9 +370,9 @@ class CameraDrawViewArguments {
     required this.onImageReady,
   });
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
-  final void Function(_i21.File) onImageReady;
+  final void Function(_i22.File) onImageReady;
 
   @override
   String toString() {
@@ -383,9 +397,9 @@ class GalleryDrawViewArguments {
     required this.onImageReady,
   });
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
-  final void Function(_i21.File) onImageReady;
+  final void Function(_i22.File) onImageReady;
 
   @override
   String toString() {
@@ -410,9 +424,9 @@ class InsightsViewArguments {
     required this.results,
   });
 
-  final _i17.Key? key;
+  final _i18.Key? key;
 
-  final List<_i19.RaisonResult> results;
+  final List<_i20.RaisonResult> results;
 
   @override
   String toString() {
@@ -431,7 +445,7 @@ class InsightsViewArguments {
   }
 }
 
-extension NavigatorStateExtension on _i22.NavigationService {
+extension NavigatorStateExtension on _i23.NavigationService {
   Future<dynamic> navigateToHomeView([
     int? routerId,
     bool preventDuplicates = true,
@@ -461,7 +475,7 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> navigateToLoginView({
-    _i17.Key? key,
+    _i18.Key? key,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -491,9 +505,9 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> navigateToPatienceView({
-    _i17.Key? key,
+    _i18.Key? key,
     int initialTab = 0,
-    _i18.Future<List<_i19.RaisonResult>>? resultsFuture,
+    _i19.Future<List<_i20.RaisonResult>>? resultsFuture,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -580,8 +594,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> navigateToSignatureCanvasView({
-    _i17.Key? key,
-    required void Function(_i20.Image) onImageReady,
+    _i18.Key? key,
+    required void Function(_i21.Image) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -598,8 +612,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> navigateToCameraDrawView({
-    _i17.Key? key,
-    required void Function(_i21.File) onImageReady,
+    _i18.Key? key,
+    required void Function(_i22.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -616,8 +630,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> navigateToGalleryDrawView({
-    _i17.Key? key,
-    required void Function(_i21.File) onImageReady,
+    _i18.Key? key,
+    required void Function(_i22.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -647,9 +661,23 @@ extension NavigatorStateExtension on _i22.NavigationService {
         transition: transition);
   }
 
+  Future<dynamic> navigateToFABTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return navigateTo<dynamic>(Routes.fABTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
   Future<dynamic> navigateToInsightsView({
-    _i17.Key? key,
-    required List<_i19.RaisonResult> results,
+    _i18.Key? key,
+    required List<_i20.RaisonResult> results,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -693,7 +721,7 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> replaceWithLoginView({
-    _i17.Key? key,
+    _i18.Key? key,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -723,9 +751,9 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> replaceWithPatienceView({
-    _i17.Key? key,
+    _i18.Key? key,
     int initialTab = 0,
-    _i18.Future<List<_i19.RaisonResult>>? resultsFuture,
+    _i19.Future<List<_i20.RaisonResult>>? resultsFuture,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -812,8 +840,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> replaceWithSignatureCanvasView({
-    _i17.Key? key,
-    required void Function(_i20.Image) onImageReady,
+    _i18.Key? key,
+    required void Function(_i21.Image) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -830,8 +858,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> replaceWithCameraDrawView({
-    _i17.Key? key,
-    required void Function(_i21.File) onImageReady,
+    _i18.Key? key,
+    required void Function(_i22.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -848,8 +876,8 @@ extension NavigatorStateExtension on _i22.NavigationService {
   }
 
   Future<dynamic> replaceWithGalleryDrawView({
-    _i17.Key? key,
-    required void Function(_i21.File) onImageReady,
+    _i18.Key? key,
+    required void Function(_i22.File) onImageReady,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
@@ -879,9 +907,23 @@ extension NavigatorStateExtension on _i22.NavigationService {
         transition: transition);
   }
 
+  Future<dynamic> replaceWithFABTestView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return replaceWith<dynamic>(Routes.fABTestView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
   Future<dynamic> replaceWithInsightsView({
-    _i17.Key? key,
-    required List<_i19.RaisonResult> results,
+    _i18.Key? key,
+    required List<_i20.RaisonResult> results,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,

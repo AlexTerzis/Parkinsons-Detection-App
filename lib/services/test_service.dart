@@ -132,6 +132,9 @@ class TestService {
       case TestType.neuro:
         // TODO: Handle this case.
         throw UnimplementedError();
+      case TestType.fab:
+        // TODO: Handle this case.
+        throw UnimplementedError();  
     }
 
     await docRef.set(result.toJson());
@@ -181,6 +184,8 @@ class TestService {
         return 'Camera';
       case TestType.neuro:
         return 'neuropsychological'; 
+      case TestType.fab:
+        return 'FAB';   
     }
   }
 
@@ -199,7 +204,9 @@ class TestService {
       case TestType.cameraDetection:
         return 'camera';
       case TestType.neuro:
-        return 'neuropsychological';  
+        return 'neuropsychological'; 
+      case TestType.fab:
+        return 'FAB';    
     }
   }
 }

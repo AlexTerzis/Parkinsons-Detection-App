@@ -306,6 +306,8 @@ class PatienceViewModel extends BaseViewModel {
         return 'Camera Detection';
       case TestType.neuro:
         return 'Neuropsychological';
+      case TestType.fab:
+        return 'FAB';
     }
   }
 
