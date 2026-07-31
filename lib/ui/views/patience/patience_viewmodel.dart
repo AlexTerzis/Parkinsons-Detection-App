@@ -100,6 +100,12 @@ class PatienceViewModel extends BaseViewModel {
           })
       .toList();
 
+  /// Whether this session is an anonymous guest one.
+  ///
+  /// Guests can take every test and see their own results, but nothing that
+  /// implies a persistent identity or a doctor relationship.
+  bool get isGuest => _authService.isGuest;
+
   // Logout and clear preference
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -131,11 +137,15 @@ class PatienceViewModel extends BaseViewModel {
           notifyListeners();
         });
 
-        // Subscribe to reports and keep the subscription
-        _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
-          _reports = data;
-          notifyListeners();
-        });
+        // Guests have no doctor relationship, so skip everything that depends
+        // on one rather than doing the work and hiding the result.
+        if (!isGuest) {
+          _reportsSub =
+              _reportsService.watchReportsForPatient(uid).listen((data) {
+            _reports = data;
+            notifyListeners();
+          });
+        }
 
         // Fetch extra profile data (DOB + medication) from Firestore
         try {
@@ -160,14 +170,16 @@ class PatienceViewModel extends BaseViewModel {
         // which the security rules deny for non-doctor accounts; without this
         // guard the throw skipped setBusy(false) and the home screen hung on
         // its spinner forever, which looked like a failed login.
-        try {
-          _doctors = await _reportsService.fetchAllDoctors();
-          for (var d in _doctors) {
-            _doctorLookup[d.uid] = d;
+        if (!isGuest) {
+          try {
+            _doctors = await _reportsService.fetchAllDoctors();
+            for (var d in _doctors) {
+              _doctorLookup[d.uid] = d;
+            }
+          } catch (e) {
+            debugPrint('Could not preload doctors: $e');
+            _doctors = [];
           }
-        } catch (e) {
-          debugPrint('Could not preload doctors: $e');
-          _doctors = [];
         }
       }
     } catch (e) {
@@ -198,10 +210,16 @@ class PatienceViewModel extends BaseViewModel {
     _medication = medicationController.text.trim();
     notifyListeners();
 
-    await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'dob': _dob,
-      'medication': _medication,
-    });
+    // set(merge) rather than update(): update() throws when the profile
+    // document does not exist yet, which is reachable for any account whose
+    // document was never created.
+    await FirebaseFirestore.instance.collection('users').doc(uid).set(
+      {
+        'dob': _dob,
+        'medication': _medication,
+      },
+      SetOptions(merge: true),
+    );
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/test_result.dart';
 import '../models/test_type.dart';
@@ -11,12 +12,27 @@ import 'storage_service.dart';
 class TestService {
   final FirebaseFirestore _firestore;
   final StorageService _storage;
+  final FirebaseAuth _auth;
 
   TestService({
     FirebaseFirestore? firestore,
     StorageService? storage,
+    FirebaseAuth? auth,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? StorageService();
+        _storage = storage ?? StorageService(),
+        _auth = auth ?? FirebaseAuth.instance;
+
+  /// Serializes a result, tagging it with whether it came from a guest.
+  ///
+  /// Applied here rather than at the ten call sites so no test flow can forget
+  /// it, and stored top-level rather than inside `data`, which each test
+  /// replaces wholesale.
+  Map<String, dynamic> _toJsonWithGuestFlag(TestResult result) {
+    return <String, dynamic>{
+      ...result.toJson(),
+      'isGuest': _auth.currentUser?.isAnonymous ?? false,
+    };
+  }
 
   /// Returns the collection for a specific test type under a user's responses
   /// substructure. The new layout stores each category under
@@ -132,7 +148,7 @@ class TestService {
         break;
     }
 
-    await docRef.set(result.toJson());
+    await docRef.set(_toJsonWithGuestFlag(result));
   }
   /// Creates or updates the questionnaire result for a patient.
   ///
@@ -144,7 +160,7 @@ class TestService {
   Future<void> setQuestionnaireResult(TestResult result) {
     return _categoryCol(result.patientId, result.type)
         .doc('questionnaire')
-        .set(result.toJson());
+        .set(_toJsonWithGuestFlag(result));
   }
   Map<String, double> computeSummary(List<TestResult> results) {
     if (results.isEmpty) return {};

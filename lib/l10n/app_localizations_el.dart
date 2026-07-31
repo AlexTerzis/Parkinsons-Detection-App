@@ -535,4 +535,39 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get resetToDefault => 'Επαναφορά προεπιλογής';
+
+  @override
+  String get continueAsGuest => 'Συνέχεια ως επισκέπτης';
+
+  @override
+  String get guestAccountTitle => 'Χρησιμοποιείτε λογαριασμό επισκέπτη';
+
+  @override
+  String get guestAccountBody =>
+      'Τα τεστ και τα αποτελέσματά σας αποθηκεύονται μόνο σε αυτή τη συσκευή. Δημιουργήστε λογαριασμό για να τα διατηρήσετε και να τα μοιραστείτε με γιατρό.';
+
+  @override
+  String get keepMyResults => 'Δημιουργία λογαριασμού';
+
+  @override
+  String get guestSignOutTitle => 'Αποσύνδεση από τον λογαριασμό επισκέπτη;';
+
+  @override
+  String get guestSignOutBody =>
+      'Αυτός ο λογαριασμός επισκέπτη και όλα τα αποτελέσματά του θα χαθούν οριστικά. Δημιουργήστε πρώτα λογαριασμό αν θέλετε να τα κρατήσετε.';
+
+  @override
+  String get signOutAnyway => 'Αποσύνδεση ούτως ή άλλως';
+
+  @override
+  String get accountCreatedKeptResults =>
+      'Ο λογαριασμός δημιουργήθηκε. Τα αποτελέσματά σας διατηρήθηκαν.';
+
+  @override
+  String get emailAlreadyInUse =>
+      'Αυτό το email ανήκει ήδη σε άλλον λογαριασμό. Συνδεθείτε σε αυτόν, αλλά τα αποτελέσματα του επισκέπτη δεν θα μεταφερθούν.';
+
+  @override
+  String get guestUpgradeFailed =>
+      'Δεν ήταν δυνατή η δημιουργία του λογαριασμού. Δοκιμάστε ξανά.';
 }

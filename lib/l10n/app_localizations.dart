@@ -1063,6 +1063,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to default'**
   String get resetToDefault;
+
+  /// No description provided for @continueAsGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as guest'**
+  String get continueAsGuest;
+
+  /// No description provided for @guestAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You are using a guest account'**
+  String get guestAccountTitle;
+
+  /// No description provided for @guestAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tests and results are saved to this device only. Create an account to keep them and to share results with a doctor.'**
+  String get guestAccountBody;
+
+  /// No description provided for @keepMyResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get keepMyResults;
+
+  /// No description provided for @guestSignOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of guest account?'**
+  String get guestSignOutTitle;
+
+  /// No description provided for @guestSignOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This guest account and every result in it will be permanently lost. Create an account first if you want to keep them.'**
+  String get guestSignOutBody;
+
+  /// No description provided for @signOutAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out anyway'**
+  String get signOutAnyway;
+
+  /// No description provided for @accountCreatedKeptResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. Your results have been kept.'**
+  String get accountCreatedKeptResults;
+
+  /// No description provided for @emailAlreadyInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'That email already belongs to another account. Sign in to it instead, though your guest results will not carry over.'**
+  String get emailAlreadyInUse;
+
+  /// No description provided for @guestUpgradeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create the account. Please try again.'**
+  String get guestUpgradeFailed;
 }
 
 class _AppLocalizationsDelegate

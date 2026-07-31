@@ -112,6 +112,30 @@ class LoginViewModel extends BaseViewModel {
     }
   }
 
+  /// Signs in anonymously so the app can be tried without an account.
+  Future<void> continueAsGuest(AppLocalizations l10n) async {
+    _setError(null);
+    setBusy(true);
+
+    try {
+      await _authService.signInAnonymously();
+
+      // Remembered deliberately, and regardless of the checkbox: a guest who
+      // relaunches would otherwise land back here while still signed in
+      // anonymously, with their results apparently gone.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('keepMeLoggedIn', true);
+
+      await _navigationService.navigateToPatienceView();
+    } on FirebaseAuthException catch (e) {
+      _setError(e.message ?? l10n.authenticationError);
+    } catch (e) {
+      _setError(l10n.unexpectedError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   Future<void> sendPasswordReset(String email, AppLocalizations l10n) async {
     if (email.isEmpty) {
       _setError(l10n.enterEmailFirst);

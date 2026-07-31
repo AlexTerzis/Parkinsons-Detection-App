@@ -532,4 +532,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resetToDefault => 'Reset to default';
+
+  @override
+  String get continueAsGuest => 'Continue as guest';
+
+  @override
+  String get guestAccountTitle => 'You are using a guest account';
+
+  @override
+  String get guestAccountBody =>
+      'Your tests and results are saved to this device only. Create an account to keep them and to share results with a doctor.';
+
+  @override
+  String get keepMyResults => 'Create an account';
+
+  @override
+  String get guestSignOutTitle => 'Sign out of guest account?';
+
+  @override
+  String get guestSignOutBody =>
+      'This guest account and every result in it will be permanently lost. Create an account first if you want to keep them.';
+
+  @override
+  String get signOutAnyway => 'Sign out anyway';
+
+  @override
+  String get accountCreatedKeptResults =>
+      'Account created. Your results have been kept.';
+
+  @override
+  String get emailAlreadyInUse =>
+      'That email already belongs to another account. Sign in to it instead, though your guest results will not carry over.';
+
+  @override
+  String get guestUpgradeFailed =>
+      'Could not create the account. Please try again.';
 }

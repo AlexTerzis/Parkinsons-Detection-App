@@ -160,5 +160,15 @@
   "textSizeLargest": "Largest",
   "textSizePreviewTitle": "Preview",
   "textSizePreviewBody": "Text throughout the app will look like this.",
-  "resetToDefault": "Reset to default"
+  "resetToDefault": "Reset to default",
+  "continueAsGuest": "Continue as guest",
+  "guestAccountTitle": "You are using a guest account",
+  "guestAccountBody": "Your tests and results are saved to this device only. Create an account to keep them and to share results with a doctor.",
+  "keepMyResults": "Create an account",
+  "guestSignOutTitle": "Sign out of guest account?",
+  "guestSignOutBody": "This guest account and every result in it will be permanently lost. Create an account first if you want to keep them.",
+  "signOutAnyway": "Sign out anyway",
+  "accountCreatedKeptResults": "Account created. Your results have been kept.",
+  "emailAlreadyInUse": "That email already belongs to another account. Sign in to it instead, though your guest results will not carry over.",
+  "guestUpgradeFailed": "Could not create the account. Please try again."
 }

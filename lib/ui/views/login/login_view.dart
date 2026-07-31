@@ -203,6 +203,20 @@ class LoginView extends StackedView<LoginViewModel> {
                                     .alreadyHaveAccount),
                           ),
 
+                          if (viewModel.isLoginMode) ...[
+                            const Divider(height: AppSpacing.lg),
+                            OutlinedButton.icon(
+                              onPressed: viewModel.isBusy
+                                  ? null
+                                  : () => viewModel.continueAsGuest(
+                                      AppLocalizations.of(context)!),
+                              icon: const Icon(Icons.person_outline),
+                              label: Text(
+                                AppLocalizations.of(context)!.continueAsGuest,
+                              ),
+                            ),
+                          ],
+
                           if (viewModel.isBusy) ...[
                             const SizedBox(height: 16),
                             const Center(child: CircularProgressIndicator()),

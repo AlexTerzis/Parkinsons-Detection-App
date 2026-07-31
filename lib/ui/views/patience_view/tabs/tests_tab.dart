@@ -131,12 +131,17 @@ class TestsTab extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: () => _onSendResultsPressed(rootContext, viewModel),
-            icon: const Icon(Icons.send),
-            label: Text(l10n.sendResultsToDoctor),
-          ),
+          // Hidden for guests. This is a second, independent entry point into
+          // the same flow as the Doctor tab, so hiding that tab alone would
+          // leave it reachable.
+          if (!viewModel.isGuest) ...[
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => _onSendResultsPressed(rootContext, viewModel),
+              icon: const Icon(Icons.send),
+              label: Text(l10n.sendResultsToDoctor),
+            ),
+          ],
         ],
       ),
     );
