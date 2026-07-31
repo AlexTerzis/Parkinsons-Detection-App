@@ -120,17 +120,25 @@ class NeuroTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
 
-    final result = TestResult(
-      id: '',
-      patientId: uid,
-      type: TestType.neuro,
-      performedAt: DateTime.now(),
-      score: (totalMocaScore / 30.0).clamp(0.0, 1.0),
-      data: {'mocaScore': totalMocaScore},
-    );
-    await _tests.addResult(result: result);
+    if (uid != null) {
+      try {
+        final result = TestResult(
+          id: '',
+          patientId: uid,
+          type: TestType.neuro,
+          performedAt: DateTime.now(),
+          score: (totalMocaScore / 30.0).clamp(0.0, 1.0),
+          data: {'mocaScore': totalMocaScore},
+        );
+        await _tests.addResult(result: result);
+      } catch (e) {
+        // Getting the user out of the finished test matters more than the
+        // write succeeding, so a failure here must not block the navigation.
+        debugPrint('Could not save neuro result: $e');
+      }
+    }
+
     locator<NavigationService>().back();
   }
 }

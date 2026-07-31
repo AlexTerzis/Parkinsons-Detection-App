@@ -65,17 +65,27 @@ class FABTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
 
-    final result = TestResult(
-      id: '',
-      patientId: uid,
-      type: TestType.fab,
-      performedAt: DateTime.now(),
-      score: (totalFABScore / 15.0).clamp(0.0, 1.0),
-      data: {'fabScore': totalFABScore},
-    );
-    await _tests.addResult(result: result);
+    if (uid != null) {
+      try {
+        final result = TestResult(
+          id: '',
+          patientId: uid,
+          type: TestType.fab,
+          performedAt: DateTime.now(),
+          score: (totalFABScore / 15.0).clamp(0.0, 1.0),
+          data: {'fabScore': totalFABScore},
+        );
+        await _tests.addResult(result: result);
+      } catch (e) {
+        // Known limitation: the 'FAB' subcollection is missing from the
+        // Firestore rules allow-list, so this write is denied today. Getting
+        // the user out of the finished test matters more than the write, so
+        // never let a failure here block the navigation below.
+        debugPrint('Could not save FAB result: $e');
+      }
+    }
+
     locator<NavigationService>().back();
   }
 }

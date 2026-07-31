@@ -116,44 +116,65 @@ class PatienceViewModel extends BaseViewModel {
   Future<void> init() async {
     setBusy(true);
 
-    _name = await _authService.fetchDisplayName() ?? '--';
-    nameController.text = _name == '--' ? '' : _name;
+    // Every step below is best-effort: a failure in any one of them must not
+    // leave the view stuck on its loading spinner, so setBusy(false) runs in
+    // a finally and the optional lookups swallow their own errors.
+    try {
+      _name = await _authService.fetchDisplayName() ?? '--';
+      nameController.text = _name == '--' ? '' : _name;
 
-    final String? uid = _authService.currentUser?.uid;
-    if (uid != null) {
-      // Subscribe to test results and keep the subscription
-      _resultsSub = _testService.watchResultsForPatient(uid).listen((list) {
-        _results = list;
-        notifyListeners();
-      });
+      final String? uid = _authService.currentUser?.uid;
+      if (uid != null) {
+        // Subscribe to test results and keep the subscription
+        _resultsSub = _testService.watchResultsForPatient(uid).listen((list) {
+          _results = list;
+          notifyListeners();
+        });
 
-      // Subscribe to reports and keep the subscription
-      _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
-        _reports = data;
-        notifyListeners();
-      });
+        // Subscribe to reports and keep the subscription
+        _reportsSub = _reportsService.watchReportsForPatient(uid).listen((data) {
+          _reports = data;
+          notifyListeners();
+        });
 
-      // Fetch extra profile data (DOB + medication) from Firestore
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        // Fetch extra profile data (DOB + medication) from Firestore
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
 
-      final data = doc.data();
-      if (data != null) {
-        _dob = data['dob'] ?? '';
-        _medication = data['medication'] ?? '';
-        _primaryDoctorId = data['primaryDoctorId'] as String?;
-        dobController.text = _dob;
-        medicationController.text = _medication;
+          final data = doc.data();
+          if (data != null) {
+            _dob = data['dob'] ?? '';
+            _medication = data['medication'] ?? '';
+            _primaryDoctorId = data['primaryDoctorId'] as String?;
+            dobController.text = _dob;
+            medicationController.text = _medication;
+          }
+        } catch (e) {
+          debugPrint('Could not load profile fields: $e');
+        }
+
+        // Preload doctor lookup map. This is a collection query over `users`,
+        // which the security rules deny for non-doctor accounts; without this
+        // guard the throw skipped setBusy(false) and the home screen hung on
+        // its spinner forever, which looked like a failed login.
+        try {
+          _doctors = await _reportsService.fetchAllDoctors();
+          for (var d in _doctors) {
+            _doctorLookup[d.uid] = d;
+          }
+        } catch (e) {
+          debugPrint('Could not preload doctors: $e');
+          _doctors = [];
+        }
       }
-
-      // Preload doctor lookup map
-      _doctors = await _reportsService.fetchAllDoctors();
-      for (var d in _doctors) {
-        _doctorLookup[d.uid] = d;
-      }
+    } catch (e) {
+      debugPrint('PatienceViewModel.init failed: $e');
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   // Save name to Firebase
