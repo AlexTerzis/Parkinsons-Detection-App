@@ -155,6 +155,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get testCompleted => 'Test completed';
 
   @override
+  String get testStopped => 'Test stopped';
+
+  @override
+  String get tabProfile => 'Profile';
+
+  @override
+  String get tabTests => 'Tests';
+
+  @override
+  String get tabResults => 'Results';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get finishAction => 'Finish';
+
+  @override
   String get voiceTest => 'Voice Test';
 
   @override
@@ -279,4 +297,207 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uploadPicture => 'Upload picture';
+
+  @override
+  String get tabMyPatients => 'MyPatients';
+
+  @override
+  String get tabCommunity => 'Community';
+
+  @override
+  String get specialtyLabel => 'Specialty';
+
+  @override
+  String get locationLabel => 'Location';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get noPatientReportsYet => 'No patient reports yet.';
+
+  @override
+  String reportsCountLabel(Object count) {
+    return 'Reports: $count';
+  }
+
+  @override
+  String sentAtLabel(Object date) {
+    return 'Sent: $date';
+  }
+
+  @override
+  String testsCountLabel(Object count) {
+    return 'Tests: $count';
+  }
+
+  @override
+  String get writeNotesHint => 'Write notes for patient...';
+
+  @override
+  String get addNote => 'Add Note';
+
+  @override
+  String get noPostsYet => 'No posts yet.';
+
+  @override
+  String reportTitle(Object date) {
+    return 'Report $date';
+  }
+
+  @override
+  String scorePercent(Object percent) {
+    return 'Score: $percent%';
+  }
+
+  @override
+  String get noAdditionalData => 'No additional data';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match.';
+
+  @override
+  String get authenticationError => 'Authentication error';
+
+  @override
+  String get unexpectedError => 'An unexpected error occurred.';
+
+  @override
+  String get enterEmailFirst => 'Please enter your email first.';
+
+  @override
+  String get failedToSendResetEmail => 'Failed to send reset email.';
+
+  @override
+  String get emailRequired => 'Email is required';
+
+  @override
+  String get invalidEmailAddress => 'Please enter a valid email address';
+
+  @override
+  String get passwordRequired => 'Password is required';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 6 characters';
+
+  @override
+  String get confirmPasswordRequired => 'Please confirm your password';
+
+  @override
+  String get nameRequired => 'Name is required';
+
+  @override
+  String get testingHand1 => 'Testing Hand 1...';
+
+  @override
+  String get testingHand2 => 'Testing Hand 2...';
+
+  @override
+  String get handOneLabel => 'Hand 1';
+
+  @override
+  String get handTwoLabel => 'Hand 2';
+
+  @override
+  String fftResultsTemplate(Object label, Object x, Object y, Object z) {
+    return '$label Results (Accelerometer):\nX Peak Frequency: $x Hz\nY Peak Frequency: $y Hz\nZ Peak Frequency: $z Hz';
+  }
+
+  @override
+  String get handOneFftSpectrum => 'Hand 1 FFT Spectrum';
+
+  @override
+  String get handTwoFftSpectrum => 'Hand 2 FFT Spectrum';
+
+  @override
+  String get insufficientSensorData =>
+      'Insufficient sensor data to render spectrum.';
+
+  @override
+  String get xAxisLabel => 'X-axis';
+
+  @override
+  String get yAxisLabel => 'Y-axis';
+
+  @override
+  String get zAxisLabel => 'Z-axis';
+
+  @override
+  String accelerometerReadout(Object x, Object y, Object z) {
+    return 'Accelerometer: X=$x Y=$y Z=$z';
+  }
+
+  @override
+  String gyroscopeReadout(Object x, Object y, Object z) {
+    return 'Live Gyroscope meter: X=$x  Y=$y  Z=$z';
+  }
+
+  @override
+  String get rightHandLabel => 'Right hand';
+
+  @override
+  String get leftHandLabel => 'Left hand';
+
+  @override
+  String get predictionNotAvailable => 'Prediction not available';
+
+  @override
+  String get predictionFailed => 'Prediction failed';
+
+  @override
+  String tapParkinsonPattern(Object label, Object percent) {
+    return '$label: ⚠️ Parkinson-like pattern ($percent%)';
+  }
+
+  @override
+  String tapNormalPattern(Object label, Object percent) {
+    return '$label: ✅ Normal tapping ($percent%)';
+  }
+
+  @override
+  String get drawTitle => 'Draw';
+
+  @override
+  String get clearAction => 'Clear';
+
+  @override
+  String get aiSummaryTitle => 'Overall AI Summary';
+
+  @override
+  String get aiSummarySubtitle =>
+      'Low risk – more advanced analytics will appear here.';
+
+  @override
+  String get testBreakdownTitle => 'Test-by-Test Breakdown';
+
+  @override
+  String get testBreakdownSubtitle =>
+      'Charts of tapping, tremor and other tests will be added.';
+
+  @override
+  String get riskAlertsTitle => 'Risk Alerts or Anomalies';
+
+  @override
+  String get noAlertsSubtitle => 'No alerts detected recently.';
+
+  @override
+  String get argumentation => 'Argumentation';
+
+  @override
+  String get loadingReasoning => 'Loading reasoning...';
+
+  @override
+  String get takeQuestionnairePrompt =>
+      'Take the questionnaire to see the results';
+
+  @override
+  String get noArgumentationYet =>
+      'Cannot give clear argumentation yet from the questionnaire results. If you have any questions, please contact your doctor.';
+
+  @override
+  String get aiSuggestionsTitle => 'AI Test Suggestions';
+
+  @override
+  String get retakeTremorSuggestion =>
+      'Please retake the Tremor Test – last result was inconclusive.';
 }

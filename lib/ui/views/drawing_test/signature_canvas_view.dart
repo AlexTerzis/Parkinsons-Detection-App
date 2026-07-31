@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:signature/signature.dart';
 import 'package:stacked_services/stacked_services.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../app/app.locator.dart';
 
@@ -48,8 +49,9 @@ class _SignatureCanvasViewState extends State<SignatureCanvasView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Draw')),
+      appBar: AppBar(title: Text(l10n.drawTitle)),
       body: Column(
         children: [
           Expanded(
@@ -71,14 +73,14 @@ class _SignatureCanvasViewState extends State<SignatureCanvasView> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _controller.clear,
-                    child: const Text('Clear'),
+                    child: Text(l10n.clearAction),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _submit,
-                    child: const Text('Submit'),
+                    child: Text(l10n.submit),
                   ),
                 ),
               ],

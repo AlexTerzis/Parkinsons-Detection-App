@@ -10,7 +10,7 @@ import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
 
-enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed }
+enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed, stopped }
 
 class TapTestViewModel extends BaseViewModel {
   // Services used to persist results and fetch the current user
@@ -53,6 +53,8 @@ class TapTestViewModel extends BaseViewModel {
         return l10n.tapLeftHand;
       case TapTestStatus.completed:
         return l10n.testCompleted;
+      case TapTestStatus.stopped:
+        return l10n.testStopped;
     }
   }
 
@@ -82,12 +84,12 @@ class TapTestViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> startTest() async {
+  Future<void> startTest(AppLocalizations l10n) async {
     if (!_modelLoaded) {
       await initModel();
     }
     _reset();
-    _startHand1();
+    _startHand1(l10n);
   }
 
   void _reset() {
@@ -103,7 +105,7 @@ class TapTestViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  void _startHand1() {
+  void _startHand1(AppLocalizations l10n) {
     _phase = 0;
     status = TapTestStatus.rightHand;
     secondsLeft = testDuration;
@@ -112,26 +114,27 @@ class TapTestViewModel extends BaseViewModel {
 
     _startTimer(() async {
       resultHand1 = await _predictFromTaps(
-        "Right hand",
+        l10n.rightHandLabel,
         List.of(_tapPairs),
+        l10n,
         storeInHand1: true,
       );
       _historyHand1.addAll(List.of(_tapPairs));
-      _startPause();
+      _startPause(l10n);
     });
   }
 
-  void _startPause() {
+  void _startPause(AppLocalizations l10n) {
     _phase = 1;
     status = TapTestStatus.switchHands;
     secondsLeft = pauseDuration;
     _tapTimes.clear();
     _tapPairs.clear();
 
-    _startTimer(_startHand2);
+    _startTimer(() => _startHand2(l10n));
   }
 
-  void _startHand2() {
+  void _startHand2(AppLocalizations l10n) {
     _phase = 2;
     status = TapTestStatus.leftHand;
     secondsLeft = testDuration;
@@ -140,8 +143,9 @@ class TapTestViewModel extends BaseViewModel {
 
     _startTimer(() async {
       resultHand2 = await _predictFromTaps(
-        "Left hand",
+        l10n.leftHandLabel,
         List.of(_tapPairs),
+        l10n,
         storeInHand1: false,
       );
       _historyHand2.addAll(List.of(_tapPairs));
@@ -171,10 +175,11 @@ class TapTestViewModel extends BaseViewModel {
   // human readable string for display.
   Future<String> _predictFromTaps(
     String label,
-    List<Map<String, DateTime>> tapPairs, {
+    List<Map<String, DateTime>> tapPairs,
+    AppLocalizations l10n, {
     required bool storeInHand1,
   }) async {
-    if (!_modelLoaded || tapPairs.length < 2) return 'Prediction not available';
+    if (!_modelLoaded || tapPairs.length < 2) return l10n.predictionNotAvailable;
 
     final intervals = <double>[];
     final holdTimes = <double>[];
@@ -224,7 +229,7 @@ class TapTestViewModel extends BaseViewModel {
       _interpreter.run(input, output);
     } catch (e) {
       print('❌ Interpreter run failed: $e');
-      return 'Prediction failed';
+      return l10n.predictionFailed;
     }
 
     final prediction = output[0][0];
@@ -236,8 +241,8 @@ class TapTestViewModel extends BaseViewModel {
     final percent = (prediction * 100).toStringAsFixed(1);
 
     return prediction >= 0.5
-        ? '$label: ⚠️ Parkinson-like pattern ($percent%)'
-        : '$label: ✅ Normal tapping ($percent%)';
+        ? l10n.tapParkinsonPattern(label, percent)
+        : l10n.tapNormalPattern(label, percent);
   }
 
   // Persists the normalized score to Firestore
@@ -273,7 +278,7 @@ class TapTestViewModel extends BaseViewModel {
   void stopTest() {
     _timer?.cancel();
     isTesting = false;
-    status = 'Test stopped' as TapTestStatus;
+    status = TapTestStatus.stopped;
     notifyListeners();
   }
   @override

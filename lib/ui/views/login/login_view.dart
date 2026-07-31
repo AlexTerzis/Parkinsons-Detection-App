@@ -61,7 +61,8 @@ class LoginView extends StackedView<LoginViewModel> {
                           if (!viewModel.isLoginMode) ...[
                             TextFormField(
                               controller: viewModel.nameController,
-                              validator: viewModel.validateName,
+                              validator: (v) => viewModel.validateName(
+                                  v, AppLocalizations.of(context)!),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.person_outline),
                                 // Localized label for user's name.
@@ -76,7 +77,8 @@ class LoginView extends StackedView<LoginViewModel> {
                           TextFormField(
                             controller: viewModel.emailController,
                             keyboardType: TextInputType.emailAddress,
-                            validator: viewModel.validateEmail,
+                            validator: (v) => viewModel.validateEmail(
+                                v, AppLocalizations.of(context)!),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.email_outlined),
                               labelText:
@@ -89,7 +91,8 @@ class LoginView extends StackedView<LoginViewModel> {
                           TextFormField(
                             controller: viewModel.passwordController,
                             obscureText: !viewModel.passwordVisible,
-                            validator: viewModel.validatePassword,
+                            validator: (v) => viewModel.validatePassword(
+                                v, AppLocalizations.of(context)!),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.lock_outline),
                               labelText:
@@ -109,7 +112,8 @@ class LoginView extends StackedView<LoginViewModel> {
                             TextFormField(
                               controller: viewModel.confirmPasswordController,
                               obscureText: !viewModel.confirmPasswordVisible,
-                              validator: viewModel.validateConfirmPassword,
+                              validator: (v) => viewModel.validateConfirmPassword(
+                                  v, AppLocalizations.of(context)!),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 labelText: AppLocalizations.of(context)!
@@ -172,7 +176,8 @@ class LoginView extends StackedView<LoginViewModel> {
                               ),
                               onPressed: viewModel.isBusy
                                   ? null
-                                  : () => _onAuthenticatePressed(viewModel),
+                                  : () =>
+                                      _onAuthenticatePressed(context, viewModel),
                               child: Text(viewModel.isLoginMode
                                   ? AppLocalizations.of(context)!.login
                                   : AppLocalizations.of(context)!.signUp),
@@ -252,7 +257,8 @@ class LoginView extends StackedView<LoginViewModel> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await viewModel.sendPasswordReset(emailCtrl.text);
+                await viewModel.sendPasswordReset(
+                    emailCtrl.text, AppLocalizations.of(context)!);
                 if (context.mounted) {
                   Navigator.of(dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -271,12 +277,13 @@ class LoginView extends StackedView<LoginViewModel> {
     );
   }
 
-  void _onAuthenticatePressed(LoginViewModel viewModel) {
+  void _onAuthenticatePressed(BuildContext context, LoginViewModel viewModel) {
     if (_formKey.currentState?.validate() ?? false) {
       viewModel.authenticate(
         email: viewModel.emailController.text,
         password: viewModel.passwordController.text,
         confirmPassword: viewModel.confirmPasswordController.text,
+        l10n: AppLocalizations.of(context)!,
       );
     }
   }

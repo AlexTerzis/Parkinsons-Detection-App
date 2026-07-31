@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import 'doctor_viewmodel.dart';
 import '../../../models/patient_report.dart';
@@ -16,6 +17,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
     Widget? child,
   ) {
     final ThemeData theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (vm.isBusy) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -27,19 +29,19 @@ class DoctorView extends StackedView<DoctorViewModel> {
         appBar: AppBar(
           toolbarHeight: 0,
           bottom: TabBar(
-            tabs: const [
-              Tab(text: 'Profile', icon: Icon(Icons.person)),
-              Tab(text: 'MyPatients', icon: Icon(Icons.people)),
-              Tab(text: 'Community', icon: Icon(Icons.diversity_1)),
+            tabs: [
+              Tab(text: l10n.tabProfile, icon: const Icon(Icons.person)),
+              Tab(text: l10n.tabMyPatients, icon: const Icon(Icons.people)),
+              Tab(text: l10n.tabCommunity, icon: const Icon(Icons.diversity_1)),
             ],
             indicatorColor: theme.colorScheme.primary,
           ),
         ),
         body: TabBarView(
           children: [
-            _buildProfileTab(context, vm, theme),
-            _buildPatientsTab(vm, theme),
-            _buildCommunityTab(vm, theme),
+            _buildProfileTab(context, vm, theme, l10n),
+            _buildPatientsTab(vm, theme, l10n),
+            _buildCommunityTab(vm, theme, l10n),
           ],
         ),
       ),
@@ -47,8 +49,8 @@ class DoctorView extends StackedView<DoctorViewModel> {
   }
 
   /// Profile information form allowing the doctor to update basic details.
-  Widget _buildProfileTab(
-      BuildContext context, DoctorViewModel vm, ThemeData theme) {
+  Widget _buildProfileTab(BuildContext context, DoctorViewModel vm,
+      ThemeData theme, AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -66,25 +68,25 @@ class DoctorView extends StackedView<DoctorViewModel> {
           const SizedBox(height: 24),
           TextField(
             controller: vm.nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.nameLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: vm.specialtyController,
-            decoration: const InputDecoration(
-              labelText: 'Specialty',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.specialtyLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: vm.locationController,
-            decoration: const InputDecoration(
-              labelText: 'Location',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.locationLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -95,12 +97,12 @@ class DoctorView extends StackedView<DoctorViewModel> {
                     await vm.saveProfile();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile saved')),
+                        SnackBar(content: Text(l10n.profileSaved)),
                       );
                     }
                   },
             icon: const Icon(Icons.save),
-            label: const Text('Save'),
+            label: Text(l10n.save),
           ),
          const SizedBox(height: 24),
           ElevatedButton(
@@ -110,9 +112,9 @@ class DoctorView extends StackedView<DoctorViewModel> {
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             onPressed: () => vm.logout(context),
-            child: const Text(
-              'LOG OUT',
-              style: TextStyle(
+            child: Text(
+              l10n.logOut,
+              style: const TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
                 fontStyle: FontStyle.italic,
@@ -125,11 +127,12 @@ class DoctorView extends StackedView<DoctorViewModel> {
   }
 
   /// Displays patients that have sent reports to this doctor.
-  Widget _buildPatientsTab(DoctorViewModel vm, ThemeData theme) {
+  Widget _buildPatientsTab(
+      DoctorViewModel vm, ThemeData theme, AppLocalizations l10n) {
     final patients = vm.reports.map((r) => r.patientId).toSet().toList();
 
     if (patients.isEmpty) {
-      return const Center(child: Text('No patient reports yet.'));
+      return Center(child: Text(l10n.noPatientReportsYet));
     }
 
     return ListView.separated(
@@ -145,7 +148,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ExpansionTile(
             title: Text(vm.patientName(pid)),
-            subtitle: Text('Reports: ${reports.length}'),
+            subtitle: Text(l10n.reportsCountLabel(reports.length)),
             childrenPadding: const EdgeInsets.all(16),
             children: [
               ListView.builder(
@@ -155,9 +158,9 @@ class DoctorView extends StackedView<DoctorViewModel> {
                 itemBuilder: (context, rIndex) {
                   final rep = reports[rIndex];
                   return ListTile(
-                    title: Text('Sent: ${rep.sentAt.toLocal()}'),
-                    subtitle: Text('Tests: ${rep.results.length}'),
-                    onTap: () => _showReportDialog(context, rep),
+                    title: Text(l10n.sentAtLabel(rep.sentAt.toLocal().toString())),
+                    subtitle: Text(l10n.testsCountLabel(rep.results.length)),
+                    onTap: () => _showReportDialog(context, rep, l10n),
                   );
                 },
               ),
@@ -166,9 +169,9 @@ class DoctorView extends StackedView<DoctorViewModel> {
                 controller: vm.noteController,
                 minLines: 3,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  hintText: 'Write notes for patient...',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l10n.writeNotesHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),
@@ -178,7 +181,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
                   onPressed: () async {
                     await vm.addNoteToReportForPatient(pid);
                   },
-                  child: const Text('Add Note'),
+                  child: Text(l10n.addNote),
                 ),
               ),
             ],
@@ -189,9 +192,10 @@ class DoctorView extends StackedView<DoctorViewModel> {
   }
 
   /// Simple list of community posts. Currently uses sample data.
-  Widget _buildCommunityTab(DoctorViewModel vm, ThemeData theme) {
+  Widget _buildCommunityTab(
+      DoctorViewModel vm, ThemeData theme, AppLocalizations l10n) {
     if (vm.posts.isEmpty) {
-      return const Center(child: Text('No posts yet.'));
+      return Center(child: Text(l10n.noPostsYet));
     }
 
     return ListView.separated(
@@ -217,12 +221,13 @@ class DoctorView extends StackedView<DoctorViewModel> {
     );
   }
 
-  void _showReportDialog(BuildContext context, PatientReport report) {
+  void _showReportDialog(
+      BuildContext context, PatientReport report, AppLocalizations l10n) {
     showDialog<void>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text('Report ${report.sentAt.toLocal()}'),
+          title: Text(l10n.reportTitle(report.sentAt.toLocal().toString())),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView(
@@ -230,12 +235,12 @@ class DoctorView extends StackedView<DoctorViewModel> {
               children: report.results.map((r) {
                 return ExpansionTile(
                   title: Text(r.type.name),
-                  subtitle: Text('Score: ${(r.score * 100).round()}%'),
+                  subtitle: Text(l10n.scorePercent((r.score * 100).round())),
                   children: [
                     if (r.data.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text('No additional data'),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(l10n.noAdditionalData),
                       )
                     else
                       Padding(
@@ -255,7 +260,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
+              child: Text(l10n.close),
             )
           ],
         );

@@ -65,13 +65,15 @@ class TapTestView extends StackedView<TapTestViewModel> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: viewModel.isTesting ? null : viewModel.startTest,
+              onPressed: viewModel.isTesting
+                  ? null
+                  : () => viewModel.startTest(AppLocalizations.of(context)!),
               icon: const Icon(Icons.play_arrow),
               label: Text(AppLocalizations.of(context)!.startTest),
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
-              onPressed: viewModel.stopTest,
+              onPressed: viewModel.isTesting ? viewModel.stopTest : null,
               icon: const Icon(Icons.stop),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               label: Text(AppLocalizations.of(context)!.stop),

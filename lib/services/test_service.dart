@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -128,13 +127,9 @@ class TestService {
         }
         break;
       case TestType.questionnaire:
-        break;
       case TestType.neuro:
-        // TODO: Handle this case.
-        throw UnimplementedError();
       case TestType.fab:
-        // TODO: Handle this case.
-        throw UnimplementedError();  
+        break;
     }
 
     await docRef.set(result.toJson());

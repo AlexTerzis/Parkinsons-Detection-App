@@ -386,6 +386,42 @@ abstract class AppLocalizations {
   /// **'Test completed'**
   String get testCompleted;
 
+  /// No description provided for @testStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Test stopped'**
+  String get testStopped;
+
+  /// No description provided for @tabProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get tabProfile;
+
+  /// No description provided for @tabTests.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests'**
+  String get tabTests;
+
+  /// No description provided for @tabResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get tabResults;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @finishAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get finishAction;
+
   /// No description provided for @voiceTest.
   ///
   /// In en, this message translates to:
@@ -613,6 +649,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upload picture'**
   String get uploadPicture;
+
+  /// No description provided for @tabMyPatients.
+  ///
+  /// In en, this message translates to:
+  /// **'MyPatients'**
+  String get tabMyPatients;
+
+  /// No description provided for @tabCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get tabCommunity;
+
+  /// No description provided for @specialtyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialty'**
+  String get specialtyLabel;
+
+  /// No description provided for @locationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get locationLabel;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @noPatientReportsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No patient reports yet.'**
+  String get noPatientReportsYet;
+
+  /// No description provided for @reportsCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports: {count}'**
+  String reportsCountLabel(Object count);
+
+  /// No description provided for @sentAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent: {date}'**
+  String sentAtLabel(Object date);
+
+  /// No description provided for @testsCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests: {count}'**
+  String testsCountLabel(Object count);
+
+  /// No description provided for @writeNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write notes for patient...'**
+  String get writeNotesHint;
+
+  /// No description provided for @addNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Note'**
+  String get addNote;
+
+  /// No description provided for @noPostsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts yet.'**
+  String get noPostsYet;
+
+  /// No description provided for @reportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report {date}'**
+  String reportTitle(Object date);
+
+  /// No description provided for @scorePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Score: {percent}%'**
+  String scorePercent(Object percent);
+
+  /// No description provided for @noAdditionalData.
+  ///
+  /// In en, this message translates to:
+  /// **'No additional data'**
+  String get noAdditionalData;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @authenticationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication error'**
+  String get authenticationError;
+
+  /// No description provided for @unexpectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred.'**
+  String get unexpectedError;
+
+  /// No description provided for @enterEmailFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email first.'**
+  String get enterEmailFirst;
+
+  /// No description provided for @failedToSendResetEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send reset email.'**
+  String get failedToSendResetEmail;
+
+  /// No description provided for @emailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get emailRequired;
+
+  /// No description provided for @invalidEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get invalidEmailAddress;
+
+  /// No description provided for @passwordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is required'**
+  String get passwordRequired;
+
+  /// No description provided for @passwordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get passwordTooShort;
+
+  /// No description provided for @confirmPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your password'**
+  String get confirmPasswordRequired;
+
+  /// No description provided for @nameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get nameRequired;
+
+  /// No description provided for @testingHand1.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing Hand 1...'**
+  String get testingHand1;
+
+  /// No description provided for @testingHand2.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing Hand 2...'**
+  String get testingHand2;
+
+  /// No description provided for @handOneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand 1'**
+  String get handOneLabel;
+
+  /// No description provided for @handTwoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand 2'**
+  String get handTwoLabel;
+
+  /// No description provided for @fftResultsTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} Results (Accelerometer):\nX Peak Frequency: {x} Hz\nY Peak Frequency: {y} Hz\nZ Peak Frequency: {z} Hz'**
+  String fftResultsTemplate(Object label, Object x, Object y, Object z);
+
+  /// No description provided for @handOneFftSpectrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand 1 FFT Spectrum'**
+  String get handOneFftSpectrum;
+
+  /// No description provided for @handTwoFftSpectrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand 2 FFT Spectrum'**
+  String get handTwoFftSpectrum;
+
+  /// No description provided for @insufficientSensorData.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient sensor data to render spectrum.'**
+  String get insufficientSensorData;
+
+  /// No description provided for @xAxisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'X-axis'**
+  String get xAxisLabel;
+
+  /// No description provided for @yAxisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Y-axis'**
+  String get yAxisLabel;
+
+  /// No description provided for @zAxisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Z-axis'**
+  String get zAxisLabel;
+
+  /// No description provided for @accelerometerReadout.
+  ///
+  /// In en, this message translates to:
+  /// **'Accelerometer: X={x} Y={y} Z={z}'**
+  String accelerometerReadout(Object x, Object y, Object z);
+
+  /// No description provided for @gyroscopeReadout.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Gyroscope meter: X={x}  Y={y}  Z={z}'**
+  String gyroscopeReadout(Object x, Object y, Object z);
+
+  /// No description provided for @rightHandLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Right hand'**
+  String get rightHandLabel;
+
+  /// No description provided for @leftHandLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Left hand'**
+  String get leftHandLabel;
+
+  /// No description provided for @predictionNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Prediction not available'**
+  String get predictionNotAvailable;
+
+  /// No description provided for @predictionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Prediction failed'**
+  String get predictionFailed;
+
+  /// No description provided for @tapParkinsonPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: ⚠️ Parkinson-like pattern ({percent}%)'**
+  String tapParkinsonPattern(Object label, Object percent);
+
+  /// No description provided for @tapNormalPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: ✅ Normal tapping ({percent}%)'**
+  String tapNormalPattern(Object label, Object percent);
+
+  /// No description provided for @drawTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get drawTitle;
+
+  /// No description provided for @clearAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearAction;
+
+  /// No description provided for @aiSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall AI Summary'**
+  String get aiSummaryTitle;
+
+  /// No description provided for @aiSummarySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low risk – more advanced analytics will appear here.'**
+  String get aiSummarySubtitle;
+
+  /// No description provided for @testBreakdownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test-by-Test Breakdown'**
+  String get testBreakdownTitle;
+
+  /// No description provided for @testBreakdownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Charts of tapping, tremor and other tests will be added.'**
+  String get testBreakdownSubtitle;
+
+  /// No description provided for @riskAlertsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk Alerts or Anomalies'**
+  String get riskAlertsTitle;
+
+  /// No description provided for @noAlertsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No alerts detected recently.'**
+  String get noAlertsSubtitle;
+
+  /// No description provided for @argumentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Argumentation'**
+  String get argumentation;
+
+  /// No description provided for @loadingReasoning.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading reasoning...'**
+  String get loadingReasoning;
+
+  /// No description provided for @takeQuestionnairePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Take the questionnaire to see the results'**
+  String get takeQuestionnairePrompt;
+
+  /// No description provided for @noArgumentationYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot give clear argumentation yet from the questionnaire results. If you have any questions, please contact your doctor.'**
+  String get noArgumentationYet;
+
+  /// No description provided for @aiSuggestionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Test Suggestions'**
+  String get aiSuggestionsTitle;
+
+  /// No description provided for @retakeTremorSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Please retake the Tremor Test – last result was inconclusive.'**
+  String get retakeTremorSuggestion;
 }
 
 class _AppLocalizationsDelegate

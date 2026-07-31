@@ -6,6 +6,8 @@ import 'package:stacked_services/stacked_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
+
 import '../../../app/app.locator.dart';
 import '../../../app/app.router.dart';
 import '../../../services/authentication_service.dart';
@@ -71,9 +73,10 @@ class LoginViewModel extends BaseViewModel {
     required String email,
     required String password,
     String? confirmPassword,
+    required AppLocalizations l10n,
   }) async {
     if (!_isLoginMode && password != confirmPassword) {
-      _setError('Passwords do not match.');
+      _setError(l10n.passwordsDoNotMatch);
       return;
     }
 
@@ -101,17 +104,17 @@ class LoginViewModel extends BaseViewModel {
 
       await _navigateBasedOnRole();
     } on FirebaseAuthException catch (e) {
-      _setError(e.message ?? 'Authentication error');
+      _setError(e.message ?? l10n.authenticationError);
     } catch (e) {
-      _setError('An unexpected error occurred.');
+      _setError(l10n.unexpectedError);
     } finally {
       setBusy(false);
     }
   }
 
-  Future<void> sendPasswordReset(String email) async {
+  Future<void> sendPasswordReset(String email, AppLocalizations l10n) async {
     if (email.isEmpty) {
-      _setError('Please enter your email first.');
+      _setError(l10n.enterEmailFirst);
       return;
     }
 
@@ -122,9 +125,9 @@ class LoginViewModel extends BaseViewModel {
       await _authService.sendPasswordReset(email: email);
       if (kDebugMode) print('Password reset email sent.');
     } on FirebaseAuthException catch (e) {
-      _setError(e.message ?? 'Failed to send reset email.');
+      _setError(e.message ?? l10n.failedToSendResetEmail);
     } catch (_) {
-      _setError('An unexpected error occurred.');
+      _setError(l10n.unexpectedError);
     } finally {
       setBusy(false);
     }
@@ -136,29 +139,29 @@ class LoginViewModel extends BaseViewModel {
   }
 
   // --- Validators ---
-  String? validateEmail(String? email) {
-    if (email == null || email.isEmpty) return 'Email is required';
+  String? validateEmail(String? email, AppLocalizations l10n) {
+    if (email == null || email.isEmpty) return l10n.emailRequired;
     final RegExp emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) return 'Please enter a valid email address';
+    if (!emailRegex.hasMatch(email)) return l10n.invalidEmailAddress;
     return null;
   }
 
-  String? validatePassword(String? password) {
-    if (password == null || password.isEmpty) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
+  String? validatePassword(String? password, AppLocalizations l10n) {
+    if (password == null || password.isEmpty) return l10n.passwordRequired;
+    if (password.length < 6) return l10n.passwordTooShort;
     return null;
   }
 
-  String? validateConfirmPassword(String? confirmPassword) {
+  String? validateConfirmPassword(String? confirmPassword, AppLocalizations l10n) {
     if (!_isLoginMode) {
-      if (confirmPassword == null || confirmPassword.isEmpty) return 'Please confirm your password';
-      if (confirmPassword != passwordController.text) return 'Passwords do not match';
+      if (confirmPassword == null || confirmPassword.isEmpty) return l10n.confirmPasswordRequired;
+      if (confirmPassword != passwordController.text) return l10n.passwordsDoNotMatch;
     }
     return null;
   }
 
-  String? validateName(String? name) {
-    if (name == null || name.trim().isEmpty) return 'Name is required';
+  String? validateName(String? name, AppLocalizations l10n) {
+    if (name == null || name.trim().isEmpty) return l10n.nameRequired;
     return null;
   }
 

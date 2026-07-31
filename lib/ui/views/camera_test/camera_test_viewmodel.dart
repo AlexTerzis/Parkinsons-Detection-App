@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import '../../../services/hand_metrics.dart';
 import '../../../models/landmark_point.dart';
@@ -21,9 +20,10 @@ class CameraTestViewModel extends BaseViewModel {
   final HandMetrics _metrics = locator<HandMetrics>();
 
   int countdown = 29;
-  late Timer _timer;
+  Timer? _timer;
   final List<FrameData> _frames = [];
   bool _handsDetected = false;
+  bool _disposed = false;
 
   void start() {
     countdown = 29;
@@ -52,12 +52,19 @@ class CameraTestViewModel extends BaseViewModel {
       return;
     }
 
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      setBusy(false);
+      locator<NavigationService>().back(result: false);
+      return;
+    }
+
     final Map<String, dynamic> metrics = _analyzeFrames();
     final double score = metrics['parkinson_probability'] as double;
     final raw = _collectLandmarks();
     final result = TestResult(
       id: '',
-      patientId: _auth.currentUser!.uid,
+      patientId: uid,
       type: TestType.cameraDetection,
       performedAt: DateTime.now(),
       score: score,
@@ -67,8 +74,16 @@ class CameraTestViewModel extends BaseViewModel {
       result: result,
       sensorData: raw,
     );
+    if (_disposed) return;
     setBusy(false);
     locator<NavigationService>().back(result: true);
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _timer?.cancel();
+    super.dispose();
   }
 
   Map<String, dynamic> _analyzeFrames() {

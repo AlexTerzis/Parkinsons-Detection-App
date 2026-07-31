@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 class FFTChartCombined extends StatelessWidget {
   final String label;
@@ -26,6 +27,7 @@ class FFTChartCombined extends StatelessWidget {
   }
 
   FlSpot _getPeak(List<double> data) {
+    if (data.length <= 2) return const FlSpot(0, 0);
     double maxVal = data[2];
     int maxIndex = 2;
     for (int i = 3; i < data.length && (i - 2) * 2.5 + 2.5 <= 12.5; i++) {
@@ -38,8 +40,26 @@ class FFTChartCombined extends StatelessWidget {
     return FlSpot(x, maxVal);
   }
 
+  bool get _hasData =>
+      spectrumX.length > 2 && spectrumY.length > 2 && spectrumZ.length > 2;
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (!_hasData) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            l10n.insufficientSensorData,
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
+      );
+    }
+
     final peakX = _getPeak(spectrumX);
     final peakY = _getPeak(spectrumY);
     final peakZ = _getPeak(spectrumZ);
@@ -49,19 +69,19 @@ class FFTChartCombined extends StatelessWidget {
       children: [
         Text(label, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        const Row(
+        Row(
           children: [
-            Icon(Icons.square, size: 10, color: Colors.blue),
-            SizedBox(width: 4),
-            Text("X-axis", style: TextStyle(fontSize: 12)),
-            SizedBox(width: 12),
-            Icon(Icons.square, size: 10, color: Colors.green),
-            SizedBox(width: 4),
-            Text("Y-axis", style: TextStyle(fontSize: 12)),
-            SizedBox(width: 12),
-            Icon(Icons.square, size: 10, color: Colors.red),
-            SizedBox(width: 4),
-            Text("Z-axis", style: TextStyle(fontSize: 12)),
+            const Icon(Icons.square, size: 10, color: Colors.blue),
+            const SizedBox(width: 4),
+            Text(l10n.xAxisLabel, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 12),
+            const Icon(Icons.square, size: 10, color: Colors.green),
+            const SizedBox(width: 4),
+            Text(l10n.yAxisLabel, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 12),
+            const Icon(Icons.square, size: 10, color: Colors.red),
+            const SizedBox(width: 4),
+            Text(l10n.zAxisLabel, style: const TextStyle(fontSize: 12)),
           ],
         ),
         const SizedBox(height: 10),

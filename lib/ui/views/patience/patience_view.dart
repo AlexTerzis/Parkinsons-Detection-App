@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import 'patience_viewmodel.dart';
 import '../patience_view/tabs/profile_tab.dart';
@@ -26,28 +27,28 @@ class PatienceView extends StackedView<PatienceViewModel> {
     Widget? child,
   ) {
     final ThemeData theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (viewModel.isBusy) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return DefaultTabController(
-      length: 6,
+      length: 5,
       // Show the requested tab without waiting for computation
       initialIndex: initialTab,
       child: Scaffold(
-        appBar: AppBar(     
-          toolbarHeight: 0,   
+        appBar: AppBar(
+          toolbarHeight: 0,
           bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: 'Profile', icon: Icon(Icons.person)),
-              Tab(text: 'Tests', icon: Icon(Icons.science)),
+              Tab(text: l10n.tabProfile, icon: Icon(Icons.person)),
+              Tab(text: l10n.tabTests, icon: Icon(Icons.science)),
               //Tab(text: 'History', icon: Icon(Icons.history)),
-              Tab(text: 'Results', icon: Icon(Icons.assessment)),
-              Tab(text: 'Insights', icon: Icon(Icons.insights)),
-              Tab(text: 'Doctor', icon: Icon(Icons.medical_information)),
-              Tab(text: 'Community', icon: Icon(Icons.diversity_1)),
+              Tab(text: l10n.tabResults, icon: Icon(Icons.assessment)),
+              Tab(text: l10n.insights, icon: Icon(Icons.insights)),
+              Tab(text: l10n.doctor, icon: Icon(Icons.medical_information)),
             ],
             indicatorColor: const Color.fromARGB(255, 8, 5, 60),
             labelPadding: EdgeInsets.symmetric(horizontal:07),

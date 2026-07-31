@@ -26,6 +26,7 @@ class _FluencyStepState extends State<FluencyStep> {
   Timer? _timer;
   int _secondsLeft = 60;
   bool _micUnexpectedlyClosed = false;
+  bool _finished = false;
 
   @override
   void initState() {
@@ -119,6 +120,9 @@ class _FluencyStepState extends State<FluencyStep> {
 
   void _finish({bool forceZero = false}) async {
     if (!_listening && !_micUnexpectedlyClosed && _secondsLeft > 0) return;
+    if (_finished) return;
+    _finished = true;
+    _timer?.cancel();
     _speech.stop();
     setState(() => _listening = false);
 

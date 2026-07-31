@@ -57,7 +57,10 @@ class TestResult {
       case 'cameraDetection':
         return TestType.cameraDetection;
       case 'neuropsychological':
+      case 'neuro':
         return TestType.neuro;
+      case 'fab':
+        return TestType.fab;
       default:
         return TestType.cameraDetection;
     }

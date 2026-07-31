@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:stacked_services/stacked_services.dart';
+
+import '../../../app/app.locator.dart';
+import '../../../services/test_service.dart';
+import '../../../services/authentication_service.dart';
+import '../../../models/test_result.dart';
+import '../../../models/test_type.dart';
 
 import 'steps/draw_cube.dart';
 import 'steps/connect_cube.dart';
@@ -18,6 +25,9 @@ import 'steps/immediate_recall.dart';
 import 'steps/delayed_recall.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
+  final TestService _tests = locator<TestService>();
+  final AuthenticationService _auth = locator<AuthenticationService>();
+
   int _currentStep = 0;
   double totalMocaScore = 0.0;
   late List<Widget> _steps;
@@ -101,13 +111,26 @@ class NeuroTestViewModel extends BaseViewModel {
   void nextStep() {
     if (_currentStep < _steps.length - 1) {
       _currentStep++;
-      print('Total MoCA Score: $totalMocaScore');
       notifyListeners();
     } else {
-      // End of test
-      print('Test complete!');
-      
-      print('Total MoCA Score: $totalMocaScore');
+      // End of test: persist the result and leave the test flow.
+      _finishTest();
     }
+  }
+
+  Future<void> _finishTest() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final result = TestResult(
+      id: '',
+      patientId: uid,
+      type: TestType.neuro,
+      performedAt: DateTime.now(),
+      score: (totalMocaScore / 30.0).clamp(0.0, 1.0),
+      data: {'mocaScore': totalMocaScore},
+    );
+    await _tests.addResult(result: result);
+    locator<NavigationService>().back();
   }
 }

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:stacked/stacked.dart';
 import 'package:fftea/fftea.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
@@ -50,7 +51,7 @@ class TremorTestViewModel extends BaseViewModel {
 
   double _score1 = 0.0;
   double _score2 = 0.0;
-  String tremorStatus = 'Press start to begin';
+  String tremorStatus = '';
   int secondsLeft = 0;
   bool isTesting = false;
 
@@ -59,13 +60,13 @@ class TremorTestViewModel extends BaseViewModel {
   StreamSubscription<GyroscopeEvent>? _gyroSub;
   Timer? _countdownTimer;
 
-  Future<void> startTest() async {
-    _reset();
+  Future<void> startTest(AppLocalizations l10n) async {
+    _reset(l10n);
     await Future.delayed(const Duration(milliseconds: 200));
-    _startHand1();
+    _startHand1(l10n);
   }
 
-  void _reset() {
+  void _reset(AppLocalizations l10n) {
     accX.clear(); accY.clear(); accZ.clear();
     gyroX.clear(); gyroY.clear(); gyroZ.clear();
     spectrumX1.clear(); spectrumY1.clear(); spectrumZ1.clear();
@@ -74,7 +75,7 @@ class TremorTestViewModel extends BaseViewModel {
     resultHand2 = '';
     _score1 = 0.0;
     _score2 = 0.0;
-    tremorStatus = 'Starting test...';
+    tremorStatus = l10n.startingTest;
     _phase = 0;
     _accData.clear();
     _gyroData.clear();
@@ -82,37 +83,37 @@ class TremorTestViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  void _startHand1() {
+  void _startHand1(AppLocalizations l10n) {
     _phase = 0;
-    tremorStatus = 'Testing Hand 1...';
+    tremorStatus = l10n.testingHand1;
     secondsLeft = testDuration;
     _startSensors();
     _startTimer(() {
       _stopSensors();
-      resultHand1 = _analyzeData('Hand 1', storeInHand1: true);
-      _startPause();
+      resultHand1 = _analyzeData(l10n.handOneLabel, l10n, storeInHand1: true);
+      _startPause(l10n);
     });
   }
 
-  void _startPause() {
+  void _startPause(AppLocalizations l10n) {
     _phase = 1;
-    tremorStatus = 'Switch hands';
+    tremorStatus = l10n.switchHands;
     secondsLeft = pauseDuration;
     accX.clear(); accY.clear(); accZ.clear();
     gyroX.clear(); gyroY.clear(); gyroZ.clear();
     notifyListeners();
-    _startTimer(() => _startHand2());
+    _startTimer(() => _startHand2(l10n));
   }
 
-  void _startHand2() {
+  void _startHand2(AppLocalizations l10n) {
     _phase = 2;
-    tremorStatus = 'Testing Hand 2...';
+    tremorStatus = l10n.testingHand2;
     secondsLeft = testDuration;
     _startSensors();
     _startTimer(() async {
       _stopSensors();
-      resultHand2 = _analyzeData('Hand 2', storeInHand1: false);
-      tremorStatus = 'Test completed';
+      resultHand2 = _analyzeData(l10n.handTwoLabel, l10n, storeInHand1: false);
+      tremorStatus = l10n.testCompleted;
       isTesting = false;
       _phase = 3;
       notifyListeners();
@@ -162,7 +163,8 @@ class TremorTestViewModel extends BaseViewModel {
 
   // Analyzes the captured sensor values and calculates a simple tremor score.
   // The frequency with the highest magnitude is used as an indicator.
-  String _analyzeData(String label, {required bool storeInHand1}) {
+  String _analyzeData(String label, AppLocalizations l10n,
+      {required bool storeInHand1}) {
     List<double> analyzeAxis(List<double> data) {
       if (data.length < 32) return [];
       int paddedLength = _nextPowerOfTwo(data.length);
@@ -207,10 +209,12 @@ class TremorTestViewModel extends BaseViewModel {
       _score2 = score;
     }
 
-    return '$label Results (Accelerometer):\n'
-        'X Peak Frequency: ${fx.toStringAsFixed(2)} Hz\n'
-        'Y Peak Frequency: ${fy.toStringAsFixed(2)} Hz\n'
-        'Z Peak Frequency: ${fz.toStringAsFixed(2)} Hz';
+    return l10n.fftResultsTemplate(
+      label,
+      fx.toStringAsFixed(2),
+      fy.toStringAsFixed(2),
+      fz.toStringAsFixed(2),
+    );
   }
 
   int _nextPowerOfTwo(int n) {
@@ -221,11 +225,11 @@ class TremorTestViewModel extends BaseViewModel {
     return power;
   }
 
-  void stopTest() {
+  void stopTest(AppLocalizations l10n) {
     _countdownTimer?.cancel();
     _stopSensors();
     isTesting = false;
-    tremorStatus = 'Test stopped';
+    tremorStatus = l10n.testStopped;
     notifyListeners();
   }
 

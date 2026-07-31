@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../../models/raison_result.dart';
 
@@ -10,28 +11,29 @@ class InsightsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Card(
           child: ListTile(
             leading: const Text('🧠', style: TextStyle(fontSize: 28)),
-            title: const Text('Overall AI Summary'),
-            subtitle: const Text('Low risk – more advanced analytics will appear here.'),
+            title: Text(l10n.aiSummaryTitle),
+            subtitle: Text(l10n.aiSummarySubtitle),
           ),
         ),
         const SizedBox(height: 16),
         Card(
           child: ListTile(
-            title: const Text('Test-by-Test Breakdown'),
-            subtitle: const Text('Charts of tapping, tremor and other tests will be added.'),
+            title: Text(l10n.testBreakdownTitle),
+            subtitle: Text(l10n.testBreakdownSubtitle),
           ),
         ),
         const SizedBox(height: 16),
         Card(
           child: ListTile(
-            title: const Text('Risk Alerts or Anomalies'),
-            subtitle: const Text('No alerts detected recently.'),
+            title: Text(l10n.riskAlertsTitle),
+            subtitle: Text(l10n.noAlertsSubtitle),
           ),
         ),
         const SizedBox(height: 16),
@@ -40,24 +42,23 @@ class InsightsTab extends StatelessWidget {
             future: resultsFuture,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const ListTile(
-                  title: Text('Argumentation'),
-                  subtitle: Text('Loading reasoning...'),
+                return ListTile(
+                  title: Text(l10n.argumentation),
+                  subtitle: Text(l10n.loadingReasoning),
                 );
               }
               final results = snapshot.data!;
               if (results.isEmpty) {
-                return const ListTile(
-                  title: Text('Argumentation'),
-                  subtitle: Text('Take the questionnaire to see the results'),
+                return ListTile(
+                  title: Text(l10n.argumentation),
+                  subtitle: Text(l10n.takeQuestionnairePrompt),
                 );
               }
               final solutions = results.where((r) => r.isSolution).toList(growable: false);
               if (solutions.isEmpty) {
-                return const ListTile(
-                  title: Text('Argumentation'),
-                  subtitle: Text(
-                      'Cannot give clear argumentation yet from the questionnaire results. If you have any questions, please contact your doctor.'),
+                return ListTile(
+                  title: Text(l10n.argumentation),
+                  subtitle: Text(l10n.noArgumentationYet),
                 );
               }
               return Padding(
@@ -65,7 +66,7 @@ class InsightsTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Argumentation', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(l10n.argumentation, style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     for (final r in solutions) ...[
                       Text(r.label, style: theme.textTheme.titleMedium),
@@ -73,7 +74,7 @@ class InsightsTab extends StatelessWidget {
                       ...r.explanation.map(
                         (e) => Padding(
                           padding: const EdgeInsets.only(left: 16, bottom: 2),
-                          child: Text('• ' + e),
+                          child: Text('• $e'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -87,8 +88,8 @@ class InsightsTab extends StatelessWidget {
         const SizedBox(height: 16),
         Card(
           child: ListTile(
-            title: const Text('AI Test Suggestions'),
-            subtitle: const Text('Please retake the Tremor Test – last result was inconclusive.'),
+            title: Text(l10n.aiSuggestionsTitle),
+            subtitle: Text(l10n.retakeTremorSuggestion),
           ),
         ),
       ],
