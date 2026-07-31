@@ -150,5 +150,15 @@
   "takeQuestionnairePrompt": "Take the questionnaire to see the results",
   "noArgumentationYet": "Cannot give clear argumentation yet from the questionnaire results. If you have any questions, please contact your doctor.",
   "aiSuggestionsTitle": "AI Test Suggestions",
-  "retakeTremorSuggestion": "Please retake the Tremor Test – last result was inconclusive."
+  "retakeTremorSuggestion": "Please retake the Tremor Test – last result was inconclusive.",
+  "preferences": "Preferences",
+  "textSize": "Text size",
+  "textSizeSystemNote": "This replaces your device's font size setting inside this app.",
+  "textSizeNormal": "Normal",
+  "textSizeLarge": "Large",
+  "textSizeLarger": "Larger",
+  "textSizeLargest": "Largest",
+  "textSizePreviewTitle": "Preview",
+  "textSizePreviewBody": "Text throughout the app will look like this.",
+  "resetToDefault": "Reset to default"
 }

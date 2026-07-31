@@ -1,4 +1,5 @@
 import 'package:parkinsondetetion/services/localization_service.dart';
+import 'package:parkinsondetetion/services/text_scale_service.dart';
 import 'package:parkinsondetetion/services/storage_service.dart';
 import 'package:parkinsondetetion/ui/bottom_sheets/notice/notice_sheet.dart';
 import 'package:parkinsondetetion/ui/dialogs/info_alert/info_alert_dialog.dart';
@@ -59,6 +60,7 @@ import '../services/hand_metrics.dart';
     LazySingleton(classType: HandMetrics),
     LazySingleton(classType: StorageService),
     LazySingleton(classType: LocalizationService),
+    LazySingleton(classType: TextScaleService),
     
 // @stacked-service
   ],

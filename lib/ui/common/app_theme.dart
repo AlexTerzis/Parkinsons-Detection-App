@@ -225,8 +225,7 @@ abstract final class AppTheme {
         dividerHeight: 0,
         labelStyle: text.labelLarge,
         unselectedLabelStyle: text.labelLarge,
-        labelPadding:
-            const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         textScaler: tabBarTextScaler,
       ),
 
@@ -301,8 +300,7 @@ abstract final class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppTokens.primaryDark,
-        contentTextStyle:
-            text.bodyLarge?.copyWith(color: AppTokens.surface),
+        contentTextStyle: text.bodyLarge?.copyWith(color: AppTokens.surface),
         actionTextColor: cs.inversePrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),

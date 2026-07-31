@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
-import 'package:parkinsondetetion/app/app.locator.dart';
-import 'package:parkinsondetetion/services/localization_service.dart';
 
+import '../../../common/widgets/app_preferences_section.dart';
 import '../../patience/patience_viewmodel.dart';
 
 /// ProfileTab extracts the profile editing UI from PatienceView.
@@ -55,8 +54,7 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Language picker uses localization service to change app-wide locale.
-          _LanguagePicker(localizationService: locator<LocalizationService>()),
+          const AppPreferencesSection(),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: viewModel.isBusy
@@ -106,41 +104,6 @@ class ProfileTab extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Dropdown that lets the user choose the desired app language.
-class _LanguagePicker extends StatelessWidget {
-  final LocalizationService localizationService;
-  const _LanguagePicker({required this.localizationService});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(AppLocalizations.of(context)!.language),
-        const SizedBox(width: 16),
-        DropdownButton<Locale>(
-          value: localizationService.locale,
-          onChanged: (locale) {
-            if (locale != null) {
-              localizationService.setLocale(locale);
-            }
-          },
-          items: [
-            DropdownMenuItem(
-              value: const Locale('en'),
-              child: Text(AppLocalizations.of(context)!.english),
-            ),
-            DropdownMenuItem(
-              value: const Locale('el'),
-              child: Text(AppLocalizations.of(context)!.greek),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

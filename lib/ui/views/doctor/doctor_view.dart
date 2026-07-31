@@ -4,6 +4,7 @@ import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import 'doctor_viewmodel.dart';
 import '../../../models/patient_report.dart';
+import '../../common/widgets/app_preferences_section.dart';
 
 /// Doctor dashboard with tab navigation similar to the patient view.
 /// Tabs: profile editing, list of patient reports and a shared community feed.
@@ -89,6 +90,8 @@ class DoctorView extends StackedView<DoctorViewModel> {
               labelText: l10n.locationLabel,
             ),
           ),
+          const SizedBox(height: 16),
+          const AppPreferencesSection(),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: vm.isBusy

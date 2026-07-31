@@ -51,55 +51,58 @@ class ResultsTab extends StatelessWidget {
               children: [
                 SizedBox(
                   height: 200,
-                  child: LineChart(
-                    LineChartData(
-                      minX: 0,
-                      maxX: (spots.length - 1).toDouble(),
-                      minY: 0,
-                      maxY: 1,
-                      titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 1,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index < 0 || index >= data.length) {
-                                return const SizedBox.shrink();
-                              }
-                              final dt = data[data.length - 1 - index].time;
-                              return Text('${dt.month}/${dt.day}',
-                                  style: const TextStyle(fontSize: 10));
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 0.25,
-                            reservedSize: 28,
-                            getTitlesWidget: (value, meta) => Text(
-                              '${(value * 100).round()}%',
-                              style: const TextStyle(fontSize: 10),
+                  child: MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: 1.2,
+                    child: LineChart(
+                      LineChartData(
+                        minX: 0,
+                        maxX: (spots.length - 1).toDouble(),
+                        minY: 0,
+                        maxY: 1,
+                        titlesData: FlTitlesData(
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 1,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index < 0 || index >= data.length) {
+                                  return const SizedBox.shrink();
+                                }
+                                final dt = data[data.length - 1 - index].time;
+                                return Text('${dt.month}/${dt.day}',
+                                    style: const TextStyle(fontSize: 10));
+                              },
                             ),
                           ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 0.25,
+                              reservedSize: 28,
+                              getTitlesWidget: (value, meta) => Text(
+                                '${(value * 100).round()}%',
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                         ),
-                        topTitles:
-                            AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles:
-                            AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        gridData: FlGridData(show: true),
+                        borderData: FlBorderData(show: true),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: spots,
+                            isCurved: false,
+                            color: theme.colorScheme.primary,
+                            dotData: FlDotData(show: true),
+                            belowBarData: BarAreaData(show: false),
+                          ),
+                        ],
                       ),
-                      gridData: FlGridData(show: true),
-                      borderData: FlBorderData(show: true),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: false,
-                          color: theme.colorScheme.primary,
-                          dotData: FlDotData(show: true),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                      ],
                     ),
                   ),
                 ),
@@ -115,32 +118,36 @@ class ResultsTab extends StatelessWidget {
           if (viewModel.resultsSummary.length >= 3)
             SizedBox(
               height: 220,
-              child: RadarChart(
-                RadarChartData(
-                  dataSets: [
-                    RadarDataSet(
-                      fillColor:
-                          theme.colorScheme.primary.withOpacity(0.25),
-                      borderColor: theme.colorScheme.primary,
-                      entryRadius: 3,
-                      dataEntries: viewModel.resultsSummary.values
-                          .map((v) => RadarEntry(value: v))
-                          .toList(),
-                    ),
-                  ],
-                  radarBackgroundColor: Colors.transparent,
-                  radarBorderData: const BorderSide(color: Colors.transparent),
-                  tickCount: 10,
-                  ticksTextStyle: const TextStyle(fontSize: 10),
-                  tickBorderData: BorderSide(color: theme.dividerColor),
-                  titleTextStyle: const TextStyle(fontSize: 12),
-                  getTitle: (index, angle) {
-                    final keys = viewModel.resultsSummary.keys.toList();
-                    if (index < 0 || index >= keys.length) {
-                      return const RadarChartTitle(text: '');
-                    }
-                    return RadarChartTitle(text: keys[index], angle: angle);
-                  },
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: 1.2,
+                child: RadarChart(
+                  RadarChartData(
+                    dataSets: [
+                      RadarDataSet(
+                        fillColor:
+                            theme.colorScheme.primary.withValues(alpha: 0.25),
+                        borderColor: theme.colorScheme.primary,
+                        entryRadius: 3,
+                        dataEntries: viewModel.resultsSummary.values
+                            .map((v) => RadarEntry(value: v))
+                            .toList(),
+                      ),
+                    ],
+                    radarBackgroundColor: Colors.transparent,
+                    radarBorderData:
+                        const BorderSide(color: Colors.transparent),
+                    tickCount: 10,
+                    ticksTextStyle: const TextStyle(fontSize: 10),
+                    tickBorderData: BorderSide(color: theme.dividerColor),
+                    titleTextStyle: const TextStyle(fontSize: 12),
+                    getTitle: (index, angle) {
+                      final keys = viewModel.resultsSummary.keys.toList();
+                      if (index < 0 || index >= keys.length) {
+                        return const RadarChartTitle(text: '');
+                      }
+                      return RadarChartTitle(text: keys[index], angle: angle);
+                    },
+                  ),
                 ),
               ),
             )
@@ -169,28 +176,31 @@ class ResultsTab extends StatelessWidget {
           const SizedBox(height: 8),
           SizedBox(
             height: 200,
-            child: LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: (viewModel.getAverageTrend().length - 1).toDouble(),
-                minY: 0,
-                maxY: 1,
-                titlesData: const FlTitlesData(show: false),
-                gridData: FlGridData(show: true),
-                borderData: FlBorderData(show: true),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: viewModel.getAverageTrend(),
-                    isCurved: true,
-                    color: theme.colorScheme.primary,
-                    barWidth: 3,
-                    dotData: FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: theme.colorScheme.primary.withOpacity(0.2),
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.2,
+              child: LineChart(
+                LineChartData(
+                  minX: 0,
+                  maxX: (viewModel.getAverageTrend().length - 1).toDouble(),
+                  minY: 0,
+                  maxY: 1,
+                  titlesData: const FlTitlesData(show: false),
+                  gridData: FlGridData(show: true),
+                  borderData: FlBorderData(show: true),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: viewModel.getAverageTrend(),
+                      isCurved: true,
+                      color: theme.colorScheme.primary,
+                      barWidth: 3,
+                      dotData: FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -7,6 +7,7 @@ import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:parkinsondetetion/services/localization_service.dart';
+import 'package:parkinsondetetion/services/text_scale_service.dart';
 import 'package:parkinsondetetion/ui/common/app_theme.dart';
 import 'package:parkinsondetetion/ui/common/app_tokens.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
@@ -29,6 +30,9 @@ Future<void> main() async {
   // Load persisted locale before the UI starts so the correct language
   // renders immediately. The service notifies listeners on changes.
   await locator<LocalizationService>().init();
+  // Load the saved text size before the first frame, otherwise the whole app
+  // visibly reflows a frame after launch.
+  await locator<TextScaleService>().init();
   setupDialogUi();
   setupBottomSheetUi();
 
@@ -40,12 +44,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obtain the localization service which holds the current locale.
+    // Obtain the services holding the current locale and text size.
     final localizationService = locator<LocalizationService>();
+    final textScaleService = locator<TextScaleService>();
 
-    // AnimatedBuilder rebuilds MaterialApp whenever the locale changes.
+    // Rebuilds MaterialApp whenever the locale or the text size changes. Both
+    // invalidate the same subtree, so one merged listenable beats nesting two
+    // builders.
     return AnimatedBuilder(
-      animation: localizationService,
+      animation: Listenable.merge([localizationService, textScaleService]),
       builder: (context, _) => ResponsiveApp(
         builder: (_) => MaterialApp(
           // onGenerateTitle uses the localized string at runtime.
@@ -59,7 +66,24 @@ class MainApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: AppTheme.light(),
+          theme: AppTheme.light(
+            tabBarTextScaler: textScaleService.tabBarTextScaler,
+          ),
+
+          // Deliberately in MaterialApp.builder rather than above MaterialApp.
+          // MediaQuery.of depends on the whole MediaQueryData, so an override
+          // higher up would rebuild the entire Navigator every time the
+          // keyboard animates open or closed - which this app does constantly,
+          // between the login form, both profile tabs and the speech-driven
+          // test steps. Down here, element reuse keeps the route subtree
+          // untouched. It also covers dialogs and sheets pushed through the
+          // stacked navigator key.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: textScaleService.textScaler),
+            child: child!,
+          ),
+
           debugShowCheckedModeBanner: false,
           home: const SplashScreen(),
           onGenerateRoute: StackedRouter().onGenerateRoute,

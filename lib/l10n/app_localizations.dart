@@ -1003,6 +1003,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please retake the Tremor Test – last result was inconclusive.'**
   String get retakeTremorSuggestion;
+
+  /// No description provided for @preferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get preferences;
+
+  /// No description provided for @textSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get textSize;
+
+  /// No description provided for @textSizeSystemNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This replaces your device\'s font size setting inside this app.'**
+  String get textSizeSystemNote;
+
+  /// No description provided for @textSizeNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get textSizeNormal;
+
+  /// No description provided for @textSizeLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get textSizeLarge;
+
+  /// No description provided for @textSizeLarger.
+  ///
+  /// In en, this message translates to:
+  /// **'Larger'**
+  String get textSizeLarger;
+
+  /// No description provided for @textSizeLargest.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get textSizeLargest;
+
+  /// No description provided for @textSizePreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get textSizePreviewTitle;
+
+  /// No description provided for @textSizePreviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Text throughout the app will look like this.'**
+  String get textSizePreviewBody;
+
+  /// No description provided for @resetToDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get resetToDefault;
 }
 
 class _AppLocalizationsDelegate

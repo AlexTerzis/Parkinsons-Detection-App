@@ -503,4 +503,36 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get retakeTremorSuggestion =>
       'Παρακαλώ επαναλάβετε το Τεστ Τρόμου – το τελευταίο αποτέλεσμα ήταν ασαφές.';
+
+  @override
+  String get preferences => 'Προτιμήσεις';
+
+  @override
+  String get textSize => 'Μέγεθος κειμένου';
+
+  @override
+  String get textSizeSystemNote =>
+      'Αντικαθιστά τη ρύθμιση μεγέθους γραμματοσειράς της συσκευής σας μέσα σε αυτή την εφαρμογή.';
+
+  @override
+  String get textSizeNormal => 'Κανονικό';
+
+  @override
+  String get textSizeLarge => 'Μεγάλο';
+
+  @override
+  String get textSizeLarger => 'Μεγαλύτερο';
+
+  @override
+  String get textSizeLargest => 'Μέγιστο';
+
+  @override
+  String get textSizePreviewTitle => 'Προεπισκόπηση';
+
+  @override
+  String get textSizePreviewBody =>
+      'Το κείμενο σε όλη την εφαρμογή θα φαίνεται έτσι.';
+
+  @override
+  String get resetToDefault => 'Επαναφορά προεπιλογής';
 }

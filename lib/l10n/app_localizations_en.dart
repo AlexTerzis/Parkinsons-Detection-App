@@ -500,4 +500,36 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get retakeTremorSuggestion =>
       'Please retake the Tremor Test – last result was inconclusive.';
+
+  @override
+  String get preferences => 'Preferences';
+
+  @override
+  String get textSize => 'Text size';
+
+  @override
+  String get textSizeSystemNote =>
+      'This replaces your device\'s font size setting inside this app.';
+
+  @override
+  String get textSizeNormal => 'Normal';
+
+  @override
+  String get textSizeLarge => 'Large';
+
+  @override
+  String get textSizeLarger => 'Larger';
+
+  @override
+  String get textSizeLargest => 'Largest';
+
+  @override
+  String get textSizePreviewTitle => 'Preview';
+
+  @override
+  String get textSizePreviewBody =>
+      'Text throughout the app will look like this.';
+
+  @override
+  String get resetToDefault => 'Reset to default';
 }
