@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:parkinsondetetion/ui/common/app_colors.dart';
-import 'package:parkinsondetetion/ui/common/ui_helpers.dart';
 import 'package:stacked/stacked.dart';
 import 'package:stacked_services/stacked_services.dart';
 
+import '../../common/app_tokens.dart';
 import 'notice_sheet_model.dart';
 
 class NoticeSheet extends StackedView<NoticeSheetModel> {
   final Function(SheetResponse)? completer;
   final SheetRequest request;
-  const NoticeSheet({Key? key, required this.completer, required this.request})
-      : super(key: key);
+  const NoticeSheet({
+    super.key,
+    required this.completer,
+    required this.request,
+  });
 
   @override
   Widget builder(
@@ -18,31 +20,34 @@ class NoticeSheet extends StackedView<NoticeSheetModel> {
     NoticeSheetModel viewModel,
     Widget? child,
   ) {
+    final theme = Theme.of(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(AppRadius.lg),
+          topRight: Radius.circular(AppRadius.lg),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            request.title!,
-            style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
-          ),
-          verticalSpaceTiny,
+          Text(request.title!, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             request.description!,
-            style: const TextStyle(fontSize: 14, color: kcMediumGrey),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             maxLines: 3,
             softWrap: true,
           ),
-          verticalSpaceLarge,
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );

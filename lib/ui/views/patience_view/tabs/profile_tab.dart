@@ -35,7 +35,6 @@ class ProfileTab extends StatelessWidget {
             controller: viewModel.nameController,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.editName,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -44,7 +43,6 @@ class ProfileTab extends StatelessWidget {
             controller: viewModel.dobController,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.dateOfBirth,
-              border: const OutlineInputBorder(),
               hintText: AppLocalizations.of(context)!.dobHint,
             ),
           ),
@@ -54,7 +52,6 @@ class ProfileTab extends StatelessWidget {
             controller: viewModel.medicationController,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.addMedication,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -95,21 +92,17 @@ class ProfileTab extends StatelessWidget {
             label: Text(AppLocalizations.of(context)!.saveChanges),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              side: const BorderSide(color: Colors.red, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            onPressed: () => viewModel.logout(context),
-            child: Text(
-              AppLocalizations.of(context)!.logOut,
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-                fontStyle: FontStyle.italic,
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 1.5,
               ),
             ),
+            onPressed: () => viewModel.logout(context),
+            icon: const Icon(Icons.logout),
+            label: Text(AppLocalizations.of(context)!.logOut),
           ),
         ],
       ),

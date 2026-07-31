@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:stacked/stacked.dart';
-import 'package:parkinsondetetion/ui/common/ui_helpers.dart';
 
+import '../../common/app_tokens.dart';
 import 'startup_viewmodel.dart';
 
 class StartupView extends StackedView<StartupViewModel> {
-  const StartupView({Key? key}) : super(key: key);
+  const StartupView({super.key});
 
   @override
   Widget builder(
@@ -14,27 +14,27 @@ class StartupView extends StackedView<StartupViewModel> {
     StartupViewModel viewModel,
     Widget? child,
   ) {
-    return const Scaffold(
+    final theme = Theme.of(context);
+
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Parkinson\'s Detection',
-              style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
+              style: theme.textTheme.displaySmall,
             ),
+            const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Loading ...', style: TextStyle(fontSize: 16)),
-                horizontalSpaceSmall,
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    color: Colors.black,
-                    strokeWidth: 6,
-                  ),
+                Text('Loading ...', style: theme.textTheme.bodyLarge),
+                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 3),
                 ),
               ],
             ),

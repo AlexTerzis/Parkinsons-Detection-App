@@ -14,6 +14,7 @@ import '../../voice_test/voice_test_view.dart';
 import '../../neuro_test/neuro_test_view.dart';
 import '../../../../models/test_type.dart';
 import '../../../../models/test_result.dart';
+import '../../../common/app_semantic_colors.dart';
 
 /// TestsTab lists available tests and actions for sending results.
 class TestsTab extends StatelessWidget {
@@ -79,9 +80,6 @@ class TestsTab extends StatelessWidget {
               itemBuilder: (context, index) {
                 final test = tests[index];
                 return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                   child: ListTile(
                     leading: Icon(
                       test['icon'] as IconData,
@@ -160,15 +158,22 @@ class TestsTab extends StatelessWidget {
       return const Icon(Icons.chevron_right);
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.check_circle, color: Colors.green),
-        Text(
-          '${matched.performedAt.month}/${matched.performedAt.day}',
-          style: const TextStyle(fontSize: 12),
-        ),
-      ],
+    return Builder(
+      builder: (context) => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon plus colour, never colour alone: red/green deficiency is
+          // common enough that hue cannot be the only signal.
+          Icon(
+            Icons.check_circle,
+            color: AppSemanticColors.of(context).success,
+          ),
+          Text(
+            '${matched.performedAt.month}/${matched.performedAt.day}',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:stacked/stacked.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../services/authentication_service.dart';
+import '../../common/app_tokens.dart';
 import 'login_viewmodel.dart';
 
 class LoginView extends StackedView<LoginViewModel> {
@@ -27,7 +27,10 @@ class LoginView extends StackedView<LoginViewModel> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color.fromARGB(255, 7, 24, 51), Color.fromARGB(255, 1, 2, 23)],
+              colors: [
+                AppTokens.splashBackground,
+                AppTokens.primaryDark,
+              ],
             ),
           ),
           child: Center(
@@ -35,9 +38,9 @@ class LoginView extends StackedView<LoginViewModel> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
+                // Elevated rather than the themed outlined default: this card
+                // is a hero surface floating on the brand gradient.
                 child: Card(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
                   elevation: 8,
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -68,7 +71,6 @@ class LoginView extends StackedView<LoginViewModel> {
                                 // Localized label for user's name.
                                 labelText:
                                     AppLocalizations.of(context)!.nameLabel,
-                                border: const OutlineInputBorder(),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -83,7 +85,6 @@ class LoginView extends StackedView<LoginViewModel> {
                               prefixIcon: const Icon(Icons.email_outlined),
                               labelText:
                                   AppLocalizations.of(context)!.emailLabel,
-                              border: const OutlineInputBorder(),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -97,7 +98,6 @@ class LoginView extends StackedView<LoginViewModel> {
                               prefixIcon: const Icon(Icons.lock_outline),
                               labelText:
                                   AppLocalizations.of(context)!.passwordLabel,
-                              border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
                                 icon: Icon(viewModel.passwordVisible
                                     ? Icons.visibility_off
@@ -118,7 +118,6 @@ class LoginView extends StackedView<LoginViewModel> {
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 labelText: AppLocalizations.of(context)!
                                     .confirmPasswordLabel,
-                                border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
                                   icon: Icon(viewModel.confirmPasswordVisible
                                       ? Icons.visibility_off
@@ -167,23 +166,19 @@ class LoginView extends StackedView<LoginViewModel> {
                             const SizedBox(height: 12),
                           ],
 
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: viewModel.isBusy
-                                  ? null
-                                  : () =>
-                                      _onAuthenticatePressed(context, viewModel),
-                              child: Text(viewModel.isLoginMode
-                                  ? AppLocalizations.of(context)!.login
-                                  : AppLocalizations.of(context)!.signUp),
-                            ),
+                          // No fixed height: the theme supplies the minimum
+                          // tap target, and a tight SizedBox here would stop
+                          // the button growing when the user scales text up.
+                          ElevatedButton(
+                            onPressed: viewModel.isBusy
+                                ? null
+                                : () =>
+                                    _onAuthenticatePressed(context, viewModel),
+                            child: Text(viewModel.isLoginMode
+                                ? AppLocalizations.of(context)!.login
+                                : AppLocalizations.of(context)!.signUp),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.sm),
 
                           if (viewModel.isLoginMode) ...[
                             Align(
@@ -245,7 +240,6 @@ class LoginView extends StackedView<LoginViewModel> {
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.emailLabel,
               prefixIcon: const Icon(Icons.email_outlined),
-              border: const OutlineInputBorder(),
             ),
           ),
           actions: [

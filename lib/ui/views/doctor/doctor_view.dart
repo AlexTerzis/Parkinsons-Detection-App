@@ -28,13 +28,16 @@ class DoctorView extends StackedView<DoctorViewModel> {
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 0,
+          // Scrollable so the longer Greek labels cannot overflow horizontally
+          // once the user scales text up.
           bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: l10n.tabProfile, icon: const Icon(Icons.person)),
               Tab(text: l10n.tabMyPatients, icon: const Icon(Icons.people)),
               Tab(text: l10n.tabCommunity, icon: const Icon(Icons.diversity_1)),
             ],
-            indicatorColor: theme.colorScheme.primary,
           ),
         ),
         body: TabBarView(
@@ -70,7 +73,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
             controller: vm.nameController,
             decoration: InputDecoration(
               labelText: l10n.nameLabel,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -78,7 +80,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
             controller: vm.specialtyController,
             decoration: InputDecoration(
               labelText: l10n.specialtyLabel,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -86,7 +87,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
             controller: vm.locationController,
             decoration: InputDecoration(
               labelText: l10n.locationLabel,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -105,22 +105,15 @@ class DoctorView extends StackedView<DoctorViewModel> {
             label: Text(l10n.save),
           ),
          const SizedBox(height: 24),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              side: const BorderSide(color: Colors.red, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+              side: BorderSide(color: theme.colorScheme.error, width: 1.5),
             ),
             onPressed: () => vm.logout(context),
-            child: Text(
-              l10n.logOut,
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ), 
+            icon: const Icon(Icons.logout),
+            label: Text(l10n.logOut),
+          ),
         ],
       ),
     );
@@ -144,8 +137,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
         final reports =
             vm.reports.where((r) => r.patientId == pid).toList();
         return Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ExpansionTile(
             title: Text(vm.patientName(pid)),
             subtitle: Text(l10n.reportsCountLabel(reports.length)),
@@ -171,7 +162,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: l10n.writeNotesHint,
-                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),

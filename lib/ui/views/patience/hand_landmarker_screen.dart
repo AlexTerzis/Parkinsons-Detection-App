@@ -20,22 +20,6 @@ class FrameData {
   FrameData({required this.timestamp, required this.hands});
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Parkinson\'s Detection',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const HandLandmarkerScreen(),
-    );
-  }
-}
-
 class HandLandmarkerScreen extends StatefulWidget {
   final void Function(FrameData)? onFrame;
 

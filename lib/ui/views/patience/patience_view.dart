@@ -42,16 +42,18 @@ class PatienceView extends StackedView<PatienceViewModel> {
           toolbarHeight: 0,
           bottom: TabBar(
             isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: l10n.tabProfile, icon: Icon(Icons.person)),
-              Tab(text: l10n.tabTests, icon: Icon(Icons.science)),
+              Tab(text: l10n.tabProfile, icon: const Icon(Icons.person)),
+              Tab(text: l10n.tabTests, icon: const Icon(Icons.science)),
               //Tab(text: 'History', icon: Icon(Icons.history)),
-              Tab(text: l10n.tabResults, icon: Icon(Icons.assessment)),
-              Tab(text: l10n.insights, icon: Icon(Icons.insights)),
-              Tab(text: l10n.doctor, icon: Icon(Icons.medical_information)),
+              Tab(text: l10n.tabResults, icon: const Icon(Icons.assessment)),
+              Tab(text: l10n.insights, icon: const Icon(Icons.insights)),
+              Tab(
+                text: l10n.doctor,
+                icon: const Icon(Icons.medical_information),
+              ),
             ],
-            indicatorColor: const Color.fromARGB(255, 8, 5, 60),
-            labelPadding: EdgeInsets.symmetric(horizontal:07),
           ),
         ),
         

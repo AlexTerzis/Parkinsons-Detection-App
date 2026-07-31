@@ -7,6 +7,8 @@ import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:parkinsondetetion/services/localization_service.dart';
+import 'package:parkinsondetetion/ui/common/app_theme.dart';
+import 'package:parkinsondetetion/ui/common/app_tokens.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
 import 'package:parkinsondetetion/firebase_options.dart';
 import 'package:parkinsondetetion/ui/views/login/login_view.dart';
@@ -57,12 +59,7 @@ class MainApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 7, 24, 51),
-            ),
-            useMaterial3: true,
-          ),
+          theme: AppTheme.light(),
           debugShowCheckedModeBanner: false,
           home: const SplashScreen(),
           onGenerateRoute: StackedRouter().onGenerateRoute,
@@ -154,8 +151,9 @@ class _SplashScreenState extends State<SplashScreen> {
       opacity: _currentDot == index ? 1.0 : 0.3,
       duration: const Duration(milliseconds: 300),
       child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4.0),
-        child: CircleAvatar(radius: 5, backgroundColor: Colors.cyanAccent),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+        // Brand accent that reads against the dark splash background.
+        child: CircleAvatar(radius: 5, backgroundColor: Color(0xFF7FD3C9)),
       ),
     );
   }
@@ -163,7 +161,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 7, 24, 51),
+      // Matches flutter_native_splash's configured colour in pubspec.yaml, so
+      // there is no flash between the native splash and this screen.
+      backgroundColor: AppTokens.splashBackground,
       body: Stack(
         children: [
           // Background image
