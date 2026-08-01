@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA trail making: join 1-Α-2-Β-3-Γ-4-Δ-5-Ε in order.
+///
+/// The labels alternate Greek letters with digits and are the instrument's own,
+/// so they stay Greek in both languages.
 class TrailsStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
@@ -13,122 +20,141 @@ class TrailsStep extends StatefulWidget {
 }
 
 class _TrailsStepState extends State<TrailsStep> {
-  final sequence = ['1', 'Α', '2', 'Β', '3', 'Γ', '4', 'Δ', '5', 'Ε'];
-  int currentIndex = 0;
-  List<Offset> drawnLines = [];
-  Map<String, Offset>? anchorPoints; // nullable
+  static const _sequence = ['1', 'Α', '2', 'Β', '3', 'Γ', '4', 'Δ', '5', 'Ε'];
+  static const _circleSize = 60.0;
 
-  final double circleSize = 60;
-  bool testCompleted = false;
-  Timer? timeoutTimer;
+  int _currentIndex = 0;
+  final List<Offset> _drawnLines = [];
+  Map<String, Offset>? _anchorPoints;
+
+  /// The canvas the anchors were laid out for. Kept so a rotation or a change
+  /// in text size re-scatters them instead of leaving circles off-screen.
+  Size? _laidOutFor;
+
+  bool _testCompleted = false;
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _generateAnchorPoints(context);
-      timeoutTimer = Timer(const Duration(minutes: 2), () {
-        if (!testCompleted) {
-          widget.onScored(0);
-          widget.onNext();
-        }
-      });
+    _timeoutTimer = Timer(const Duration(minutes: 2), () {
+      if (!_testCompleted) _finish(score: 0);
     });
   }
 
   @override
   void dispose() {
-    timeoutTimer?.cancel();
+    _timeoutTimer?.cancel();
     super.dispose();
   }
 
-  void completeTestWithPoint() {
-    if (!testCompleted) {
-      testCompleted = true;
-      timeoutTimer?.cancel();
-      widget.onScored(1);
-      widget.onNext();
-    }
+  void _finish({required int score}) {
+    if (_testCompleted) return;
+    _testCompleted = true;
+    _timeoutTimer?.cancel();
+    widget.onScored(score);
+    widget.onNext();
   }
 
-  void _generateAnchorPoints(BuildContext context) {
+  /// Scatters the circles across [size], keeping them a minimum distance apart.
+  ///
+  /// Laid out against the real canvas rather than `MediaQuery.size` minus a
+  /// hardcoded 400px bottom margin, which was a guess at the height of the
+  /// instructions and button and put circles off-screen on short displays.
+  void _generateAnchorPoints(Size size) {
     final rand = Random();
-    final size = MediaQuery.of(context).size;
+    const inset = _circleSize / 2 + 4;
+    final minDistance = min(100.0, min(size.width, size.height) / 3);
 
-    const double safePadding = 32.0;
-    const double topMargin = 40.0;
-    const double bottomMargin = 400.0;
-    const double minDistance = 100.0;
+    final usableWidth = max(1.0, size.width - 2 * inset);
+    final usableHeight = max(1.0, size.height - 2 * inset);
 
-    final usableWidth = size.width - 2 * safePadding;
-    final usableHeight = size.height - topMargin - bottomMargin;
+    final used = <Offset>[];
+    final result = <String, Offset>{};
 
-    final List<Offset> usedPoints = [];
-    final Map<String, Offset> result = {};
-    final Set<String> usedLabels = {};
+    for (final label in _sequence) {
+      if (result.containsKey(label)) continue;
 
-    for (final label in sequence) {
-      if (usedLabels.contains(label)) continue;
-
-      Offset candidate = const Offset(0, 0);
+      Offset candidate = Offset.zero;
       bool overlaps;
       int attempts = 0;
 
       do {
+        // Give up spacing after 1000 tries rather than looping forever on a
+        // canvas too small to hold ten well-separated circles.
         if (++attempts > 1000) break;
-
         candidate = Offset(
-          rand.nextDouble() * usableWidth + safePadding,
-          rand.nextDouble() * usableHeight + topMargin,
+          rand.nextDouble() * usableWidth + inset,
+          rand.nextDouble() * usableHeight + inset,
         );
-
-        overlaps = usedPoints.any((p) => (p - candidate).distance < minDistance);
+        overlaps = used.any((p) => (p - candidate).distance < minDistance);
       } while (overlaps);
 
-      usedLabels.add(label);
-      usedPoints.add(candidate);
+      used.add(candidate);
       result[label] = candidate;
     }
 
-    setState(() => anchorPoints = result);
+    _anchorPoints = result;
+    _laidOutFor = size;
   }
 
-  void handleTap(String label) {
-    if (label == sequence[currentIndex]) {
-      setState(() {
-        if (currentIndex > 0) {
-          drawnLines.add(anchorPoints![sequence[currentIndex - 1]]!);
-          drawnLines.add(anchorPoints![label]!);
-        }
-        currentIndex++;
-      });
+  void _handleTap(String label) {
+    if (label != _sequence[_currentIndex]) {
+      AppFeedback.error(context, AppLocalizations.of(context)!.stepWrongOrder);
+      return;
+    }
 
-      if (currentIndex == sequence.length) {
-        Future.delayed(const Duration(milliseconds: 500), completeTestWithPoint);
+    setState(() {
+      if (_currentIndex > 0) {
+        _drawnLines
+          ..add(_anchorPoints![_sequence[_currentIndex - 1]]!)
+          ..add(_anchorPoints![label]!);
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Λάθος σειρά.')),
+      _currentIndex++;
+    });
+
+    if (_currentIndex == _sequence.length) {
+      Future.delayed(
+        const Duration(milliseconds: 500),
+        () => _finish(score: 1),
       );
     }
   }
 
-  Widget _buildCircle(String label, Offset pos) {
+  Widget _buildCircle(BuildContext context, String label, Offset pos) {
+    final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
+    final visited = _sequence.indexOf(label) < _currentIndex;
+
     return Positioned(
-      left: pos.dx - circleSize / 2,
-      top: pos.dy - circleSize / 2,
-      child: GestureDetector(
-        onTap: () => handleTap(label),
-        child: Container(
-          width: circleSize,
-          height: circleSize,
-          decoration: BoxDecoration(
-            color: sequence.indexOf(label) < currentIndex ? Colors.green : Colors.white,
-            border: Border.all(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
-            shape: BoxShape.circle,
+      left: pos.dx - _circleSize / 2,
+      top: pos.dy - _circleSize / 2,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: GestureDetector(
+          onTap: () => _handleTap(label),
+          child: Container(
+            width: _circleSize,
+            height: _circleSize,
+            decoration: BoxDecoration(
+              color: visited
+                  ? semantic.successContainer
+                  : theme.colorScheme.surface,
+              border: Border.all(
+                color: visited ? semantic.success : theme.colorScheme.outline,
+                width: 2,
+              ),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: visited ? semantic.onSuccessContainer : null,
+              ),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -136,75 +162,62 @@ class _TrailsStepState extends State<TrailsStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Οπτικο-Νοητική Ιχνηλάτηση'),
-        automaticallyImplyLeading: true,
-        centerTitle: true,
-      ),
-      body: anchorPoints == null
-    ? const Center(child: CircularProgressIndicator())
-    : Stack(
-        children: [
-          Column(
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return TestStepScaffold(
+      title: l10n.stepTitleTrails,
+      instruction: '${l10n.stepInstructionTrails}\n'
+          '${l10n.stepInstructionTrailsRetry}',
+      // The circles are positioned absolutely inside the canvas below.
+      scrollable: false,
+      onNext: () => _finish(score: 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          if (_anchorPoints == null || _laidOutFor != size) {
+            _generateAnchorPoints(size);
+          }
+
+          return Stack(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Οδηγίες:\nΣυνδέστε τα κυκλάκια ξεκινώντας από το 1, έπειτα το Α, μετά το 2, Β, 3, Γ... έως το 5 και Ε.\n'
-                  'Αν κάνετε λάθος, μπορείτε να προσπαθήσετε ξανά. Αν δυσκολεύεστε, πατήστε "Επόμενο". Χρόνος 2 λεπτά.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+              CustomPaint(
+                size: size,
+                painter: _LinePainter(
+                  points: _drawnLines,
+                  color: theme.colorScheme.primary,
                 ),
               ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      painter: LinePainter(drawnLines),
-                      child: Container(),
-                    ),
-                    ...anchorPoints!.entries.map((e) => _buildCircle(e.key, e.value)).toList(),
-                  ],
-                ),
-              ),
+              for (final e in _anchorPoints!.entries)
+                _buildCircle(context, e.key, e.value),
             ],
-          ),
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: ElevatedButton(
-              onPressed: () {
-                if (!testCompleted) {
-                  timeoutTimer?.cancel();
-                  widget.onScored(0);
-                  widget.onNext();
-                }
-              },
-              child: const Text('Επόμενο'),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
-class LinePainter extends CustomPainter {
+/// Draws the trail joining the circles tapped so far, as connected pairs.
+class _LinePainter extends CustomPainter {
+  _LinePainter({required this.points, required this.color});
+
   final List<Offset> points;
-  LinePainter(this.points);
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.blue
-      ..strokeWidth = 4;
+      ..color = color
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
 
-    for (int i = 0; i < points.length - 1; i += 2) {
+    for (int i = 0; i + 1 < points.length; i += 2) {
       canvas.drawLine(points[i], points[i + 1], paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _LinePainter old) =>
+      old.points.length != points.length || old.color != color;
 }

@@ -109,10 +109,10 @@ class FFTChartCombined extends StatelessWidget {
                     getTitlesWidget: (value, meta) => Text(value.toStringAsFixed(0), style: const TextStyle(fontSize: 10)),
                   ),
                 ),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
-              gridData: FlGridData(show: true),
+              gridData: const FlGridData(show: true),
               borderData: FlBorderData(show: true),
               lineBarsData: [
                 LineChartBarData(

@@ -7,7 +7,6 @@ import '../login/login_view.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/reports_service.dart';
 import '../../../services/authentication_service.dart';
-import '../../../models/app_user.dart';
 import '../../../models/patient_report.dart';
 import '../../../models/doctor_note.dart';
 

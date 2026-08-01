@@ -1303,6 +1303,804 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saving your results'**
   String get cameraFinishing;
+
+  /// No description provided for @stepOfSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String stepOfSteps(Object current, Object total);
+
+  /// No description provided for @stepStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get stepStart;
+
+  /// No description provided for @stepSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get stepSubmit;
+
+  /// No description provided for @stepFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get stepFinish;
+
+  /// No description provided for @stepDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get stepDone;
+
+  /// No description provided for @stepContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get stepContinue;
+
+  /// No description provided for @stepHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hint'**
+  String get stepHint;
+
+  /// No description provided for @stepClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get stepClear;
+
+  /// No description provided for @stepDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get stepDelete;
+
+  /// No description provided for @stepAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get stepAnswer;
+
+  /// No description provided for @stepResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get stepResults;
+
+  /// No description provided for @stepTimeRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining'**
+  String get stepTimeRemaining;
+
+  /// No description provided for @stepTimeRemainingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining: {seconds}'**
+  String stepTimeRemainingValue(Object seconds);
+
+  /// No description provided for @stepTapMicToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the microphone to start.'**
+  String get stepTapMicToStart;
+
+  /// No description provided for @stepSayWithMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Say the word into the microphone'**
+  String get stepSayWithMic;
+
+  /// No description provided for @stepSpokenIntoMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Spoken into the microphone'**
+  String get stepSpokenIntoMic;
+
+  /// No description provided for @stepTypeOrUseMic.
+  ///
+  /// In en, this message translates to:
+  /// **'You can type or use the microphone.'**
+  String get stepTypeOrUseMic;
+
+  /// No description provided for @stepStartMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Start microphone'**
+  String get stepStartMic;
+
+  /// No description provided for @stepMicProblem.
+  ///
+  /// In en, this message translates to:
+  /// **'There is a problem with the microphone. Tap it again to retry.'**
+  String get stepMicProblem;
+
+  /// No description provided for @stepMicStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The microphone stopped. Tap it again to continue.'**
+  String get stepMicStopped;
+
+  /// No description provided for @stepMicClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'The microphone closed. Tap it again to continue.'**
+  String get stepMicClosed;
+
+  /// No description provided for @stepSpeakNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak now. Each word appears on screen straight away.'**
+  String get stepSpeakNow;
+
+  /// No description provided for @stepCorrectAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct!'**
+  String get stepCorrectAnswer;
+
+  /// No description provided for @stepCorrectWithHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct (hint used)'**
+  String get stepCorrectWithHint;
+
+  /// No description provided for @stepWrongOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong order.'**
+  String get stepWrongOrder;
+
+  /// No description provided for @stepWrongLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong line'**
+  String get stepWrongLine;
+
+  /// No description provided for @stepAllWordsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'All the words have been found.'**
+  String get stepAllWordsFound;
+
+  /// No description provided for @stepTimeUpScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Time is up.\nScore: {score}/3.00'**
+  String stepTimeUpScore(Object score);
+
+  /// No description provided for @stepCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is required to continue.'**
+  String get stepCameraPermissionRequired;
+
+  /// No description provided for @stepCameraPermissionRecheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check permission again'**
+  String get stepCameraPermissionRecheck;
+
+  /// No description provided for @stepCameraPermissionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the app settings if the problem persists.'**
+  String get stepCameraPermissionSettings;
+
+  /// No description provided for @stepLocationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access was not allowed.\nYour City and Country answers will be accepted as entered.'**
+  String get stepLocationDenied;
+
+  /// No description provided for @stepTitleSubtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtract 7 from 100'**
+  String get stepTitleSubtract;
+
+  /// No description provided for @stepTitleOrientation.
+  ///
+  /// In en, this message translates to:
+  /// **'Orientation'**
+  String get stepTitleOrientation;
+
+  /// No description provided for @stepTitleNaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Naming'**
+  String get stepTitleNaming;
+
+  /// No description provided for @stepTitleImmediateRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediate recall'**
+  String get stepTitleImmediateRecall;
+
+  /// No description provided for @stepTitleDelayedRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'Delayed recall'**
+  String get stepTitleDelayedRecall;
+
+  /// No description provided for @stepTitleDigits.
+  ///
+  /// In en, this message translates to:
+  /// **'Working memory'**
+  String get stepTitleDigits;
+
+  /// No description provided for @stepTitleVigilance.
+  ///
+  /// In en, this message translates to:
+  /// **'Vigilance'**
+  String get stepTitleVigilance;
+
+  /// No description provided for @stepTitleFluency.
+  ///
+  /// In en, this message translates to:
+  /// **'Verbal fluency'**
+  String get stepTitleFluency;
+
+  /// No description provided for @stepTitleSimilarities.
+  ///
+  /// In en, this message translates to:
+  /// **'Abstract thinking'**
+  String get stepTitleSimilarities;
+
+  /// No description provided for @stepTitleClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock: hands'**
+  String get stepTitleClock;
+
+  /// No description provided for @stepTitleTrails.
+  ///
+  /// In en, this message translates to:
+  /// **'Visuospatial tracking'**
+  String get stepTitleTrails;
+
+  /// No description provided for @stepTitleCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Visuoconstructional skills'**
+  String get stepTitleCube;
+
+  /// No description provided for @stepTitleRepeatSentences.
+  ///
+  /// In en, this message translates to:
+  /// **'Sentence repetition'**
+  String get stepTitleRepeatSentences;
+
+  /// No description provided for @stepTitleGestures.
+  ///
+  /// In en, this message translates to:
+  /// **'Gesture recognition'**
+  String get stepTitleGestures;
+
+  /// No description provided for @stepTitleConflicting.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflicting instructions'**
+  String get stepTitleConflicting;
+
+  /// No description provided for @stepTitleGoNoGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go / no-go'**
+  String get stepTitleGoNoGo;
+
+  /// No description provided for @stepInstructionSubtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtract 7 repeatedly, starting from 100 (five times):'**
+  String get stepInstructionSubtract;
+
+  /// No description provided for @stepInstructionDigitsMemorise.
+  ///
+  /// In en, this message translates to:
+  /// **'Try to memorise the numbers below.'**
+  String get stepInstructionDigitsMemorise;
+
+  /// No description provided for @stepInstructionDigitsForwardSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'In a moment you will be asked to repeat them in the same order.'**
+  String get stepInstructionDigitsForwardSoon;
+
+  /// No description provided for @stepInstructionDigitsBackwardSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'In a moment you will be asked to repeat them in reverse order.'**
+  String get stepInstructionDigitsBackwardSoon;
+
+  /// No description provided for @stepInstructionDigitsForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat the numbers you saw, in the same order:'**
+  String get stepInstructionDigitsForward;
+
+  /// No description provided for @stepInstructionDigitsBackward.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat the numbers you saw, in reverse order:'**
+  String get stepInstructionDigitsBackward;
+
+  /// No description provided for @stepInstructionWriteOrSayNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Write or say the numbers'**
+  String get stepInstructionWriteOrSayNumbers;
+
+  /// No description provided for @stepInstructionOrientation.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the following:'**
+  String get stepInstructionOrientation;
+
+  /// No description provided for @stepInstructionOrientationDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day (e.g. Monday)'**
+  String get stepInstructionOrientationDay;
+
+  /// No description provided for @stepInstructionOrientationDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date (e.g. 01 / 01 / 2020)'**
+  String get stepInstructionOrientationDate;
+
+  /// No description provided for @stepInstructionOrientationCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get stepInstructionOrientationCity;
+
+  /// No description provided for @stepInstructionOrientationCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get stepInstructionOrientationCountry;
+
+  /// No description provided for @stepHintCityExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Athens'**
+  String get stepHintCityExample;
+
+  /// No description provided for @stepHintCountryExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Greece'**
+  String get stepHintCountryExample;
+
+  /// No description provided for @stepInstructionNaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Name each animal by tapping the microphone on the right of its frame.'**
+  String get stepInstructionNaming;
+
+  /// No description provided for @stepInstructionImmediateRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'I will say 5 words. Try to memorise them, because you will be asked for them again shortly.'**
+  String get stepInstructionImmediateRecall;
+
+  /// No description provided for @stepInstructionImmediateRecallPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'To practise, you will first repeat them all together. Then you will try to repeat each word separately.'**
+  String get stepInstructionImmediateRecallPractice;
+
+  /// No description provided for @stepInstructionSayWordsTogether.
+  ///
+  /// In en, this message translates to:
+  /// **'Say the words from the list (all together, in any order): {words}'**
+  String stepInstructionSayWordsTogether(Object words);
+
+  /// No description provided for @stepInstructionSayWordsSeparately.
+  ///
+  /// In en, this message translates to:
+  /// **'Say the words, one in each field. {words}'**
+  String stepInstructionSayWordsSeparately(Object words);
+
+  /// No description provided for @stepInstructionSayWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Say the words'**
+  String get stepInstructionSayWords;
+
+  /// No description provided for @stepInstructionDelayedRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'Say as many words as you remember (voice only; the order does not matter).'**
+  String get stepInstructionDelayedRecall;
+
+  /// No description provided for @stepInstructionDelayedRecallHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you tap “Hint” for a word, you get half a point for it.'**
+  String get stepInstructionDelayedRecallHint;
+
+  /// No description provided for @stepInstructionWhichWordWasInList.
+  ///
+  /// In en, this message translates to:
+  /// **'Which of the following words was in the list?'**
+  String get stepInstructionWhichWordWasInList;
+
+  /// No description provided for @stepInstructionVigilance.
+  ///
+  /// In en, this message translates to:
+  /// **'This test measures your alertness and attention.'**
+  String get stepInstructionVigilance;
+
+  /// No description provided for @stepInstructionVigilanceLetters.
+  ///
+  /// In en, this message translates to:
+  /// **'A series of letters will appear, one at a time.'**
+  String get stepInstructionVigilanceLetters;
+
+  /// No description provided for @stepInstructionVigilanceTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Press the button when you see the letter “Α”.'**
+  String get stepInstructionVigilanceTap;
+
+  /// No description provided for @stepInstructionFluency.
+  ///
+  /// In en, this message translates to:
+  /// **'Verbal fluency: as many words as you can beginning with the letter “Χ”, without proper nouns or derived words, within 1 minute.'**
+  String get stepInstructionFluency;
+
+  /// No description provided for @stepInstructionSimilarities.
+  ///
+  /// In en, this message translates to:
+  /// **'What do the following pairs have in common?'**
+  String get stepInstructionSimilarities;
+
+  /// No description provided for @stepInstructionSimilaritiesExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. banana - orange = fruit'**
+  String get stepInstructionSimilaritiesExample;
+
+  /// No description provided for @stepInstructionSimilaritiesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Hint” for example answers.'**
+  String get stepInstructionSimilaritiesHint;
+
+  /// No description provided for @stepInstructionClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the hands so that they show 11:10'**
+  String get stepInstructionClock;
+
+  /// No description provided for @stepInstructionTrails.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the circles starting from 1, then Α, then 2, Β, 3, Γ… up to 5 and Ε.'**
+  String get stepInstructionTrails;
+
+  /// No description provided for @stepInstructionTrailsRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'If you make a mistake you can try again. If you are struggling, press “Next”. Time: 2 minutes.'**
+  String get stepInstructionTrailsRetry;
+
+  /// No description provided for @stepInstructionDrawCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the cube you see below.'**
+  String get stepInstructionDrawCube;
+
+  /// No description provided for @stepInstructionConnectCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the cube by joining the dots. Tap one dot first, then the next.'**
+  String get stepInstructionConnectCube;
+
+  /// No description provided for @stepInstructionConnectCubeAlmost.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost right — remove the red lines'**
+  String get stepInstructionConnectCubeAlmost;
+
+  /// No description provided for @stepInstructionRepeatSentence.
+  ///
+  /// In en, this message translates to:
+  /// **'Say the sentence…'**
+  String get stepInstructionRepeatSentence;
+
+  /// No description provided for @stepInstructionGesturesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'When you press “Start”, the camera will turn on for 1 minute.\n\nYou need to perform the following movements:'**
+  String get stepInstructionGesturesIntro;
+
+  /// No description provided for @stepInstructionGesturesPerformAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Perform all the movements.'**
+  String get stepInstructionGesturesPerformAll;
+
+  /// No description provided for @stepGestureRecognised.
+  ///
+  /// In en, this message translates to:
+  /// **'{gesture}\nRecognised!'**
+  String stepGestureRecognised(Object gesture);
+
+  /// No description provided for @stepGesturesAllDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Well done! All gestures were detected.\n\nScore: 3.00/3.00'**
+  String get stepGesturesAllDetected;
+
+  /// No description provided for @stepWordNumbered.
+  ///
+  /// In en, this message translates to:
+  /// **'Word {number}'**
+  String stepWordNumbered(Object number);
+
+  /// No description provided for @stepExampleAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Example: {hint}'**
+  String stepExampleAnswer(Object hint);
+
+  /// No description provided for @stepHintFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Hint: {hint}'**
+  String stepHintFor(Object hint);
+
+  /// No description provided for @stepHeardTargetLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'I heard Α'**
+  String get stepHeardTargetLetter;
+
+  /// No description provided for @stepStartTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Start test'**
+  String get stepStartTest;
+
+  /// No description provided for @stepSecondsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String stepSecondsValue(Object seconds);
+
+  /// No description provided for @stepMemoriseTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to memorise: {seconds}'**
+  String stepMemoriseTimeLeft(Object seconds);
+
+  /// No description provided for @stepInstructionRepeatSentencesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'A sentence will appear for 20 seconds. Try to read it and memorise it. You will then be asked to repeat it back as accurately as you can.\n\nYou can see the sentence again for 3 seconds if you need to (Hint), and you can clear what the microphone heard (Clear). Press “Next” to move on, even if you have not answered.'**
+  String get stepInstructionRepeatSentencesIntro;
+
+  /// No description provided for @stepInstructionRepeatBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat the sentence you read. Press the microphone to start; if it stops, press it again.'**
+  String get stepInstructionRepeatBack;
+
+  /// No description provided for @fabGoNoGoInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'The numbers 1 and 2 will appear one at a time.\n\nPress the “Tap” button when 1 appears. Do not press it when 2 appears.\n\nWe will run a short practice round first to explain the rules, then the real task.'**
+  String get fabGoNoGoInstructions;
+
+  /// No description provided for @fabGoNoGoRules.
+  ///
+  /// In en, this message translates to:
+  /// **'“1” — tap\n“2” — do not tap'**
+  String get fabGoNoGoRules;
+
+  /// No description provided for @fabGoNoGoPracticeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice round. Apply the rules. If you make a mistake you will see an explanation. Press “Start” to begin the practice.'**
+  String get fabGoNoGoPracticeIntro;
+
+  /// No description provided for @fabGoNoGoTestIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Main task. Apply the rules. Press “Start” to begin.'**
+  String get fabGoNoGoTestIntro;
+
+  /// No description provided for @fabTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap'**
+  String get fabTap;
+
+  /// No description provided for @fabGoNoGoMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'You should have tapped once, but did not tap.'**
+  String get fabGoNoGoMissed;
+
+  /// No description provided for @fabGoNoGoTooMany.
+  ///
+  /// In en, this message translates to:
+  /// **'You should have tapped once; you tapped {count} times.'**
+  String fabGoNoGoTooMany(Object count);
+
+  /// No description provided for @fabGoNoGoShouldNotTap.
+  ///
+  /// In en, this message translates to:
+  /// **'You should not have tapped; you tapped {count} times.'**
+  String fabGoNoGoShouldNotTap(Object count);
+
+  /// No description provided for @fabScoreValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Score: {score}'**
+  String fabScoreValue(Object score);
+
+  /// No description provided for @fabGoNoGoResultStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'You gave the same answer at least 4 times in a row.'**
+  String get fabGoNoGoResultStreak;
+
+  /// No description provided for @fabGoNoGoResultPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'You made no mistakes.'**
+  String get fabGoNoGoResultPerfect;
+
+  /// No description provided for @fabGoNoGoResultFew.
+  ///
+  /// In en, this message translates to:
+  /// **'You made 1 or 2 mistakes.'**
+  String get fabGoNoGoResultFew;
+
+  /// No description provided for @fabGoNoGoResultMany.
+  ///
+  /// In en, this message translates to:
+  /// **'You made more than 2 mistakes.'**
+  String get fabGoNoGoResultMany;
+
+  /// No description provided for @fabFluencyInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Say as many words as you can beginning with the letter Κ, other than surnames and proper names.\n\nYou have 60 seconds.\n\nScoring: more than 10 words = 3 points, 6–10 = 2, 3–5 = 1, fewer than 3 = 0.'**
+  String get fabFluencyInstructions;
+
+  /// No description provided for @fabFluencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verbal fluency'**
+  String get fabFluencyTitle;
+
+  /// No description provided for @fabFluencyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Words beginning with “Κ”'**
+  String get fabFluencyPrompt;
+
+  /// No description provided for @fabFluencyResultMany.
+  ///
+  /// In en, this message translates to:
+  /// **'More than 10 words.'**
+  String get fabFluencyResultMany;
+
+  /// No description provided for @fabFluencyResultCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} words.'**
+  String fabFluencyResultCount(Object count);
+
+  /// No description provided for @fabFluencyResultFew.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer than 3 words.'**
+  String get fabFluencyResultFew;
+
+  /// No description provided for @fabSimilaritiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Similarities'**
+  String get fabSimilaritiesTitle;
+
+  /// No description provided for @fabSimilaritiesInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'“What do they have in common?”\n\nFor example: banana - orange = fruit.\n\nYou can type or use the microphone. Tap “Hint” on the first question if you would like help.\n\nScoring: 3 correct answers = 3 points, 2 = 2, 1 = 1, none = 0.'**
+  String get fabSimilaritiesInstructions;
+
+  /// No description provided for @fabQuestionOfCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Question {current} of {total}'**
+  String fabQuestionOfCount(Object current, Object total);
+
+  /// No description provided for @fabCorrectAnswersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} correct answers.'**
+  String fabCorrectAnswersCount(Object count);
+
+  /// No description provided for @fabNoCorrectAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'No correct answers.'**
+  String get fabNoCorrectAnswers;
+
+  /// No description provided for @fabConflictingInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap once when I tap twice. Tap twice when I tap once.\n\nWe will run a short practice round first, then the real task.'**
+  String get fabConflictingInstructions;
+
+  /// No description provided for @fabExaminerTapsOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'I tap once'**
+  String get fabExaminerTapsOnce;
+
+  /// No description provided for @fabExaminerTapsTwice.
+  ///
+  /// In en, this message translates to:
+  /// **'I tap twice'**
+  String get fabExaminerTapsTwice;
+
+  /// No description provided for @fabYourTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your turn'**
+  String get fabYourTurn;
+
+  /// No description provided for @fabGesturesRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {gestures}'**
+  String fabGesturesRemaining(Object gestures);
+
+  /// No description provided for @fabConflictingRules.
+  ///
+  /// In en, this message translates to:
+  /// **'“1” — tap twice\n“2” — tap once'**
+  String get fabConflictingRules;
+
+  /// No description provided for @fabConflictingPracticeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice round. Follow the rules so you get a feel for the task. Press “Start” to begin the practice.'**
+  String get fabConflictingPracticeIntro;
+
+  /// No description provided for @fabConflictingTestIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Main task. Apply the rules. Press “Start” to begin.'**
+  String get fabConflictingTestIntro;
+
+  /// No description provided for @fabExpectedTapsOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'You should have tapped once; you tapped {count} times.'**
+  String fabExpectedTapsOnce(Object count);
+
+  /// No description provided for @fabExpectedTapsTwice.
+  ///
+  /// In en, this message translates to:
+  /// **'You should have tapped twice; you tapped {count} times.'**
+  String fabExpectedTapsTwice(Object count);
+
+  /// No description provided for @fabResultStreakStimulus.
+  ///
+  /// In en, this message translates to:
+  /// **'You matched the number shown at least 4 times in a row.'**
+  String get fabResultStreakStimulus;
 }
 
 class _AppLocalizationsDelegate

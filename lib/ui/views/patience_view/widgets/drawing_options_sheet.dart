@@ -5,9 +5,6 @@ import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../../app/app.locator.dart';
 import '../../patience/patience_viewmodel.dart';
-import '../../drawing_test/signature_canvas_view.dart';
-import '../../drawing_test/camera_draw_view.dart';
-import '../../drawing_test/gallery_draw_view.dart';
 
 /// Shows options for drawing input and forwards the image to [vm].
 void showDrawingOptions(BuildContext ctx, PatienceViewModel vm) {

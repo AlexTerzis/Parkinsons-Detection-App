@@ -97,7 +97,7 @@ class HeuristicScorer implements CameraScorer {
 
     // --- Normalize ---
 
-    final config = EnhancedScoringConfig.weights;
+    const config = EnhancedScoringConfig.weights;
     final drafts = <_Draft>[
       _Draft('tremor', tremorSeverity, config['tremor']!,
           // Already 0-1 from _HandAnalysis, which folds in the band check.

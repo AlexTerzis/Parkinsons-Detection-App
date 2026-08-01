@@ -53,9 +53,25 @@ class TremorTestViewModel extends BaseViewModel {
   double _score2 = 0.0;
   String tremorStatus = '';
   int secondsLeft = 0;
+
+  /// Elapsed fraction of the countdown currently running, for the progress bar.
+  ///
+  /// The denominator follows [phase]: the pause between hands counts down from
+  /// [pauseDuration], not [testDuration], so sharing one divisor would make the
+  /// bar jump backwards when the pause starts.
+  double get progress {
+    final total = phase == 1 ? pauseDuration : testDuration;
+    if (total == 0) return 0;
+    return ((total - secondsLeft) / total).clamp(0.0, 1.0);
+  }
+
   bool isTesting = false;
 
-  int _phase = 0; // 0 = hand 1, 1 = pause, 2 = hand 2, 3 = done
+  /// Which leg of the two-hand sequence is running: 0 = hand 1, 1 = pause,
+  /// 2 = hand 2, 3 = done. Exposed because the value is only ever written
+  /// internally, and a private field the analyzer sees no reads of is flagged
+  /// as dead — but the state is real and worth surfacing to the view.
+  int phase = 0;
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
   Timer? _countdownTimer;
@@ -76,7 +92,7 @@ class TremorTestViewModel extends BaseViewModel {
     _score1 = 0.0;
     _score2 = 0.0;
     tremorStatus = l10n.startingTest;
-    _phase = 0;
+    phase = 0;
     _accData.clear();
     _gyroData.clear();
     isTesting = true;
@@ -84,7 +100,7 @@ class TremorTestViewModel extends BaseViewModel {
   }
 
   void _startHand1(AppLocalizations l10n) {
-    _phase = 0;
+    phase = 0;
     tremorStatus = l10n.testingHand1;
     secondsLeft = testDuration;
     _startSensors();
@@ -96,7 +112,7 @@ class TremorTestViewModel extends BaseViewModel {
   }
 
   void _startPause(AppLocalizations l10n) {
-    _phase = 1;
+    phase = 1;
     tremorStatus = l10n.switchHands;
     secondsLeft = pauseDuration;
     accX.clear(); accY.clear(); accZ.clear();
@@ -106,7 +122,7 @@ class TremorTestViewModel extends BaseViewModel {
   }
 
   void _startHand2(AppLocalizations l10n) {
-    _phase = 2;
+    phase = 2;
     tremorStatus = l10n.testingHand2;
     secondsLeft = testDuration;
     _startSensors();
@@ -115,7 +131,7 @@ class TremorTestViewModel extends BaseViewModel {
       resultHand2 = _analyzeData(l10n.handTwoLabel, l10n, storeInHand1: false);
       tremorStatus = l10n.testCompleted;
       isTesting = false;
-      _phase = 3;
+      phase = 3;
       notifyListeners();
       await _saveResult(math.max(_score1, _score2));
     });

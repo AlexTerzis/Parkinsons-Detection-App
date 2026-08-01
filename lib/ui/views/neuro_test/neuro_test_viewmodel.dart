@@ -107,6 +107,10 @@ class NeuroTestViewModel extends BaseViewModel {
   // ✅ Getter to expose current step
   Widget get currentStepWidget => _steps[_currentStep];
 
+  /// 1-based position and length of the battery, for the progress indicator.
+  int get currentStepNumber => _currentStep + 1;
+  int get stepCount => _steps.length;
+
   // ✅ Move to the next step
   void nextStep() {
     if (_currentStep < _steps.length - 1) {

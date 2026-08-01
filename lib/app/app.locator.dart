@@ -42,9 +42,9 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => ReportsService());
   locator.registerLazySingleton(() => VoiceApiService());
   locator.registerLazySingleton(() => RaisonApiService());
-  locator.registerLazySingleton(() => HandMetrics());
-  locator.registerLazySingleton(() => TremorAnalysisService());
-  locator.registerLazySingleton(() => CameraScoringService());
+  locator.registerLazySingleton(() => const HandMetrics());
+  locator.registerLazySingleton(() => const TremorAnalysisService());
+  locator.registerLazySingleton(() => const CameraScoringService());
   locator.registerLazySingleton(() => StorageService());
   locator.registerLazySingleton(() => LocalizationService());
   locator.registerLazySingleton(() => TextScaleService());

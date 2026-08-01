@@ -3,14 +3,21 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA sentence repetition: read a sentence, then repeat it from memory.
+///
+/// The two sentences are the instrument's own and stay Greek — they are scored
+/// word-by-word against `el_GR` recognition.
 class RepeatSentencesStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(double score) onScored;
   const RepeatSentencesStep({
-    Key? key,
+    super.key,
     required this.onNext,
     required this.onScored,
-  }) : super(key: key);
+  });
 
   @override
   State<RepeatSentencesStep> createState() => _RepeatSentencesStepState();
@@ -36,7 +43,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   Timer? _memorizeTimer;
   Timer? _recordingTimer;
   bool _available = false;
-  List<double> _phraseScores = [];
+  final List<double> _phraseScores = [];
   bool _timerStarted = false;
 
   @override
@@ -146,13 +153,13 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
             _recognized = r.recognizedWords;
             // Only append if new recognition doesn't already exist at the end
             if (!_recognizedHistory.endsWith(_recognized)) {
-              _recognizedHistory = (_recognizedHistory + ' ' + _recognized).trim();
+              _recognizedHistory = '$_recognizedHistory $_recognized'.trim();
             }
           }
           if (r.finalResult) {
             // Always save the final recognizedWords to history
             if (!_recognizedHistory.endsWith(_recognized)) {
-              _recognizedHistory = (_recognizedHistory + ' ' + _recognized).trim();
+              _recognizedHistory = '$_recognizedHistory $_recognized'.trim();
             }
             _listening = false;
           }
@@ -251,177 +258,123 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
 
   @override
   Widget build(BuildContext context) {
-    if (_step == 0) {
-      // Instructions Page
-      return Scaffold(
-        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Οδηγίες"),
-                const SizedBox(height: 12),
-                const Text(
-                  "Θα εμφανιστεί μια πρόταση για 20 δευτερόλεπτα. "
-                  "Προσπάθησε να τη διαβάσεις και να την απομνημονεύσεις. "
-                  "Στη συνέχεια θα σου ζητηθεί να την επαναλάβεις όσο πιο σωστά μπορείς. "
-                  "\n Θα έχεις τη δυνατότητα να δεις ξανά την πρόταση για 3 δευτερόλεπτα αν χρειαστεί (Υπόδειξη).\n"
-                  " Μπορείς να καθαρίσεις ό,τι έχει πει το μικρόφωνο (Καθαρισμός).\n"
-                  " Πάτα 'Επόμενο' για να προχωρήσεις, ακόμα κι αν δεν έχεις απαντήσει.",
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _goToMemorize,
-                  child: const Text("Έναρξη Τεστ"),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    } else if (_step == 1) {
-      // Memorize Phase
-      return Scaffold(
-        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Column(
-            children: [
-              const SizedBox(height: 14),
-              Text(_phrases[_phraseIndex], textAlign: TextAlign.center),
-              const SizedBox(height: 18),
-              Text("Χρόνος απομνημόνευσης: $_memorizeSecondsLeft"),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _skipMemorizeAndRecord,
-                  child: const Text("Επόμενο"),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
-      );
-    } else {
-      // Recording Phase
-      bool micEnabled = (!_listening && _available && _recordingSecondsLeft > 0);
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+    final isLastPhrase = _phraseIndex >= _phrases.length - 1;
 
-      return Scaffold(
-        appBar: AppBar(title: const Text('Επανάληψη προτάσεων')),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "Επανάλαβε την πρόταση που διάβασες. "
-                "Πάτησε το μικρόφωνο για να ξεκινήσεις. Αν σταματήσει, πάτησέ το ξανά.",
-                textAlign: TextAlign.center,
+    if (_step == 0) {
+      return TestStepScaffold(
+        title: l10n.stepTitleRepeatSentences,
+        instruction: l10n.stepInstructionRepeatSentencesIntro,
+        nextLabel: l10n.stepStartTest,
+        onNext: _goToMemorize,
+        child: const SizedBox.shrink(),
+      );
+    }
+
+    if (_step == 1) {
+      return TestStepScaffold(
+        title: l10n.stepTitleRepeatSentences,
+        onNext: _skipMemorizeAndRecord,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // The sentence to memorise, given the whole screen.
+            Text(
+              _phrases[_phraseIndex],
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall,
+            ),
+            const AppGap.lg(),
+            Text(
+              l10n.stepMemoriseTimeLeft(_memorizeSecondsLeft),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  "Χρόνος που απομένει: $_recordingSecondsLeft δευτ.",
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Recognized Text (plain)
-              Text(
-                _recognizedHistory.isEmpty ? 'Πείτε την πρόταση...' : _recognizedHistory,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 17),
-              ),
-              if (_showHintPhrase)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.yellow[100],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _phrases[_phraseIndex],
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              if (_micUnexpectedlyClosed && !_listening)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    'Το μικρόφωνο σταμάτησε. Πάτησε το μικρόφωνο για να συνεχίσεις.',
-                    style: const TextStyle(color: Colors.orange),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              Center(
-                child: SizedBox(
-                  height: 50,
-                  width: 50,
-                  child: FloatingActionButton(
-                    onPressed: micEnabled
-                        ? () async {
-                            setState(() {
-                              _micUnexpectedlyClosed = false; // Hide message as soon as user tries again
-                            });
-                            await _startListening();
-                          }
-                        : null,
-                    tooltip: 'Εκκίνηση μικροφώνου',
-                    child: const Icon(Icons.mic, size: 30),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: _showHint,
-                        child: const Text('Υπόδειξη'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: _clear,
-                        child: const Text('Διαγραφή'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _next,
-                        child: Text(
-                          _phraseIndex < _phrases.length - 1 ? 'Επόμενο' : 'Τέλος',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
+
+    final micEnabled = !_listening && _available && _recordingSecondsLeft > 0;
+
+    return TestStepScaffold(
+      title: l10n.stepTitleRepeatSentences,
+      instruction: l10n.stepInstructionRepeatBack,
+      nextLabel: isLastPhrase ? l10n.stepFinish : null,
+      onNext: _next,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.stepTimeRemainingValue(
+              l10n.stepSecondsValue(_recordingSecondsLeft),
+            ),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: _recordingSecondsLeft <= 10 ? semantic.warning : null,
+            ),
+          ),
+          const AppGap.md(),
+          Text(
+            _recognizedHistory.isEmpty
+                ? l10n.stepInstructionRepeatSentence
+                : _recognizedHistory,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: _recognizedHistory.isEmpty
+                  ? theme.colorScheme.onSurfaceVariant
+                  : null,
+            ),
+          ),
+          if (_showHintPhrase) HintPanel(lines: [_phrases[_phraseIndex]]),
+          const Spacer(),
+          if (_micUnexpectedlyClosed && !_listening) ...[
+            Text(
+              l10n.stepMicStopped,
+              textAlign: TextAlign.center,
+              style:
+                  theme.textTheme.bodyMedium?.copyWith(color: semantic.warning),
+            ),
+            const AppGap.sm(),
+          ],
+          Align(
+            child: FilledButton.tonalIcon(
+              onPressed: micEnabled
+                  ? () async {
+                      // Clear the warning the moment the patient retries.
+                      setState(() => _micUnexpectedlyClosed = false);
+                      await _startListening();
+                    }
+                  : null,
+              icon: const Icon(Icons.mic),
+              label: Text(l10n.stepStartMic),
+            ),
+          ),
+          const AppGap.md(),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _showHint,
+                  icon: const Icon(Icons.lightbulb_outline),
+                  label: Text(l10n.stepHint),
+                ),
+              ),
+              const AppGap.wide(AppSpacing.xs),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _recognizedHistory.isEmpty ? null : _clear,
+                  icon: const Icon(Icons.undo),
+                  label: Text(l10n.stepDelete),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

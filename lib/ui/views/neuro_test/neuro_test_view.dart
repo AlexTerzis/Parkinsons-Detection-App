@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+
+import '../../common/widgets/widgets.dart';
 import 'neuro_test_viewmodel.dart';
 
+/// Host for the MoCA battery. Owns nothing but the step frame: each step
+/// supplies its own [TestStepScaffold].
 class NeuroTestView extends StatelessWidget {
   const NeuroTestView({super.key});
 
@@ -10,8 +14,10 @@ class NeuroTestView extends StatelessWidget {
     return ViewModelBuilder<NeuroTestViewModel>.reactive(
       viewModelBuilder: () => NeuroTestViewModel(),
       builder: (context, model, child) {
-        return Scaffold(
-          body: model.currentStepWidget,
+        return TestStepProgress(
+          index: model.currentStepNumber,
+          count: model.stepCount,
+          child: model.currentStepWidget,
         );
       },
     );

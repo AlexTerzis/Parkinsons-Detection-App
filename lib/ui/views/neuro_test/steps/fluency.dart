@@ -3,15 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA verbal fluency: name as many words starting with Χ as possible in one
+/// minute. The target letter and the "τέλος" stop word belong to the Greek
+/// instrument and are matched against `el_GR` speech, so both stay Greek.
 class FluencyStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(int score) onScored;
 
   const FluencyStep({
-    Key? key,
+    super.key,
     required this.onNext,
     required this.onScored,
-  }) : super(key: key);
+  });
 
   @override
   State<FluencyStep> createState() => _FluencyStepState();
@@ -61,12 +67,7 @@ class _FluencyStepState extends State<FluencyStep> {
       _micUnexpectedlyClosed = true;
       _listening = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Πρόβλημα με το μικρόφωνο. Πάτα πάλι το μικρόφωνο για να ξαναδοκιμάσεις.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    AppFeedback.error(context, AppLocalizations.of(context)!.stepMicProblem);
   }
 
   void _toggleListening() async {
@@ -111,8 +112,10 @@ class _FluencyStepState extends State<FluencyStep> {
             _finish();
           }
         },
-        partialResults: true,
-        listenMode: ListenMode.confirmation,
+        listenOptions: SpeechListenOptions(
+          partialResults: true,
+          listenMode: ListenMode.confirmation,
+        ),
         localeId: 'el_GR',
       );
     }
@@ -149,109 +152,92 @@ class _FluencyStepState extends State<FluencyStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Λεκτική ευχέρεια')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Λεκτική ευχέρεια: όσες περισσότερες λέξεις μπορείς που να αρχίζουν από το γράμμα "Χ", '
-              'χωρίς να πεις κύρια ονόματα ή παράγωγες λέξεις, μέσα σε 1 λεπτό.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 18),
-            if (_listening || _secondsLeft < 60)
-              Column(
-                children: [
-                  const Text(
-                    'Χρόνος που απομένει:',
-                    style: TextStyle(fontSize: 15, color: Colors.black),
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+    final started = _listening || _secondsLeft < 60;
+
+    return TestStepScaffold(
+      title: l10n.stepTitleFluency,
+      instruction: l10n.stepInstructionFluency,
+      // The word chips scroll in their own list below.
+      scrollable: false,
+      onNext: widget.onNext,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (started)
+            Column(
+              children: [
+                Text(
+                  l10n.stepTimeRemaining,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  Text(
-                    '$_secondsLeft',
-                    style: const TextStyle(
-                      fontSize: 40,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            if (_micUnexpectedlyClosed && !_listening && _secondsLeft > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'Το μικρόφωνο έκλεισε. Πάτησε ξανά το μικρόφωνο για να συνεχίσεις.',
-                  style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            const SizedBox(height: 8),
+                Text(
+                  '$_secondsLeft',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    // Runs warning-coloured over the last ten seconds.
+                    color: _secondsLeft <= 10 ? semantic.warning : null,
+                  ),
+                ),
+              ],
+            ),
+          if (_micUnexpectedlyClosed && !_listening && _secondsLeft > 0) ...[
+            const AppGap.sm(),
             Text(
-              _listening
-                  ? 'Μιλήστε τώρα! Κάθε λέξη εμφανίζεται αμέσως στην οθόνη.'
-                  : 'Πάτα το μικρόφωνο για να ξεκινήσεις.',
+              l10n.stepMicClosed,
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Scrollbar(
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: _allWords.map((w) {
-                        final isValid = w.length > 1 && w.toLowerCase().startsWith('χ');
-                        return Chip(
-                          label: Text(w),
-                          backgroundColor: isValid ? Colors.green[200] : null,
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: semantic.warning),
             ),
           ],
-        ),
-      ),
-      floatingActionButton: Stack(
-        children: [
-          // Next button bottom right
-          Positioned(
-            right: 8,
-            bottom: 8,
-            child: ElevatedButton.icon(
-              onPressed: widget.onNext,
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Επόμενο'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                textStyle: const TextStyle(fontSize: 17),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
+          const AppGap.xs(),
+          Text(
+            _listening ? l10n.stepSpeakNow : l10n.stepTapMicToStart,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const AppGap.md(),
+          // The mic sits with the content rather than floating: it is the
+          // control the patient is told to press, so it must be findable.
+          Align(
+            child: FilledButton.tonalIcon(
+              onPressed: _secondsLeft == 0 ? null : _toggleListening,
+              icon: Icon(_listening ? Icons.stop : Icons.mic),
+              label: Text(_listening ? l10n.stepFinish : l10n.stepStartMic),
             ),
           ),
-          // Mic button bottom center
-          Positioned(
-            left: MediaQuery.of(context).size.width / 2 - 28,
-            bottom: 72,
-            child: FloatingActionButton(
-              onPressed: (_secondsLeft == 0) ? null : _toggleListening,
-              tooltip: 'Ξεκίνησε ή συνέχισε',
-              child: const Icon(Icons.mic),
+          const AppGap.md(),
+          Expanded(
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xxs,
+                  children: _allWords.map((w) {
+                    // Words that count toward the score are marked with an
+                    // icon as well as a tint, so the cue is not colour alone.
+                    final isValid =
+                        w.length > 1 && w.toLowerCase().startsWith('χ');
+                    return Chip(
+                      label: Text(w),
+                      avatar: isValid
+                          ? Icon(Icons.check, color: semantic.success)
+                          : null,
+                      backgroundColor:
+                          isValid ? semantic.successContainer : null,
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

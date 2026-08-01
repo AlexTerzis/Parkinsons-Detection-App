@@ -73,7 +73,7 @@ class VoiceTestViewModel extends BaseViewModel {
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/voice_test.wav';
 
-    final config = RecordConfig(
+    const config = RecordConfig(
       encoder: AudioEncoder.wav,
       sampleRate: 44100,
       bitRate: 128000,

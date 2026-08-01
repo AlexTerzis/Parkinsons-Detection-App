@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../common/widgets/widgets.dart';
 import 'tap_test_viewmodel.dart';
 
+/// Finger-tapping speed test.
 class TapTestView extends StackedView<TapTestViewModel> {
-  const TapTestView({Key? key}) : super(key: key);
+  const TapTestView({super.key});
 
   @override
   Widget builder(
@@ -13,80 +15,91 @@ class TapTestView extends StackedView<TapTestViewModel> {
     TapTestViewModel viewModel,
     Widget? child,
   ) {
-    return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tapTest)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              viewModel.statusText(AppLocalizations.of(context)!),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            if (viewModel.isTesting)
-              Column(
-                children: [
-                  Text(AppLocalizations.of(context)!
-                      .timeLeft(viewModel.secondsLeft)),
-                  const SizedBox(height: 10),
-                  LinearProgressIndicator(
-                    value: viewModel.progress,
-                    minHeight: 8,
-                  ),
-                ],
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return AppScaffold(
+      title: l10n.tapTest,
+      // The tap target must stay put; a scrolling body would move it under the
+      // finger mid-test.
+      scrollable: false,
+      bottomAction: viewModel.isTesting
+          ? SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: viewModel.stopTest,
+                icon: const Icon(Icons.stop),
+                label: Text(l10n.stop),
               ),
-            const SizedBox(height: 20),
-            GestureDetector(
+            )
+          : PrimaryAction(
+              label: l10n.startTest,
+              icon: Icons.play_arrow,
+              onPressed: () => viewModel.startTest(l10n),
+            ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            viewModel.statusText(l10n),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall,
+          ),
+          if (viewModel.isTesting) ...[
+            const AppGap.lg(),
+            CountdownProgress(
+              label: l10n.timeLeft(viewModel.secondsLeft),
+              progress: viewModel.progress,
+            ),
+          ],
+          const AppGap.xl(),
+          Center(
+            child: GestureDetector(
               onTapDown: (_) => viewModel.onTapDown(),
               onTapUp: (_) => viewModel.onTapUp(),
               child: Container(
-                width: 150,
-                height: 150,
+                width: 180,
+                height: 180,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  // Dimmed until the test is running, so it is obvious the pad
+                  // is not yet live.
                   color: viewModel.isTesting
-                      ? Colors.blueAccent
-                      : Colors.grey.shade400,
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.surfaceContainerHighest,
                 ),
                 child: Center(
                   child: Text(
-                    AppLocalizations.of(context)!.tap,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                    l10n.tap,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: viewModel.isTesting
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: viewModel.isTesting
-                  ? null
-                  : () => viewModel.startTest(AppLocalizations.of(context)!),
-              icon: const Icon(Icons.play_arrow),
-              label: Text(AppLocalizations.of(context)!.startTest),
+          ),
+          if (viewModel.resultHand1.isNotEmpty ||
+              viewModel.resultHand2.isNotEmpty) ...[
+            const AppGap.xl(),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (viewModel.resultHand1.isNotEmpty)
+                    Text(viewModel.resultHand1,
+                        style: theme.textTheme.bodyLarge),
+                  if (viewModel.resultHand2.isNotEmpty)
+                    Text(viewModel.resultHand2,
+                        style: theme.textTheme.bodyLarge),
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: viewModel.isTesting ? viewModel.stopTest : null,
-              icon: const Icon(Icons.stop),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              label: Text(AppLocalizations.of(context)!.stop),
-            ),
-            const SizedBox(height: 30),
-            if (viewModel.resultHand1.isNotEmpty)
-              Text(viewModel.resultHand1,
-                  style: const TextStyle(fontSize: 16)),
-            if (viewModel.resultHand2.isNotEmpty)
-              Text(viewModel.resultHand2,
-                  style: const TextStyle(fontSize: 16)),
           ],
-        ),
+        ],
       ),
     );
   }

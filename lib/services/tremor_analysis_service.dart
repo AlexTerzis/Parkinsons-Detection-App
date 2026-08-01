@@ -461,7 +461,7 @@ class TremorAnalysisService {
   /// is what makes the cascade maximally flat in the passband instead of
   /// rippling.
   List<_Biquad> _butterworthSections(double fps, double cutoffHz) {
-    final int pairs = _butterworthOrder ~/ 2;
+    const int pairs = _butterworthOrder ~/ 2;
     final double w0 = 2 * math.pi * cutoffHz / fps;
     final double cosW0 = math.cos(w0);
     final double sinW0 = math.sin(w0);

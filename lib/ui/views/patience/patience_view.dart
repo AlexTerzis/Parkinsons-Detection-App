@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
+import '../../common/widgets/widgets.dart';
 import 'patience_viewmodel.dart';
 import '../patience_view/tabs/profile_tab.dart';
 import '../patience_view/tabs/tests_tab.dart';
@@ -11,8 +12,7 @@ import '../patience_view/tabs/insights_tab.dart';
 import '../../../models/raison_result.dart';
 
 class PatienceView extends StackedView<PatienceViewModel> {
-  const PatienceView({Key? key, this.initialTab = 0, this.resultsFuture})
-      : super(key: key);
+  const PatienceView({super.key, this.initialTab = 0, this.resultsFuture});
 
   /// Index of the tab to display when the view opens.
   final int initialTab;
@@ -26,11 +26,10 @@ class PatienceView extends StackedView<PatienceViewModel> {
     PatienceViewModel viewModel,
     Widget? child,
   ) {
-    final ThemeData theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     if (viewModel.isBusy) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(body: AppLoading());
     }
 
     // The Doctor tab is hidden for guests, who have no doctor relationship to
@@ -51,7 +50,7 @@ class PatienceView extends StackedView<PatienceViewModel> {
       TestsTab(viewModel: viewModel),
       ResultsTab(viewModel: viewModel),
       InsightsTab(resultsFuture: resultsFuture),
-      if (!viewModel.isGuest) DoctorTab(viewModel: viewModel, theme: theme),
+      if (!viewModel.isGuest) DoctorTab(viewModel: viewModel),
     ];
 
     return DefaultTabController(

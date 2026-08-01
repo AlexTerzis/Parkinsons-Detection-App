@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:fftea/fftea.dart';
@@ -30,23 +30,23 @@ class VoicePredictor {
     await _ensureModel();
 
     final rawFeatures = await _extractFeatures(wav);
-    print('🧠 Extracted features: $rawFeatures');
+    debugPrint('🧠 Extracted features: $rawFeatures');
 
     final features = _normalizeFeatures(rawFeatures);
-    print('🧪 Normalized features: $features');
+    debugPrint('🧪 Normalized features: $features');
 
     // 🧪 Debugging logs
-    print('🧠 Extracted features: $rawFeatures');
-    print('🧪 Normalized features: $features');
-    print('🔢 Feature count: ${features.length}');
-    print('✅ All finite: ${features.every((v) => v.isFinite)}');
+    debugPrint('🧠 Extracted features: $rawFeatures');
+    debugPrint('🧪 Normalized features: $features');
+    debugPrint('🔢 Feature count: ${features.length}');
+    debugPrint('✅ All finite: ${features.every((v) => v.isFinite)}');
 
     final input = Float32List.fromList(features).reshape([1, 16]);
     final output = Float32List(1).reshape([1, 1]);
-    print('📤 Final input to model: ${input[0]}');
+    debugPrint('📤 Final input to model: ${input[0]}');
     _interpreter.run(input, output);
 
-    print('📈 Raw model output: ${output[0][0]}');
+    debugPrint('📈 Raw model output: ${output[0][0]}');
     return output[0][0];
   }
 
@@ -114,7 +114,7 @@ final flo = frequencies.isNotEmpty ? frequencies.reduce(min) : 0.0;
   final jitterAbs = jitterAbsRaw; // Already in ~1e-4 range
   final jitterPct = avgPeriod > 0 ? (jitterAbsRaw / avgPeriod) : 0.0; // **No ×100**; Python is ratio, not percent
 
-  double _rap() {
+  double rap0() {
     if (periods.length < 3) return 0.0;
     double sum = 0;
     for (int i = 1; i < periods.length - 1; i++) {
@@ -124,7 +124,7 @@ final flo = frequencies.isNotEmpty ? frequencies.reduce(min) : 0.0;
     return avgPeriod > 0 ? sum / (periods.length - 2) / avgPeriod : 0.0;
   }
 
-  double _ppq() {
+  double ppq0() {
     if (periods.length < 5) return 0.0;
     double sum = 0;
     for (int i = 2; i < periods.length - 2; i++) {
@@ -134,8 +134,8 @@ final flo = frequencies.isNotEmpty ? frequencies.reduce(min) : 0.0;
     return avgPeriod > 0 ? sum / (periods.length - 4) / avgPeriod : 0.0;
   }
 
-  final rap = _rap();  // Should be tiny (< 0.01)
-  final ppq = _ppq();  // Should be tiny (< 0.01)
+  final rap = rap0();  // Should be tiny (< 0.01)
+  final ppq = ppq0();  // Should be tiny (< 0.01)
   final ddp = 3 * rap; // Should be tiny (< 0.04)
 
   // --- Shimmer features ---
@@ -168,7 +168,7 @@ final flo = frequencies.isNotEmpty ? frequencies.reduce(min) : 0.0;
   final hnr = nhr > 0 ? 1 / nhr : 0.0;
 
   // Debug: Print all features
-  print('🧠 Extracted features: [$fo, $fhi, $flo, $jitterPct, $jitterAbs, $rap, $ppq, $ddp, $shimmer, $shimmerDb, $apq3, $apq5, $apq, $dda, $nhr, $hnr]');
+  debugPrint('🧠 Extracted features: [$fo, $fhi, $flo, $jitterPct, $jitterAbs, $rap, $ppq, $ddp, $shimmer, $shimmerDb, $apq3, $apq5, $apq, $dda, $nhr, $hnr]');
 
   return [
     fo,         // MDVP:Fo(Hz)

@@ -677,4 +677,491 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get cameraFinishing => 'Αποθήκευση των αποτελεσμάτων σας';
+
+  @override
+  String stepOfSteps(Object current, Object total) {
+    return 'Βήμα $current από $total';
+  }
+
+  @override
+  String get stepStart => 'Έναρξη';
+
+  @override
+  String get stepSubmit => 'Υποβολή';
+
+  @override
+  String get stepFinish => 'Τερματισμός';
+
+  @override
+  String get stepDone => 'Ολοκλήρωση';
+
+  @override
+  String get stepContinue => 'Συνέχεια';
+
+  @override
+  String get stepHint => 'Υπόδειξη';
+
+  @override
+  String get stepClear => 'Καθαρισμός';
+
+  @override
+  String get stepDelete => 'Διαγραφή';
+
+  @override
+  String get stepAnswer => 'Απάντηση';
+
+  @override
+  String get stepResults => 'Αποτελέσματα';
+
+  @override
+  String get stepTimeRemaining => 'Χρόνος που απομένει';
+
+  @override
+  String stepTimeRemainingValue(Object seconds) {
+    return 'Χρόνος που απομένει: $seconds';
+  }
+
+  @override
+  String get stepTapMicToStart => 'Πάτα το μικρόφωνο για να ξεκινήσεις.';
+
+  @override
+  String get stepSayWithMic => 'Πείτε τη λέξη με το μικρόφωνο';
+
+  @override
+  String get stepSpokenIntoMic => 'Λέγεται στο μικρόφωνο';
+
+  @override
+  String get stepTypeOrUseMic =>
+      'Μπορείτε να γράψετε ή να χρησιμοποιήσετε το μικρόφωνο.';
+
+  @override
+  String get stepStartMic => 'Εκκίνηση μικροφώνου';
+
+  @override
+  String get stepMicProblem =>
+      'Πρόβλημα με το μικρόφωνο. Πάτα πάλι το μικρόφωνο για να ξαναδοκιμάσεις.';
+
+  @override
+  String get stepMicStopped =>
+      'Το μικρόφωνο σταμάτησε. Πάτησε το μικρόφωνο για να συνεχίσεις.';
+
+  @override
+  String get stepMicClosed =>
+      'Το μικρόφωνο έκλεισε. Πάτησε ξανά το μικρόφωνο για να συνεχίσεις.';
+
+  @override
+  String get stepSpeakNow =>
+      'Μιλήστε τώρα! Κάθε λέξη εμφανίζεται αμέσως στην οθόνη.';
+
+  @override
+  String get stepCorrectAnswer => 'Σωστή απάντηση!';
+
+  @override
+  String get stepCorrectWithHint => 'Σωστό! (Χρησιμοποιήθηκε υπόδειξη)';
+
+  @override
+  String get stepWrongOrder => 'Λάθος σειρά.';
+
+  @override
+  String get stepWrongLine => 'Λάθος γραμμή';
+
+  @override
+  String get stepAllWordsFound => 'Όλες οι λέξεις έχουν βρεθεί!';
+
+  @override
+  String stepTimeUpScore(Object score) {
+    return 'Ολοκληρώθηκε ο χρόνος.\nΣκορ: $score/3.00';
+  }
+
+  @override
+  String get stepCameraPermissionRequired =>
+      'Απαιτείται πρόσβαση στην κάμερα για να συνεχίσετε.';
+
+  @override
+  String get stepCameraPermissionRecheck => 'Επανέλεγχος άδειας';
+
+  @override
+  String get stepCameraPermissionSettings =>
+      'Ελέγξτε τις ρυθμίσεις της εφαρμογής αν το πρόβλημα παραμείνει.';
+
+  @override
+  String get stepLocationDenied =>
+      'Δεν επιτράπηκε η πρόσβαση στην τοποθεσία.\nΟι απαντήσεις στην Πόλη/Χώρα θα γίνουν δεκτές όπως είναι.';
+
+  @override
+  String get stepTitleSubtract => 'Αφαίρεση 7 από το 100';
+
+  @override
+  String get stepTitleOrientation => 'Προσανατολισμός';
+
+  @override
+  String get stepTitleNaming => 'Κατονομασία';
+
+  @override
+  String get stepTitleImmediateRecall => 'Άμεση Ανάκληση';
+
+  @override
+  String get stepTitleDelayedRecall => 'Καθυστερημένη Ανάκληση';
+
+  @override
+  String get stepTitleDigits => 'Εργαζόμενη μνήμη';
+
+  @override
+  String get stepTitleVigilance => 'Εγρήγορση';
+
+  @override
+  String get stepTitleFluency => 'Λεκτική ευχέρεια';
+
+  @override
+  String get stepTitleSimilarities => 'Αφαιρετική σκέψη';
+
+  @override
+  String get stepTitleClock => 'Ρολόι: δείκτες';
+
+  @override
+  String get stepTitleTrails => 'Οπτικο-Νοητική Ιχνηλάτηση';
+
+  @override
+  String get stepTitleCube => 'Οπτικο-Κατασκευαστικές Ικανότητες';
+
+  @override
+  String get stepTitleRepeatSentences => 'Επανάληψη προτάσεων';
+
+  @override
+  String get stepTitleGestures => 'Αναγνώριση Χειρονομιών';
+
+  @override
+  String get stepTitleConflicting => 'Εναντιούμενα παραγγέλματα';
+
+  @override
+  String get stepTitleGoNoGo => 'Πάτημα';
+
+  @override
+  String get stepInstructionSubtract =>
+      'Αφαιρέστε διαδοχικά 7 ξεκινώντας από το 100 (πέντε φορές):';
+
+  @override
+  String get stepInstructionDigitsMemorise =>
+      'Προσπαθήστε να απομνημονεύσετε τα παρακάτω νούμερα.';
+
+  @override
+  String get stepInstructionDigitsForwardSoon =>
+      'Σε λίγο θα σας ζητηθεί να τα επαναλάβετε με τη σωστή σειρά.';
+
+  @override
+  String get stepInstructionDigitsBackwardSoon =>
+      'Σε λίγο θα σας ζητηθεί να τα επαναλάβετε με την αντίστροφη σειρά.';
+
+  @override
+  String get stepInstructionDigitsForward =>
+      'Επαναλάβετε με τη σωστή σειρά τους αριθμούς που είδατε:';
+
+  @override
+  String get stepInstructionDigitsBackward =>
+      'Επαναλάβετε με την αντίστροφη σειρά τους αριθμούς που είδατε:';
+
+  @override
+  String get stepInstructionWriteOrSayNumbers => 'Γράψτε ή πείτε τους αριθμούς';
+
+  @override
+  String get stepInstructionOrientation => 'Συμπληρώστε τα παρακάτω:';
+
+  @override
+  String get stepInstructionOrientationDay => 'Ημέρα (π.χ. Δευτέρα)';
+
+  @override
+  String get stepInstructionOrientationDate =>
+      'Ημερομηνία (π.χ. 01 / 01 / 2020)';
+
+  @override
+  String get stepInstructionOrientationCity => 'Πόλη';
+
+  @override
+  String get stepInstructionOrientationCountry => 'Χώρα';
+
+  @override
+  String get stepHintCityExample => 'π.χ. Αθήνα';
+
+  @override
+  String get stepHintCountryExample => 'π.χ. Ελλάδα';
+
+  @override
+  String get stepInstructionNaming =>
+      'Κατονομάστε κάθε ζώο πατώντας το μικρόφωνο στη δεξιά πλευρά του πλαισίου.';
+
+  @override
+  String get stepInstructionImmediateRecall =>
+      'Θα σας πω 5 λέξεις. Προσπαθήστε να τις απομνημονεύσετε γιατί λίγο αργότερα θα σας ζητηθούν ξανά.';
+
+  @override
+  String get stepInstructionImmediateRecallPractice =>
+      'Για εξάσκηση πρώτα θα τις επαναλάβετε όλες μαζί. Μετά, θα προσπαθήσετε να επαναλάβετε κάθε λέξη ξεχωριστά.';
+
+  @override
+  String stepInstructionSayWordsTogether(Object words) {
+    return 'Πείτε τις λέξεις από τη λίστα (όλες μαζί, με όποια σειρά θέλετε): $words';
+  }
+
+  @override
+  String stepInstructionSayWordsSeparately(Object words) {
+    return 'Πείτε τις λέξεις, μία σε κάθε πεδίο. $words';
+  }
+
+  @override
+  String get stepInstructionSayWords => 'Πείτε τις λέξεις';
+
+  @override
+  String get stepInstructionDelayedRecall =>
+      'Πείτε όσες λέξεις θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).';
+
+  @override
+  String get stepInstructionDelayedRecallHint =>
+      'Αν πατήσετε “Υπόδειξη” για κάποιο, παίρνετε μισό βαθμό για αυτό.';
+
+  @override
+  String get stepInstructionWhichWordWasInList =>
+      'Ποια από τις παρακάτω λέξεις ήταν στη λίστα;';
+
+  @override
+  String get stepInstructionVigilance =>
+      'Αυτό το τεστ μετρά την εγρήγορση και την προσοχή σας.';
+
+  @override
+  String get stepInstructionVigilanceLetters =>
+      'Θα εμφανιστεί μία σειρά από γράμματα, ένα κάθε φορά.';
+
+  @override
+  String get stepInstructionVigilanceTap =>
+      'Πατήστε το κουμπί όταν βλέπετε το γράμμα “Α”.';
+
+  @override
+  String get stepInstructionFluency =>
+      'Λεκτική ευχέρεια: όσες περισσότερες λέξεις μπορείς που να αρχίζουν από το γράμμα “Χ”, χωρίς να πεις κύρια ονόματα ή παράγωγες λέξεις, μέσα σε 1 λεπτό.';
+
+  @override
+  String get stepInstructionSimilarities => 'Τι κοινό έχουν τα παρακάτω ζεύγη;';
+
+  @override
+  String get stepInstructionSimilaritiesExample =>
+      'π.χ. μπανάνα - πορτοκάλι = φρούτα';
+
+  @override
+  String get stepInstructionSimilaritiesHint =>
+      'Πατήστε “Υπόδειξη” για παραδείγματα απαντήσεων.';
+
+  @override
+  String get stepInstructionClock =>
+      'Μετακινήστε τους δείκτες ώστε να δείχνουν 11:10';
+
+  @override
+  String get stepInstructionTrails =>
+      'Συνδέστε τα κυκλάκια ξεκινώντας από το 1, έπειτα το Α, μετά το 2, Β, 3, Γ… έως το 5 και Ε.';
+
+  @override
+  String get stepInstructionTrailsRetry =>
+      'Αν κάνετε λάθος, μπορείτε να προσπαθήσετε ξανά. Αν δυσκολεύεστε, πατήστε “Επόμενο”. Χρόνος 2 λεπτά.';
+
+  @override
+  String get stepInstructionDrawCube =>
+      'Αντιγράψτε τον κύβο που βλέπετε παρακάτω.';
+
+  @override
+  String get stepInstructionConnectCube =>
+      'Αντιγράψτε τον κύβο συνδέοντας τις τελείες. Πατήστε πρώτα μία τελεία και μετά την επόμενη.';
+
+  @override
+  String get stepInstructionConnectCubeAlmost =>
+      'Σχεδόν σωστό—διαγράψτε τις κόκκινες γραμμές';
+
+  @override
+  String get stepInstructionRepeatSentence => 'Πείτε την πρόταση…';
+
+  @override
+  String get stepInstructionGesturesIntro =>
+      'Όταν πατήσετε “Έναρξη”, θα ενεργοποιηθεί η κάμερα για 1 λεπτό.\n\nΠρέπει να πραγματοποιήσετε τις εξής κινήσεις:';
+
+  @override
+  String get stepInstructionGesturesPerformAll =>
+      'Εκτελέστε όλες τις κινήσεις.';
+
+  @override
+  String stepGestureRecognised(Object gesture) {
+    return '$gesture\nΑναγνωρίστηκε!';
+  }
+
+  @override
+  String get stepGesturesAllDetected =>
+      'Συγχαρητήρια! Εντοπίστηκαν όλα τα gestures.\n\nΣκορ: 3.00/3.00';
+
+  @override
+  String stepWordNumbered(Object number) {
+    return 'Λέξη $number';
+  }
+
+  @override
+  String stepExampleAnswer(Object hint) {
+    return 'Υπόδειγμα: $hint';
+  }
+
+  @override
+  String stepHintFor(Object hint) {
+    return 'Υπόδειξη: $hint';
+  }
+
+  @override
+  String get stepHeardTargetLetter => 'Άκουσα Α';
+
+  @override
+  String get stepStartTest => 'Έναρξη Τεστ';
+
+  @override
+  String stepSecondsValue(Object seconds) {
+    return '$seconds δευτ.';
+  }
+
+  @override
+  String stepMemoriseTimeLeft(Object seconds) {
+    return 'Χρόνος απομνημόνευσης: $seconds';
+  }
+
+  @override
+  String get stepInstructionRepeatSentencesIntro =>
+      'Θα εμφανιστεί μια πρόταση για 20 δευτερόλεπτα. Προσπάθησε να τη διαβάσεις και να την απομνημονεύσεις. Στη συνέχεια θα σου ζητηθεί να την επαναλάβεις όσο πιο σωστά μπορείς.\n\nΘα έχεις τη δυνατότητα να δεις ξανά την πρόταση για 3 δευτερόλεπτα αν χρειαστεί (Υπόδειξη) και μπορείς να καθαρίσεις ό,τι έχει πει το μικρόφωνο (Καθαρισμός). Πάτα “Επόμενο” για να προχωρήσεις, ακόμα κι αν δεν έχεις απαντήσει.';
+
+  @override
+  String get stepInstructionRepeatBack =>
+      'Επανάλαβε την πρόταση που διάβασες. Πάτησε το μικρόφωνο για να ξεκινήσεις. Αν σταματήσει, πάτησέ το ξανά.';
+
+  @override
+  String get fabGoNoGoInstructions =>
+      'Σε αυτή τη δοκιμασία θα εμφανίζονται αριθμοί 1 και 2.\n\nΠατήστε το κουμπί “Πάτημα” όταν εμφανίζεται ο αριθμός 1. Μην πατάτε το κουμπί όταν εμφανίζεται ο αριθμός 2.\n\nΘα δοκιμάσουμε πρώτα με μια δοκιμαστική σειρά για να εξηγήσουμε τους κανόνες, και μετά θα προχωρήσουμε στην κύρια δοκιμασία.';
+
+  @override
+  String get fabGoNoGoRules => '“1” — Πατάω\n“2” — ΔΕΝ Πατάω';
+
+  @override
+  String get fabGoNoGoPracticeIntro =>
+      'Δοκιμαστική σειρά. Εφαρμόστε τους κανόνες. Σε περίπτωση λάθους, θα δείτε μια εξήγηση. Πατήστε “Έναρξη” για να ξεκινήσετε την εκπαίδευση.';
+
+  @override
+  String get fabGoNoGoTestIntro =>
+      'Κύρια δοκιμασία. Εφαρμόστε τους κανόνες. Πατήστε “Έναρξη” για να ξεκινήσετε.';
+
+  @override
+  String get fabTap => 'Πάτημα';
+
+  @override
+  String get fabGoNoGoMissed => 'Έπρεπε να πατήσετε 1 φορά, αλλά δεν πατήσατε.';
+
+  @override
+  String fabGoNoGoTooMany(Object count) {
+    return 'Έπρεπε να πατήσετε 1 φορά, πατήσατε $count.';
+  }
+
+  @override
+  String fabGoNoGoShouldNotTap(Object count) {
+    return 'Δεν έπρεπε να πατήσετε, αλλά πατήσατε $count.';
+  }
+
+  @override
+  String fabScoreValue(Object score) {
+    return 'Σκορ: $score';
+  }
+
+  @override
+  String get fabGoNoGoResultStreak =>
+      'Απάντησες ίδιο αριθμό τουλάχιστον 4 φορές συνεχόμενα.';
+
+  @override
+  String get fabGoNoGoResultPerfect => 'Δεν έκανες κανένα λάθος!';
+
+  @override
+  String get fabGoNoGoResultFew => 'Έκανες 1 ή 2 λάθη.';
+
+  @override
+  String get fabGoNoGoResultMany => 'Έκανες περισσότερα από 2 λάθη.';
+
+  @override
+  String get fabFluencyInstructions =>
+      '«Πείτε όσες περισσότερες λέξεις μπορείτε που να αρχίζουν από το γράμμα Κ, εκτός από επώνυμα και κύρια ονόματα».\n\nΟ επιτρεπόμενος χρόνος είναι 60 δευτερόλεπτα.\n\nΒαθμολόγηση: περισσότερες από 10 λέξεις = 3 βαθμοί, 6 έως 10 = 2, 3 έως 5 = 1, λιγότερες από 3 = 0.';
+
+  @override
+  String get fabFluencyTitle => 'Λεκτική ευφράδεια';
+
+  @override
+  String get fabFluencyPrompt => 'Λέξεις που ξεκινούν με “Κ”';
+
+  @override
+  String get fabFluencyResultMany => 'Περισσότερες από 10 λέξεις.';
+
+  @override
+  String fabFluencyResultCount(Object count) {
+    return '$count λέξεις.';
+  }
+
+  @override
+  String get fabFluencyResultFew => 'Λιγότερες από 3 λέξεις.';
+
+  @override
+  String get fabSimilaritiesTitle => 'Ομοιότητες';
+
+  @override
+  String get fabSimilaritiesInstructions =>
+      '«Τι κοινό έχουν;»\n\nΠαράδειγμα: μπανάνα - πορτοκάλι = φρούτα.\n\nΜπορείτε να πληκτρολογήσετε ή να χρησιμοποιήσετε το μικρόφωνο. Πατήστε “Υπόδειξη” μόνο στην 1η ερώτηση αν θέλετε βοήθεια.\n\nΒαθμολόγηση: 3 σωστές απαντήσεις = 3 βαθμοί, 2 = 2, 1 = 1, καμία = 0.';
+
+  @override
+  String fabQuestionOfCount(Object current, Object total) {
+    return 'Ερώτηση $current από $total';
+  }
+
+  @override
+  String fabCorrectAnswersCount(Object count) {
+    return '$count σωστές απαντήσεις.';
+  }
+
+  @override
+  String get fabNoCorrectAnswers => 'Καμία σωστή απάντηση.';
+
+  @override
+  String get fabConflictingInstructions =>
+      'Χτυπήστε μία φορά όταν χτυπήσω δύο φορές. Χτυπήστε δύο φορές όταν χτυπήσω μία φορά.\n\nΘα κάνουμε πρώτα μια δοκιμαστική σειρά και μετά την κύρια δοκιμασία.';
+
+  @override
+  String get fabExaminerTapsOnce => 'Χτυπάω μία φορά';
+
+  @override
+  String get fabExaminerTapsTwice => 'Χτυπάω δύο φορές';
+
+  @override
+  String get fabYourTurn => 'Η σειρά σας';
+
+  @override
+  String fabGesturesRemaining(Object gestures) {
+    return 'Απομένουν: $gestures';
+  }
+
+  @override
+  String get fabConflictingRules => '“1” — Πατάω 2 φορές\n“2” — Πατάω 1 φορά';
+
+  @override
+  String get fabConflictingPracticeIntro =>
+      'Δοκιμαστική σειρά. Ακολουθήστε τις οδηγίες για να καταλάβετε τη λογική του τεστ. Πατήστε “Έναρξη” για να ξεκινήσετε την εκπαίδευση.';
+
+  @override
+  String get fabConflictingTestIntro =>
+      'Κύρια δοκιμασία. Εφαρμόστε τους κανόνες. Πατήστε “Έναρξη” για να ξεκινήσετε.';
+
+  @override
+  String fabExpectedTapsOnce(Object count) {
+    return 'Έπρεπε να πατήσετε 1 φορά, πατήσατε $count.';
+  }
+
+  @override
+  String fabExpectedTapsTwice(Object count) {
+    return 'Έπρεπε να πατήσετε 2 φορές, πατήσατε $count.';
+  }
+
+  @override
+  String get fabResultStreakStimulus =>
+      'Απαντήσατε ίδιο αριθμό με το ερέθισμα τουλάχιστον 4 συνεχόμενες φορές.';
 }

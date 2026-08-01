@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
 // Helper for more forgiving Greek matching
 String normalizeGreek(String text) {
   return text
@@ -82,7 +85,9 @@ class _SimilaritiesStepState extends State<SimilaritiesStep> {
   @override
   void dispose() {
     _timeout?.cancel();
-    for (final c in _controllers) c.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
     _speech.stop();
     super.dispose();
   }
@@ -132,147 +137,81 @@ class _SimilaritiesStepState extends State<SimilaritiesStep> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Αφαιρετική σκέψη')),
-      body: Stack(
+    return TestStepScaffold(
+      title: l10n.stepTitleSimilarities,
+      instruction: '${l10n.stepInstructionSimilarities}\n'
+          '${l10n.stepTypeOrUseMic}\n'
+          '${l10n.stepInstructionSimilaritiesHint}\n'
+          '${l10n.stepInstructionSimilaritiesExample}',
+      onNext: _submit,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // INSTRUCTIONS (theme color)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface, // App theme
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Tι κοινό έχουν τα παρακάτω ζεύγη;\n\n'
-                      'Μπορείτε να πληκτρολογήσετε ή να χρησιμοποιήσετε το μικρόφωνο.\n'
-                      'Πατήστε "Υπόδειξη" για παραδείγματα απαντήσεων.\n'
-                      'π.χ. μπανάνα - πορτοκάλι = φρούτα\n',
-                      style: TextStyle(fontSize: 16),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                  // First pair
-                  const Text(
-                    '1) Τρένο – Ποδήλατο',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controllers[0],
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Απάντηση',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(_listening[0] ? Icons.mic : Icons.mic_none),
-                        color: _listening[0] ? Colors.green : null,
-                        onPressed: _listening[0] ? null : () => _startListening(0),
-                      ),
-                      OutlinedButton(
-                        onPressed: () => _showHintFunc(0),
-                        child: const Text('Υπόδειξη'),
-                      ),
-                      if (_isCorrect1)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.check_circle, color: Colors.green),
-                        ),
-                    ],
-                  ),
-                  if (_showHint[0])
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.yellow[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: _hints1.map((h) => Text('• $h', style: const TextStyle(fontSize: 15))).toList(),
-                      ),
-                    ),
-                  const SizedBox(height: 22),
-                  // Second pair
-                  const Text(
-                    '2) Ρολόι – Χάρακας',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controllers[1],
-                          textInputAction: TextInputAction.done,
-                          decoration: InputDecoration(
-                            labelText: 'Απάντηση',
-                            border: const OutlineInputBorder(),
-                          ),
-                          onSubmitted: (_) => _submit(),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(_listening[1] ? Icons.mic : Icons.mic_none),
-                        color: _listening[1] ? Colors.green : null,
-                        onPressed: _listening[1] ? null : () => _startListening(1),
-                      ),
-                      OutlinedButton(
-                        onPressed: () => _showHintFunc(1),
-                        child: const Text('Υπόδειξη'),
-                      ),
-                      if (_isCorrect2)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.check_circle, color: Colors.green),
-                        ),
-                    ],
-                  ),
-                  if (_showHint[1])
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.yellow[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: _hints2.map((h) => Text('• $h', style: const TextStyle(fontSize: 15))).toList(),
-                      ),
-                    ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+          _pair(
+            context,
+            // The word pairs are the instrument's stimuli and stay Greek.
+            prompt: '1) Τρένο – Ποδήλατο',
+            index: 0,
+            hints: _hints1,
+            correct: _isCorrect1,
+            textInputAction: TextInputAction.next,
           ),
-          // Next button at bottom right, matches your other tests
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, bottom: 16),
-              child: ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Επόμενο'),
-              ),
-            ),
+          const AppGap.lg(),
+          _pair(
+            context,
+            prompt: '2) Ρολόι – Χάρακας',
+            index: 1,
+            hints: _hints2,
+            correct: _isCorrect2,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
           ),
         ],
       ),
+    );
+  }
+
+  /// One stimulus pair: the prompt, the answer field and its hint panel.
+  Widget _pair(
+    BuildContext context, {
+    required String prompt,
+    required int index,
+    required List<String> hints,
+    required bool correct,
+    required TextInputAction textInputAction,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(prompt, style: theme.textTheme.titleMedium),
+        const AppGap.xs(),
+        SpeechTextField(
+          controller: _controllers[index],
+          listening: _listening[index],
+          onListen: () => _startListening(index),
+          label: l10n.stepAnswer,
+          micTooltip: l10n.stepSayWithMic,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
+          correct: correct,
+        ),
+        const AppGap.xs(),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _showHint[index] ? null : () => _showHintFunc(index),
+            icon: const Icon(Icons.lightbulb_outline),
+            label: Text(l10n.stepHint),
+          ),
+        ),
+        if (_showHint[index]) HintPanel(lines: hints),
+      ],
     );
   }
 }

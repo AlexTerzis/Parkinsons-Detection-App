@@ -53,7 +53,6 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
 
   // Landmark indices (refer to MediaPipe documentation)
   final int _thumbTipIndex = 4;
-  final int _wristIndex = 0; //TODO mallon remove
 
   // --- Lifecycle Methods ---
   @override
@@ -91,7 +90,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
       if (points.length > _thumbTipIndex) {
         currentHands.add(LandmarkData(handedness: side, landmarks: points));
       } else {
-        print("Warning: Landmark data format unexpected or missing thumb tip.");
+        debugPrint("Warning: Landmark data format unexpected or missing thumb tip.");
       }
     });
 
@@ -116,8 +115,9 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
 
   // --- Symptom Metric Calculation ---
   void _updateSymptomMetrics() {
-    if (_landmarkHistory.length < _tremorWindowSize)
+    if (_landmarkHistory.length < _tremorWindowSize) {
       return; // Need minimum data
+    }
 
     List<List<LandmarkPoint>?> leftHistory = _getHandHistory('Left');
     List<List<LandmarkPoint>?> rightHistory = _getHandHistory('Right');
@@ -177,22 +177,30 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
 
     // Simple Indication Logic
     int highMetricsCount = 0;
-    if (_speedVarianceLeft > _symptomThreshold && leftHandPresent)
+    if (_speedVarianceLeft > _symptomThreshold && leftHandPresent) {
       highMetricsCount++;
-    if (_speedVarianceRight > _symptomThreshold && rightHandPresent)
+    }
+    if (_speedVarianceRight > _symptomThreshold && rightHandPresent) {
       highMetricsCount++;
-    if (_tremorScoreLeft > _symptomThreshold && leftHandPresent)
+    }
+    if (_tremorScoreLeft > _symptomThreshold && leftHandPresent) {
       highMetricsCount++;
-    if (_tremorScoreRight > _symptomThreshold && rightHandPresent)
+    }
+    if (_tremorScoreRight > _symptomThreshold && rightHandPresent) {
       highMetricsCount++;
-    if (_accelVarianceLeft > _symptomThreshold && leftHandPresent)
+    }
+    if (_accelVarianceLeft > _symptomThreshold && leftHandPresent) {
       highMetricsCount++;
-    if (_accelVarianceRight > _symptomThreshold && rightHandPresent)
+    }
+    if (_accelVarianceRight > _symptomThreshold && rightHandPresent) {
       highMetricsCount++;
-    if (_jerkVarianceLeft > _symptomThreshold && leftHandPresent)
+    }
+    if (_jerkVarianceLeft > _symptomThreshold && leftHandPresent) {
       highMetricsCount++;
-    if (_jerkVarianceRight > _symptomThreshold && rightHandPresent)
+    }
+    if (_jerkVarianceRight > _symptomThreshold && rightHandPresent) {
       highMetricsCount++;
+    }
     if (_asymmetryScore > _symptomThreshold &&
         leftHandPresent &&
         rightHandPresent) {
@@ -236,7 +244,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
       child: Container(
         padding: const EdgeInsets.all(10.0),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(8.0),
         ),
         child: _metricsExpanded
@@ -291,9 +299,11 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
   // Helper to build a single indicator bar row
   Widget _buildBar(String label, double value) {
     Color barColor = Colors.green;
-    if (value > 0.7)
+    if (value > 0.7) {
       barColor = Colors.red;
-    else if (value > 0.4) barColor = Colors.orange;
+    } else if (value > 0.4) {
+      barColor = Colors.orange;
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0), // Adjusted padding
@@ -350,7 +360,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
         }
       }
     } catch (e) {
-      print("Error parsing summary data: $e");
+      debugPrint("Error parsing summary data: $e");
       // Fallback or default values?
       handCount = landmarks.length; // Best guess
       pointsPerHand = 0;
@@ -405,7 +415,7 @@ class _HandLandmarkerScreenState extends State<HandLandmarkerScreen> {
                     padding: const EdgeInsets.all(12.0),
                     margin: const EdgeInsets.all(10.0),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     child: SingleChildScrollView(
@@ -490,9 +500,9 @@ class _HandLandmarkerViewState extends State<HandLandmarkerView> {
   void _onViewCreated(int id) {
     // Ensure the channel name matches the one used in HandLandmarkerView.kt
     _channel = MethodChannel('hand_landmarker_channel_$id');
-    print("MethodChannel 'hand_landmarker_channel_$id' created."); // Debug log
+    debugPrint("MethodChannel 'hand_landmarker_channel_$id' created."); // Debug log
     _channel!.setMethodCallHandler((call) async {
-      // print("Method call received on Flutter side!!!!!!!: ${call.method}"); // Debug log
+      // debugPrint("Method call received on Flutter side!!!!!!!: ${call.method}"); // Debug log
       if (call.method == 'onLandmarks') {
         try {
           // Directly pass the argument, expecting List<dynamic> (List<Map<String, dynamic>>)
@@ -500,17 +510,18 @@ class _HandLandmarkerViewState extends State<HandLandmarkerView> {
           if (landmarksData is List<dynamic>) {
             widget.onLandmarksDetected(landmarksData);
           } else {
-            print(
+            debugPrint(
                 "Error: Received landmark data is not a List: ${landmarksData.runtimeType}");
             widget.onLandmarksDetected([]); // Pass empty list on format error
           }
         } catch (e, stacktrace) {
-          print("Error processing landmarks in Flutter MethodCallHandler: $e");
-          print(stacktrace);
+          debugPrint(
+              "Error processing landmarks in Flutter MethodCallHandler: $e");
+          debugPrint('$stacktrace');
           widget.onLandmarksDetected([]); // Pass empty list on error
         }
       } else {
-        print("Unknown method call: ${call.method}");
+        debugPrint("Unknown method call: ${call.method}");
       }
     });
   }

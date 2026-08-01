@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
-import 'doctor_viewmodel.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/patient_report.dart';
-import '../../common/widgets/app_preferences_section.dart';
+import '../../common/widgets/widgets.dart';
+import 'doctor_viewmodel.dart';
 
 /// Doctor dashboard with tab navigation similar to the patient view.
 /// Tabs: profile editing, list of patient reports and a shared community feed.
@@ -21,7 +21,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
     final l10n = AppLocalizations.of(context)!;
 
     if (vm.isBusy) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: AppLoading());
     }
 
     return DefaultTabController(
@@ -56,7 +56,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
   Widget _buildProfileTab(BuildContext context, DoctorViewModel vm,
       ThemeData theme, AppLocalizations l10n) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -65,49 +65,47 @@ class DoctorView extends StackedView<DoctorViewModel> {
             backgroundColor: theme.colorScheme.primaryContainer,
             child: const Icon(Icons.person, size: 48),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           Text(vm.name, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
+          const AppGap.xs(),
           Text(vm.email, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 24),
+          const AppGap.lg(),
           TextField(
             controller: vm.nameController,
             decoration: InputDecoration(
               labelText: l10n.nameLabel,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           TextField(
             controller: vm.specialtyController,
             decoration: InputDecoration(
               labelText: l10n.specialtyLabel,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           TextField(
             controller: vm.locationController,
             decoration: InputDecoration(
               labelText: l10n.locationLabel,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           const AppPreferencesSection(),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           ElevatedButton.icon(
             onPressed: vm.isBusy
                 ? null
                 : () async {
                     await vm.saveProfile();
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.profileSaved)),
-                      );
+                      AppFeedback.success(context, l10n.profileSaved);
                     }
                   },
             icon: const Icon(Icons.save),
             label: Text(l10n.save),
           ),
-         const SizedBox(height: 24),
+         const AppGap.lg(),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
@@ -128,13 +126,16 @@ class DoctorView extends StackedView<DoctorViewModel> {
     final patients = vm.reports.map((r) => r.patientId).toSet().toList();
 
     if (patients.isEmpty) {
-      return Center(child: Text(l10n.noPatientReportsYet));
+      return AppEmptyState(
+        icon: Icons.folder_open,
+        title: l10n.noPatientReportsYet,
+      );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: patients.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const AppGap.sm(),
       itemBuilder: (context, index) {
         final pid = patients[index];
         final reports =
@@ -143,7 +144,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
           child: ExpansionTile(
             title: Text(vm.patientName(pid)),
             subtitle: Text(l10n.reportsCountLabel(reports.length)),
-            childrenPadding: const EdgeInsets.all(16),
+            childrenPadding: const EdgeInsets.all(AppSpacing.md),
             children: [
               ListView.builder(
                 shrinkWrap: true,
@@ -158,7 +159,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              const AppGap.sm(),
               TextField(
                 controller: vm.noteController,
                 minLines: 3,
@@ -167,7 +168,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
                   hintText: l10n.writeNotesHint,
                 ),
               ),
-              const SizedBox(height: 8),
+              const AppGap.xs(),
               Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
@@ -188,13 +189,16 @@ class DoctorView extends StackedView<DoctorViewModel> {
   Widget _buildCommunityTab(
       DoctorViewModel vm, ThemeData theme, AppLocalizations l10n) {
     if (vm.posts.isEmpty) {
-      return Center(child: Text(l10n.noPostsYet));
+      return AppEmptyState(
+        icon: Icons.forum_outlined,
+        title: l10n.noPostsYet,
+      );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: vm.posts.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const AppGap.sm(),
       itemBuilder: (context, index) {
         final post = vm.posts[index];
         return Card(
@@ -204,7 +208,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(post['date'] ?? ''),
-                const SizedBox(height: 8),
+                const AppGap.xs(),
                 Text(post['content'] ?? ''),
               ],
             ),
@@ -232,12 +236,12 @@ class DoctorView extends StackedView<DoctorViewModel> {
                   children: [
                     if (r.data.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
                         child: Text(l10n.noAdditionalData),
                       )
                     else
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: r.data.entries

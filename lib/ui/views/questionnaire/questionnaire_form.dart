@@ -9,7 +9,7 @@ typedef SubmitCallback = Future<void> Function(Map<String, dynamic> responses);
 
 /// A dynamic questionnaire form that renders fields from [questionnaireSchema].
 class QuestionnaireForm extends StatefulWidget {
-  const QuestionnaireForm({Key? key, required this.onSubmit}) : super(key: key);
+  const QuestionnaireForm({super.key, required this.onSubmit});
 
   final SubmitCallback onSubmit;
 
@@ -131,7 +131,7 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
         final options = q['options'] as List<dynamic>;
         return DropdownButtonFormField<dynamic>(
           decoration: InputDecoration(labelText: label),
-          value: _responses[id],
+          initialValue: _responses[id],
           items: options
               .map((o) => DropdownMenuItem(
                     value: o['value'],
@@ -179,26 +179,29 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, style: Theme.of(context).textTheme.titleMedium),
-            Wrap(
-              spacing: 16.0,
-              runSpacing: 8.0,
-              children: options.map<Widget>((o) {
-                final val = o['value'];
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Radio<dynamic>(
-                      value: val,
-                      groupValue: _responses[id],
-                      onChanged: (v) => setState(() => _responses[id] = v),
+            RadioGroup<dynamic>(
+              groupValue: _responses[id],
+              onChanged: (v) => setState(() => _responses[id] = v),
+              child: Wrap(
+                spacing: 16.0,
+                runSpacing: 8.0,
+                children: options.map<Widget>((o) {
+                  final val = o['value'];
+                  return InkWell(
+                    // The label is part of the target, not just decoration
+                    // beside it: a bare radio is a small mark to hit, and this
+                    // audience has hand tremor.
+                    onTap: () => setState(() => _responses[id] = val),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Radio<dynamic>(value: val),
+                        Text(o['label']),
+                      ],
                     ),
-                    GestureDetector(
-                      onTap: () => setState(() => _responses[id] = val),
-                      child: Text(o['label']),
-                    ),
-                  ],
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ],
         );

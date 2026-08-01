@@ -3,15 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// FAB motor programming: perform four hand gestures in front of the camera.
+///
+/// Recognition runs natively behind a platform view; this widget only drives
+/// the phases and reports the score.
 class GesturesStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(double score) onScored;
 
   const GesturesStep({
-    Key? key,
+    super.key,
     required this.onNext,
     required this.onScored,
-  }) : super(key: key);
+  });
 
   @override
   State<GesturesStep> createState() => _GesturesStepState();
@@ -41,7 +48,12 @@ class _GesturesStepState extends State<GesturesStep> {
   String? _lastDetectedGesture;
   double _finalScore = 0.0;
 
+  /// Consecutive frames a gesture must hold before it counts, so a hand
+  /// passing through a pose does not register.
   static const int _framesNeeded = 4;
+
+  /// Emoji plus the gesture's name. Not localised: the emoji carries the
+  /// meaning and the names match what the native recognizer reports.
   static const gestureLabels = {
     'Thumb_Up': '👍 Thumbs Up',
     'Open_Palm': '🖐️ Open Palm',
@@ -61,9 +73,8 @@ class _GesturesStepState extends State<GesturesStep> {
       status = await Permission.camera.request();
       _askedPermission = true;
     }
-    setState(() {
-      _hasPermission = status.isGranted;
-    });
+    if (!mounted) return;
+    setState(() => _hasPermission = status.isGranted);
   }
 
   void _startTest() {
@@ -86,28 +97,26 @@ class _GesturesStepState extends State<GesturesStep> {
     _timeout?.cancel();
     _timeout = null;
 
-    final double score = _gestureDone.values.where((v) => v).length * 0.75;
+    // 0.75 per gesture, so all four make the full 3.00.
+    final score = _gestureDone.values.where((v) => v).length * 0.75;
     _finalScore = score;
     widget.onScored(score);
 
-    setState(() {
-      _success = score == 3.0;
-    });
+    setState(() => _success = score == 3.0);
 
-    // Properly close the channel (releases camera natively)
-    if (_channel != null) {
-      _channel!.setMethodCallHandler(null);
-      _channel = null;
-    }
+    // Drop the channel so the native side releases the camera.
+    _releaseChannel();
+  }
+
+  void _releaseChannel() {
+    _channel?.setMethodCallHandler(null);
+    _channel = null;
   }
 
   @override
   void dispose() {
     _timeout?.cancel();
-    if (_channel != null) {
-      _channel!.setMethodCallHandler(null);
-      _channel = null;
-    }
+    _releaseChannel();
     super.dispose();
   }
 
@@ -115,166 +124,106 @@ class _GesturesStepState extends State<GesturesStep> {
     _channel = MethodChannel('gesture_recognizer_channel_$id');
     _channel!.setMethodCallHandler((call) async {
       if (_testEnded) return;
-      if (call.method == 'onGestures') {
-        final List<dynamic> gestures = call.arguments;
-        bool updated = false;
-        for (final g in _gestureCounts.keys) {
-          if (_gestureDone[g]!) continue;
-          if (gestures.contains(g)) {
-            _gestureCounts[g] = _gestureCounts[g]! + 1;
-            if (_gestureCounts[g]! >= _framesNeeded) {
-              _gestureDone[g] = true;
-              _lastDetectedGesture = g;
-              updated = true;
-              setState(() {});
-              Future.delayed(const Duration(milliseconds: 900), () {
-                if (!_testEnded) setState(() => _lastDetectedGesture = null);
-              });
-            }
-          } else {
-            _gestureCounts[g] = 0;
+      if (call.method != 'onGestures') return;
+
+      final List<dynamic> gestures = call.arguments;
+      bool updated = false;
+
+      for (final g in _gestureCounts.keys) {
+        if (_gestureDone[g]!) continue;
+        if (gestures.contains(g)) {
+          _gestureCounts[g] = _gestureCounts[g]! + 1;
+          if (_gestureCounts[g]! >= _framesNeeded) {
+            _gestureDone[g] = true;
+            _lastDetectedGesture = g;
+            updated = true;
+            setState(() {});
+            // Clear the confirmation banner after it has been seen.
+            Future.delayed(const Duration(milliseconds: 900), () {
+              if (mounted && !_testEnded) {
+                setState(() => _lastDetectedGesture = null);
+              }
+            });
           }
+        } else {
+          // The gesture has to be held; a broken run starts over.
+          _gestureCounts[g] = 0;
         }
-        if (_gestureDone.values.every((v) => v)) {
-          _finish();
-        } else if (updated) {
-          setState(() {});
-        }
+      }
+
+      if (_gestureDone.values.every((v) => v)) {
+        _finish();
+      } else if (updated) {
+        setState(() {});
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+
     if (!_hasPermission) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Απαιτείται πρόσβαση στην κάμερα για να συνεχίσετε.',
-                style: TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _checkPermission,
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  textStyle: const TextStyle(fontSize: 18),
-                ),
-                child: const Text('Επανέλεγχος άδειας'),
-              ),
-              if (_askedPermission)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Ελέγξτε τις ρυθμίσεις της εφαρμογής αν το πρόβλημα παραμένει.',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-            ],
-          ),
+      return AppScaffold(
+        title: l10n.stepTitleGestures,
+        showBackButton: false,
+        body: AppErrorState(
+          message: _askedPermission
+              ? '${l10n.stepCameraPermissionRequired}\n\n'
+                  '${l10n.stepCameraPermissionSettings}'
+              : l10n.stepCameraPermissionRequired,
+          onRetry: _checkPermission,
+          retryLabel: l10n.stepCameraPermissionRecheck,
         ),
       );
     }
 
     if (!_testStarted) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Αναγνώριση Χειρονομιών')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey[800]?.withOpacity(0.90),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: const TextSpan(
-                    style: TextStyle(fontSize: 19, color: Colors.white),
-                    children: [
-                      TextSpan(text: 'Όταν πατήσετε "Έναρξη", θα ενεργοποιηθεί η κάμερα για 1 λεπτό.\n\nΠρέπει να πραγματοποιήσετε τις εξής κινήσεις:\n\n'),
-                      TextSpan(text: '👍 Thumbs Up\n', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '🖐️ Open Palm\n', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '☝️ Pointing Up\n', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '✊ Closed Fist', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
+      return TestStepScaffold(
+        title: l10n.stepTitleGestures,
+        instruction: l10n.stepInstructionGesturesIntro,
+        nextLabel: l10n.stepStart,
+        onNext: _startTest,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final label in gestureLabels.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text(label, style: theme.textTheme.titleMedium),
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _startTest,
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-                  textStyle: const TextStyle(fontSize: 21),
-                ),
-                child: const Text('Έναρξη'),
-              ),
-            ],
-          ),
+          ],
         ),
       );
     }
 
     if (_testEnded) {
-      // ✅ No camera widget here, so camera closes!
-      return Scaffold(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        body: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: _success
-                  ? Colors.green[800]?.withOpacity(0.93)
-                  : Colors.blueGrey[800]?.withOpacity(0.97),
-              borderRadius: BorderRadius.circular(32),
-            ),
+      // No platform view in this subtree, which is what releases the camera.
+      return TestStepScaffold(
+        title: l10n.stepResults,
+        nextLabel: l10n.stepContinue,
+        onNext: widget.onNext,
+        child: Center(
+          child: AppCard(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(_success ? Icons.check_circle_outline : Icons.info_outline,
-                    size: 66, color: Colors.white),
-                const SizedBox(height: 20),
+                Icon(
+                  _success ? Icons.check_circle_outline : Icons.info_outline,
+                  size: 64,
+                  color: _success
+                      ? semantic.success
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const AppGap.md(),
                 Text(
                   _success
-                      ? 'Συγχαρητήρια! Εντοπίστηκαν όλα τα gestures.\n\nΣκορ: 3.00/3.00'
-                      : 'Ολοκληρώθηκε ο χρόνος.\nΣκορ: ${_finalScore.toStringAsFixed(2)}/3.00',
+                      ? l10n.stepGesturesAllDetected
+                      : l10n.stepTimeUpScore(_finalScore.toStringAsFixed(2)),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: widget.onNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: _success ? Colors.green[900] : Colors.blueGrey[900],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 18),
-                    textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-                  ),
-                  child: const Text('Συνέχεια'),
+                  style: theme.textTheme.titleMedium,
                 ),
               ],
             ),
@@ -283,7 +232,8 @@ class _GesturesStepState extends State<GesturesStep> {
       );
     }
 
-    // TEST PHASE
+    // Live phase. Content sits over the camera preview, so it uses the fixed
+    // overlay colours rather than theme roles, which risk dark-on-dark here.
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -300,42 +250,47 @@ class _GesturesStepState extends State<GesturesStep> {
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(
-                margin: const EdgeInsets.only(top: 18, left: 22, right: 22),
-                padding: const EdgeInsets.all(18),
+                margin: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey[800]?.withOpacity(0.93),
-                  borderRadius: BorderRadius.circular(22),
+                  color: AppTokens.overlayScrim,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Εκτελέστε όλες τις κινήσεις.',
+                    Text(
+                      l10n.stepInstructionGesturesPerformAll,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: AppTokens.onOverlay),
                     ),
-                    const SizedBox(height: 14),
-                    ..._gestureCounts.keys.map((g) {
-                      final done = _gestureDone[g]!;
-                      return Row(
+                    const AppGap.sm(),
+                    for (final g in _gestureCounts.keys)
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             gestureLabels[g]!,
-                            style: TextStyle(
-                              color: done ? Colors.greenAccent : Colors.white,
-                              fontWeight: done ? FontWeight.bold : FontWeight.normal,
-                              fontSize: 19,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppTokens.onOverlay,
+                              // Struck through once done, so completion does
+                              // not rely on the check icon alone.
+                              decoration: _gestureDone[g]!
+                                  ? TextDecoration.lineThrough
+                                  : null,
                             ),
                           ),
-                          if (done)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 10),
-                              child: Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+                          if (_gestureDone[g]!) ...[
+                            const AppGap.wide(AppSpacing.xs),
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppTokens.onOverlay,
+                              size: 20,
                             ),
+                          ],
                         ],
-                      );
-                    }).toList(),
+                      ),
                   ],
                 ),
               ),
@@ -344,19 +299,21 @@ class _GesturesStepState extends State<GesturesStep> {
           if (_lastDetectedGesture != null)
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.md,
+                  horizontal: AppSpacing.xl,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.green[700]!.withOpacity(0.91),
-                  borderRadius: BorderRadius.circular(34),
+                  color: semantic.success,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Text(
-                  '${gestureLabels[_lastDetectedGesture!]}\nΑναγνωρίστηκε!',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 29,
-                    fontWeight: FontWeight.bold,
+                  l10n.stepGestureRecognised(
+                    gestureLabels[_lastDetectedGesture!]!,
                   ),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(color: semantic.onSuccess),
                 ),
               ),
             ),

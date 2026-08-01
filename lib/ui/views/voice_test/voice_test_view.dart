@@ -1,53 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../common/widgets/widgets.dart';
 import 'voice_test_viewmodel.dart';
 
-/// Simple UI for recording and analyzing a short voice sample.
+/// Records and analyses a short voice sample.
 class VoiceTestView extends StackedView<VoiceTestViewModel> {
   const VoiceTestView({super.key});
 
   @override
   Widget builder(
       BuildContext context, VoiceTestViewModel viewModel, Widget? child) {
-    return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.voiceTest)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              viewModel.statusText(AppLocalizations.of(context)!),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            if (viewModel.isRecording)
-              Column(
-                children: [
-                  Text(AppLocalizations.of(context)!
-                      .timeLeft(viewModel.secondsLeft)),
-                  const SizedBox(height: 10),
-                  LinearProgressIndicator(value: viewModel.progress, minHeight: 8),
-                ],
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return AppScaffold(
+      title: l10n.voiceTest,
+      bottomAction: viewModel.isRecording
+          ? SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: viewModel.stopTest,
+                icon: const Icon(Icons.stop),
+                label: Text(l10n.stop),
               ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: viewModel.isRecording ? null : viewModel.startTest,
-              icon: const Icon(Icons.mic),
-              label: Text(AppLocalizations.of(context)!.startTest),
+            )
+          : PrimaryAction(
+              label: l10n.startTest,
+              icon: Icons.mic,
+              onPressed: viewModel.startTest,
             ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: viewModel.stopTest,
-              icon: const Icon(Icons.stop),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              label: Text(AppLocalizations.of(context)!.stop),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            viewModel.statusText(l10n),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall,
+          ),
+          if (viewModel.isRecording) ...[
+            const AppGap.lg(),
+            CountdownProgress(
+              label: l10n.timeLeft(viewModel.secondsLeft),
+              progress: viewModel.progress,
             ),
           ],
-        ),
+        ],
       ),
     );
   }

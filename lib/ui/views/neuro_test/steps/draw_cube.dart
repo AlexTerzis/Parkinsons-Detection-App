@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA visuoconstruction: copy the reference cube freehand.
 class DrawCubeStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int) onScored;
@@ -12,77 +16,91 @@ class DrawCubeStep extends StatefulWidget {
   });
 
   @override
-  _DrawCubeStepState createState() => _DrawCubeStepState();
+  State<DrawCubeStep> createState() => _DrawCubeStepState();
 }
 
 class _DrawCubeStepState extends State<DrawCubeStep> {
+  // Black on white, like the paper instrument.
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 3,
-    penColor: Colors.black,
-    exportBackgroundColor: Colors.white,
+    penColor: AppTokens.canvasInk,
+    exportBackgroundColor: AppTokens.canvasPaper,
   );
 
-  void _handleNext({required int score}) async {
-    if (_controller.isNotEmpty) score = 1;
-    widget.onScored(score);
+  /// Enables Next once something has been drawn, so the button state tells the
+  /// patient whether their strokes registered.
+  bool _hasDrawing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onStrokesChanged);
+  }
+
+  void _onStrokesChanged() {
+    final has = _controller.isNotEmpty;
+    if (has != _hasDrawing && mounted) {
+      setState(() => _hasDrawing = has);
+    }
+  }
+
+  void _handleNext() {
+    widget.onScored(_controller.isNotEmpty ? 1 : 0);
     widget.onNext();
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onStrokesChanged);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Οπτικο-Κατασκευαστικές Ικανότητες')),
-      body: Column(
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return TestStepScaffold(
+      title: l10n.stepTitleCube,
+      instruction: l10n.stepInstructionDrawCube,
+      // The canvas must fill the space it is given; scrolling would swallow
+      // the vertical strokes.
+      scrollable: false,
+      onNext: _handleNext,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Αντιγράψτε τον κύβο που βλέπετε παρακάτω ☞',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
+          Image.asset(
+            'assets/images/cube_reference.png',
+            height: 140,
+            fit: BoxFit.contain,
+            semanticLabel: l10n.stepInstructionDrawCube,
           ),
-          // Reference cube
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Image.asset(
-              'assets/images/cube_reference.png',
-              height: 150,
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Drawing canvas
+          const AppGap.sm(),
           Expanded(
-            child: Container(
-              color: Colors.grey.shade200,
-              child: Signature(
-                controller: _controller,
-                backgroundColor: Colors.white,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTokens.canvasPaper,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: Signature(
+                  controller: _controller,
+                  backgroundColor: AppTokens.canvasPaper,
+                ),
               ),
             ),
           ),
-          // Controls
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            child: Row(
-              children: [
-                ElevatedButton(
-                  onPressed: () => _controller.clear(),
-                  child: const Text('Καθάρισμα'),
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: () => _handleNext(score: 0),
-                  child: const Text('Επόμενο'),
-                ),
-              ],
+          const AppGap.sm(),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _hasDrawing ? _controller.clear : null,
+              icon: const Icon(Icons.undo),
+              label: Text(l10n.stepClear),
             ),
           ),
         ],

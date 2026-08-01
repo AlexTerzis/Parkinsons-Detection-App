@@ -4,8 +4,7 @@ import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../../services/authentication_service.dart';
-import '../../../common/app_tokens.dart';
-import '../../../common/widgets/app_preferences_section.dart';
+import '../../../common/widgets/widgets.dart';
 import '../../patience/patience_viewmodel.dart';
 
 /// ProfileTab extracts the profile editing UI from PatienceView.
@@ -18,7 +17,7 @@ class ProfileTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -28,14 +27,14 @@ class ProfileTab extends StatelessWidget {
             // Generic profile avatar icon.
             child: const Icon(Icons.person, size: 48),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           Text(viewModel.name, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
+          const AppGap.xs(),
           Text(viewModel.email, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 24),
+          const AppGap.lg(),
           if (viewModel.isGuest) ...[
             const _GuestUpgradeCard(),
-            const SizedBox(height: 24),
+            const AppGap.lg(),
           ],
           // Name editing field.
           TextField(
@@ -44,7 +43,7 @@ class ProfileTab extends StatelessWidget {
               labelText: AppLocalizations.of(context)!.editName,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           // Date of birth field with localized hint.
           TextField(
             controller: viewModel.dobController,
@@ -53,7 +52,7 @@ class ProfileTab extends StatelessWidget {
               hintText: AppLocalizations.of(context)!.dobHint,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           // Medication field.
           TextField(
             controller: viewModel.medicationController,
@@ -61,43 +60,41 @@ class ProfileTab extends StatelessWidget {
               labelText: AppLocalizations.of(context)!.addMedication,
             ),
           ),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           const AppPreferencesSection(),
-          const SizedBox(height: 16),
+          const AppGap.md(),
           ElevatedButton.icon(
             onPressed: viewModel.isBusy
                 ? null
                 : () async {
                     await viewModel.saveExtraProfileFields();
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(AppLocalizations.of(context)!
-                                .profileSaved)),
+                      AppFeedback.success(
+                        context,
+                        AppLocalizations.of(context)!.profileSaved,
                       );
                     }
                   },
             icon: const Icon(Icons.save_alt),
             label: Text(AppLocalizations.of(context)!.saveProfile),
           ),
-          const SizedBox(height: 30),
+          const AppGap.lg(),
           ElevatedButton.icon(
             onPressed: viewModel.isBusy
                 ? null
                 : () async {
                     await viewModel.saveName();
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(AppLocalizations.of(context)!
-                                .savedSuccessfully)),
+                      AppFeedback.success(
+                        context,
+                        AppLocalizations.of(context)!.savedSuccessfully,
                       );
                     }
                   },
             icon: const Icon(Icons.save),
             label: Text(AppLocalizations.of(context)!.saveChanges),
           ),
-          const SizedBox(height: 24),
+          const AppGap.lg(),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
@@ -197,9 +194,7 @@ class _GuestUpgradeCardState extends State<_GuestUpgradeCard> {
         password: _passwordController.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.accountCreatedKeptResults)),
-      );
+      AppFeedback.success(context, l10n.accountCreatedKeptResults);
       setState(() => _expanded = false);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -235,7 +230,7 @@ class _GuestUpgradeCardState extends State<_GuestUpgradeCard> {
             Row(
               children: [
                 Icon(Icons.info_outline, color: cs.onSecondaryContainer),
-                const SizedBox(width: AppSpacing.sm),
+                const AppGap.wide(AppSpacing.sm),
                 Expanded(
                   child: Text(
                     l10n.guestAccountTitle,
@@ -245,13 +240,13 @@ class _GuestUpgradeCardState extends State<_GuestUpgradeCard> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const AppGap.xs(),
             Text(
               l10n.guestAccountBody,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: cs.onSecondaryContainer),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const AppGap.md(),
             if (!_expanded)
               ElevatedButton.icon(
                 onPressed: () => setState(() => _expanded = true),
@@ -277,7 +272,7 @@ class _GuestUpgradeCardState extends State<_GuestUpgradeCard> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const AppGap.sm(),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -292,14 +287,14 @@ class _GuestUpgradeCardState extends State<_GuestUpgradeCard> {
                       },
                     ),
                     if (_error != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
+                      const AppGap.sm(),
                       Text(
                         _error!,
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: cs.error),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.md),
+                    const AppGap.md(),
                     ElevatedButton(
                       onPressed: _busy ? null : _upgrade,
                       child: _busy

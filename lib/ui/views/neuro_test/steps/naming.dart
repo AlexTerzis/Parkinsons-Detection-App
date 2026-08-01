@@ -2,18 +2,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA naming: name the three pictured animals aloud.
+///
+/// The expected answers stay Greek — they are matched against the `el_GR`
+/// recognizer's output, so translating them would fail every comparison.
 class NamingStep extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(double score) onScored;
 
   const NamingStep({
-    Key? key,
+    super.key,
     required this.onNext,
     required this.onScored,
-  }) : super(key: key);
+  });
 
   @override
-  _NamingStepState createState() => _NamingStepState();
+  State<NamingStep> createState() => _NamingStepState();
 }
 
 class _NamingStepState extends State<NamingStep> {
@@ -66,15 +73,14 @@ class _NamingStepState extends State<NamingStep> {
     if (_responses[idx].isEmpty) return;
     final userSaid = _responses[idx];
     final correct = userSaid == _names[idx] || userSaid == _names[idx].replaceAll('ά', 'α');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${_names[idx][0].toUpperCase()}${_names[idx].substring(1)}: '
-          '${correct ? 'Σωστό' : 'Λάθος'}',
-        ),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    // Icon carries the verdict, so the message is just the expected animal.
+    final expected =
+        '${_names[idx][0].toUpperCase()}${_names[idx].substring(1)}';
+    if (correct) {
+      AppFeedback.success(context, expected);
+    } else {
+      AppFeedback.error(context, expected);
+    }
     _answeredCount++;
     if (_answeredCount >= 3) {
       Future.delayed(const Duration(milliseconds: 500), _finish);
@@ -110,107 +116,88 @@ class _NamingStepState extends State<NamingStep> {
     widget.onNext();
   }
 
+  static const _assets = [
+    'assets/animals/lion.png',
+    'assets/animals/rhino.png',
+    'assets/animals/camel.png',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Κατονομασία')),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Κατονομάστε κάθε ζώο πατώντας το μικρόφωνο στη δεξιά πλευρά του πλαισίου.\n'
-                  'Αν πατήσετε "Υπόδειξη" για κάποιο, παίρνετε μισό βαθμό για αυτό.',
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: List.generate(3, (i) {
-                      final asset = i == 0
-                          ? 'assets/animals/lion.png'
-                          : i == 1
-                              ? 'assets/animals/rhino.png'
-                              : 'assets/animals/camel.png';
-                      return Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Image.asset(asset, fit: BoxFit.contain),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              height: 50,
-                              child: TextField(
-                                readOnly: true,
-                                controller: TextEditingController(
-                                    text: _responses[i].isEmpty ? '—' : _responses[i]),
-                                decoration: InputDecoration(
-                                  border: const OutlineInputBorder(),
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      Icons.mic,
-                                      color: _listening[i] ? Colors.green : Colors.black,
-                                    ),
-                                    onPressed: !_listening[i] && !_done
-                                        ? () => _startListening(i)
-                                        : null,
-                                    tooltip: 'Λέγεται στο μικρόφωνο',
-                                  ),
-                                ),
-                                style: const TextStyle(fontSize: 17),
-                                enableInteractiveSelection: false,
-                                showCursor: false,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            if (_showHint[i])
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  _names[i].toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.yellow[900],
-                                    backgroundColor: Colors.yellow[200],
-                                    fontWeight: FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            SizedBox(
-                              width: 110,
-                              child: OutlinedButton(
-                                onPressed: !_showHint[i]
-                                    ? () => _showHintFor(i)
-                                    : null,
-                                child: const Text('Υπόδειξη'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+
+    return TestStepScaffold(
+      title: l10n.stepTitleNaming,
+      instruction: '${l10n.stepInstructionNaming}\n'
+          '${l10n.stepInstructionDelayedRecallHint}',
+      // Three side-by-side image columns that must share the viewport height.
+      scrollable: false,
+      onNext: _finish,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(3, (i) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Image.asset(_assets[i], fit: BoxFit.contain),
                   ),
-                ),
-                const SizedBox(height: 50), // space for button
-              ],
+                  const AppGap.xs(),
+                  TextField(
+                    readOnly: true,
+                    // Rebuilt each frame from _responses, which the recognizer
+                    // owns; the field is a read-only display, never an input.
+                    controller: TextEditingController(
+                      text: _responses[i].isEmpty ? '—' : _responses[i],
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      suffixIcon: IconButton(
+                        tooltip: l10n.stepSpokenIntoMic,
+                        icon: Icon(
+                          _listening[i] ? Icons.mic : Icons.mic_none,
+                          color: _listening[i] ? semantic.success : null,
+                        ),
+                        onPressed: !_listening[i] && !_done
+                            ? () => _startListening(i)
+                            : null,
+                      ),
+                    ),
+                    enableInteractiveSelection: false,
+                    showCursor: false,
+                  ),
+                  const AppGap.xs(),
+                  if (_showHint[i])
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: AppSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: semantic.warningContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                      ),
+                      child: Text(
+                        _names[i].toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelLarge
+                            ?.copyWith(color: semantic.onWarningContainer),
+                      ),
+                    ),
+                  const AppGap.xs(),
+                  OutlinedButton(
+                    onPressed: !_showHint[i] ? () => _showHintFor(i) : null,
+                    child: Text(l10n.stepHint),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: ElevatedButton(
-              onPressed: _finish,
-              child: const Text('Επόμενο'),
-            ),
-          ),
-        ],
+          );
+        }),
       ),
     );
   }

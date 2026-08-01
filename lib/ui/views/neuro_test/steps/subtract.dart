@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
 /// MoCA Serial 7s - dynamic, allows speaking or typing.
 /// Each subtraction uses user's previous input.
 /// 5 or 4 correct = 3 pts, 3 or 2 = 2 pts, 1 = 1 pt, 0 = 0.
@@ -34,8 +37,12 @@ class _SubtractStepState extends State<SubtractStep> {
   @override
   void dispose() {
     _timeout?.cancel();
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     _speech.stop();
     super.dispose();
   }
@@ -69,11 +76,17 @@ class _SubtractStepState extends State<SubtractStep> {
       final val = int.tryParse(_controllers[i].text.trim());
       if (val == _answers[i]) correct++;
     }
-    int score = 0;
-    if (correct >= 4) score = 3;
-    else if (correct >= 2) score = 2;
-    else if (correct == 1) score = 1;
-    else score = 0;
+    // MoCA serial 7s: 4-5 correct = 3 pts, 2-3 = 2, 1 = 1, none = 0.
+    final int score;
+    if (correct >= 4) {
+      score = 3;
+    } else if (correct >= 2) {
+      score = 2;
+    } else if (correct == 1) {
+      score = 1;
+    } else {
+      score = 0;
+    }
 
     setState(() => _submitted = true);
     widget.onScored(score);
@@ -88,91 +101,66 @@ class _SubtractStepState extends State<SubtractStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Αφαίρεση 7 από το 100')),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return TestStepScaffold(
+      title: l10n.stepTitleSubtract,
+      instruction: l10n.stepInstructionSubtract,
+      onNext: _submit,
+      nextEnabled: !_submitted,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: List.generate(5, (i) {
+          final left = _leftNumber(i);
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
               children: [
-                const Text(
-                  'Αφαιρέστε διαδοχικά 7 ξεκινώντας από το 100 (πέντε φορές):',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 18),
-                Center(
-                  child: SizedBox(
-                    width: 320,
-                    child: Column(
-                      children: List.generate(5, (i) {
-                        final left = _leftNumber(i);
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          child: Row(
-                            children: [
-                              // Left side: previous answer or 100
-                              SizedBox(
-                                width: 55,
-                                child: Text(
-                                  left != null ? '$left' : '—',
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              const Text('- 7 ='),
-                              const SizedBox(width: 8),
-                              // Input
-                              Expanded(
-                                child: TextField(
-                                  controller: _controllers[i],
-                                  focusNode: _focusNodes[i],
-                                  keyboardType: TextInputType.number,
-                                  textInputAction: TextInputAction.next,
-                                  enabled: !_submitted,
-                                  onChanged: (_) {
-                                    setState(() {}); // To refresh left side for next row
-                                  },
-                                  decoration: InputDecoration(
-                                    border: const OutlineInputBorder(),
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _listening[i] ? Icons.mic : Icons.mic_none,
-                                        color: _listening[i] ? Colors.green : null,
-                                      ),
-                                      onPressed: _submitted || _listening.contains(true)
-                                          ? null
-                                          : () => _listenField(i),
-                                    ),
-                                  ),
-                                  onSubmitted: (_) => i == 4 ? _submit() : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ),
+                // Left side: previous answer or 100.
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    left != null ? '$left' : '—',
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
-                const SizedBox(height: 22),
+                const AppGap.wide(AppSpacing.xs),
+                Text('− 7 =', style: theme.textTheme.titleMedium),
+                const AppGap.wide(AppSpacing.xs),
+                Expanded(
+                  child: TextField(
+                    controller: _controllers[i],
+                    focusNode: _focusNodes[i],
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    enabled: !_submitted,
+                    onChanged: (_) {
+                      // Refreshes the left-hand number of the next row.
+                      setState(() {});
+                    },
+                    decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        tooltip: l10n.stepSayWithMic,
+                        icon: Icon(
+                          _listening[i] ? Icons.mic : Icons.mic_none,
+                          color: _listening[i]
+                              ? AppSemanticColors.of(context).success
+                              : null,
+                        ),
+                        onPressed: _submitted || _listening.contains(true)
+                            ? null
+                            : () => _listenField(i),
+                      ),
+                    ),
+                    onSubmitted: (_) => i == 4 ? _submit() : null,
+                  ),
+                ),
               ],
             ),
-          ),
-          // Next button bottom right
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: ElevatedButton(
-              onPressed: _submitted ? null : _submit,
-              child: const Text('Επόμενο'),
-            ),
-          ),
-        ],
+          );
+        }),
       ),
     );
   }

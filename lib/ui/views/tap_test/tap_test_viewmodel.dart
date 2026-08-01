@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:stacked/stacked.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
@@ -62,9 +62,9 @@ class TapTestViewModel extends BaseViewModel {
     try {
       _interpreter = await Interpreter.fromAsset('assets/tapping_model.tflite');
       _modelLoaded = true;
-      print('✅ Model loaded');
+      debugPrint('✅ Model loaded');
     } catch (e) {
-      print('❌ Failed to load model: $e');
+      debugPrint('❌ Failed to load model: $e');
     }
   }
 
@@ -221,14 +221,14 @@ class TapTestViewModel extends BaseViewModel {
 
     final output = Float32List(1).reshape([1, 1]);
 
-    print('Predicting with:\n'
+    debugPrint('Predicting with:\n'
         'avg=$avg var=$variance freq=$freq\n'
         'max=$maxVal min=$minVal range=$range stdDev=$stdDev hold=$avgHold');
 
     try {
       _interpreter.run(input, output);
     } catch (e) {
-      print('❌ Interpreter run failed: $e');
+      debugPrint('❌ Interpreter run failed: $e');
       return l10n.predictionFailed;
     }
 
