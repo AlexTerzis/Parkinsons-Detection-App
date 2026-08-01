@@ -4,7 +4,7 @@ import 'package:stacked/stacked.dart';
 
 import '../../common/app_tokens.dart';
 import '../patience/hand_landmarker_screen.dart';
-import 'camera_task_protocol.dart';
+import '../../../models/camera_task_protocol.dart';
 import 'camera_test_viewmodel.dart';
 
 /// Guided camera assessment.

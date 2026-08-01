@@ -1,4 +1,4 @@
-import '../ui/views/camera_test/camera_task_protocol.dart';
+import 'camera_task_protocol.dart';
 import 'landmark_point.dart';
 
 /// One frame of landmarks captured during a specific protocol task.

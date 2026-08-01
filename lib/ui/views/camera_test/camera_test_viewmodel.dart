@@ -5,6 +5,7 @@ import 'package:stacked/stacked.dart';
 import 'package:stacked_services/stacked_services.dart';
 
 import '../../../app/app.locator.dart';
+import '../../../models/camera_task_protocol.dart';
 import '../../../models/camera_task_segment.dart';
 import '../../../models/landmark_point.dart';
 import '../../../models/test_result.dart';
@@ -12,9 +13,10 @@ import '../../../models/test_type.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/hand_metrics.dart';
 import '../../../services/parkinson_config.dart';
+import '../../../services/scoring/camera_recording.dart';
+import '../../../services/scoring/camera_scoring_service.dart';
 import '../../../services/test_service.dart';
 import '../patience/hand_landmarker_screen.dart';
-import 'camera_task_protocol.dart';
 
 /// Where the guided run currently is.
 enum CameraTestPhase {
@@ -41,6 +43,7 @@ class CameraTestViewModel extends BaseViewModel {
   final TestService _tests = locator<TestService>();
   final AuthenticationService _auth = locator<AuthenticationService>();
   final HandMetrics _metrics = locator<HandMetrics>();
+  final CameraScoringService _scoring = locator<CameraScoringService>();
 
   /// Bumped whenever the stored shape changes, so an analysis job can tell a
   /// guided run from the old single-capture documents. Version 1 is implicit
@@ -321,7 +324,26 @@ class CameraTestViewModel extends BaseViewModel {
     }
 
     final Map<String, dynamic> metrics = _analyzeFrames();
-    final double score = metrics['parkinson_probability'] as double;
+
+    // Both scorers run on every recording and both verdicts are stored. The
+    // enhanced one's normalization ranges are still provisional, so the flag
+    // decides which likelihood the rest of the app sees; the comparison data
+    // stored here is what will make calibrating those ranges possible.
+    ScoringComparison? scoring;
+    try {
+      scoring = _scoring.scoreAll(
+        CameraRecording.fromSegments(_segments, _mode),
+      );
+      metrics['scoring'] = scoring.toJson();
+    } catch (e) {
+      // Scoring must never cost the patient their recording.
+      debugPrint('Could not compute scoring comparison: $e');
+    }
+
+    // Unchanged when the flag is off: the legacy probability, exactly as
+    // before.
+    final double score =
+        scoring?.likelihood ?? metrics['parkinson_probability'] as double;
 
     final result = TestResult(
       id: '',

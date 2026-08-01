@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parkinsondetetion/models/camera_task_segment.dart';
 import 'package:parkinsondetetion/models/landmark_point.dart';
-import 'package:parkinsondetetion/ui/views/camera_test/camera_task_protocol.dart';
+import 'package:parkinsondetetion/models/camera_task_protocol.dart';
 
 void main() {
   group('CameraTaskProtocol -', () {
