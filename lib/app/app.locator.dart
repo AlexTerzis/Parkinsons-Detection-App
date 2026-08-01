@@ -19,6 +19,7 @@ import '../services/reports_service.dart';
 import '../services/storage_service.dart';
 import '../services/test_service.dart';
 import '../services/text_scale_service.dart';
+import '../services/tremor_analysis_service.dart';
 import '../services/voice_api_service.dart';
 
 final locator = StackedLocator.instance;
@@ -41,6 +42,7 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => VoiceApiService());
   locator.registerLazySingleton(() => RaisonApiService());
   locator.registerLazySingleton(() => HandMetrics());
+  locator.registerLazySingleton(() => TremorAnalysisService());
   locator.registerLazySingleton(() => StorageService());
   locator.registerLazySingleton(() => LocalizationService());
   locator.registerLazySingleton(() => TextScaleService());
