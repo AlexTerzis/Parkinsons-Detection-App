@@ -711,6 +711,13 @@ class MockDialogService extends _i1.Mock implements _i3.DialogService {
 class MockAuthenticationService extends _i1.Mock
     implements _i8.AuthenticationService {
   @override
+  bool get isGuest => (super.noSuchMethod(
+        Invocation.getter(#isGuest),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   _i6.Stream<_i2.User?> observeAuthState() => (super.noSuchMethod(
         Invocation.method(
           #observeAuthState,
@@ -719,6 +726,72 @@ class MockAuthenticationService extends _i1.Mock
         returnValue: _i6.Stream<_i2.User?>.empty(),
         returnValueForMissingStub: _i6.Stream<_i2.User?>.empty(),
       ) as _i6.Stream<_i2.User?>);
+
+  @override
+  _i6.Future<_i2.UserCredential> signInAnonymously() => (super.noSuchMethod(
+        Invocation.method(
+          #signInAnonymously,
+          [],
+        ),
+        returnValue: _i6.Future<_i2.UserCredential>.value(_FakeUserCredential_0(
+          this,
+          Invocation.method(
+            #signInAnonymously,
+            [],
+          ),
+        )),
+        returnValueForMissingStub:
+            _i6.Future<_i2.UserCredential>.value(_FakeUserCredential_0(
+          this,
+          Invocation.method(
+            #signInAnonymously,
+            [],
+          ),
+        )),
+      ) as _i6.Future<_i2.UserCredential>);
+
+  @override
+  _i6.Future<_i2.UserCredential> linkAnonymousToEmail({
+    required String? email,
+    required String? password,
+    String? name,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #linkAnonymousToEmail,
+          [],
+          {
+            #email: email,
+            #password: password,
+            #name: name,
+          },
+        ),
+        returnValue: _i6.Future<_i2.UserCredential>.value(_FakeUserCredential_0(
+          this,
+          Invocation.method(
+            #linkAnonymousToEmail,
+            [],
+            {
+              #email: email,
+              #password: password,
+              #name: name,
+            },
+          ),
+        )),
+        returnValueForMissingStub:
+            _i6.Future<_i2.UserCredential>.value(_FakeUserCredential_0(
+          this,
+          Invocation.method(
+            #linkAnonymousToEmail,
+            [],
+            {
+              #email: email,
+              #password: password,
+              #name: name,
+            },
+          ),
+        )),
+      ) as _i6.Future<_i2.UserCredential>);
 
   @override
   _i6.Future<_i2.UserCredential> signIn({
@@ -883,6 +956,7 @@ class MockTestService extends _i1.Mock implements _i9.TestService {
     _i11.Uint8List? drawingPng,
     _i12.File? audioWav,
     Map<String, dynamic>? sensorData,
+    Map<String, Map<String, dynamic>>? taskSegments,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -893,6 +967,7 @@ class MockTestService extends _i1.Mock implements _i9.TestService {
             #drawingPng: drawingPng,
             #audioWav: audioWav,
             #sensorData: sensorData,
+            #taskSegments: taskSegments,
           },
         ),
         returnValue: _i6.Future<void>.value(),
@@ -1067,6 +1142,29 @@ class MockStorageService extends _i1.Mock implements _i17.StorageService {
             userId,
             testType,
             testId,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> uploadCompressedJsonNamed(
+    Map<String, dynamic>? rawData,
+    String? userId,
+    String? testType,
+    String? testId,
+    String? name,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadCompressedJsonNamed,
+          [
+            rawData,
+            userId,
+            testType,
+            testId,
+            name,
           ],
         ),
         returnValue: _i6.Future<void>.value(),

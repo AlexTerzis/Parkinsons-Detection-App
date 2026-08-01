@@ -570,4 +570,111 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get guestUpgradeFailed =>
       'Δεν ήταν δυνατή η δημιουργία του λογαριασμού. Δοκιμάστε ξανά.';
+
+  @override
+  String get cameraTestTitle => 'Αξιολόγηση χεριών με κάμερα';
+
+  @override
+  String get cameraSetupBody =>
+      'Θα καθοδηγηθείτε σε μια σύντομη σειρά κινήσεων, ένα χέρι κάθε φορά. Κρατήστε το κινητό σταθερό ή στηρίξτε το, ώστε το χέρι που εξετάζεται να παραμένει ορατό.';
+
+  @override
+  String get cameraTestLength => 'Διάρκεια';
+
+  @override
+  String get cameraModeFull => 'Πλήρης';
+
+  @override
+  String get cameraModeShort => 'Σύντομη';
+
+  @override
+  String get cameraModeShortNote =>
+      'Η σύντομη λειτουργία χρησιμοποιεί περίπου τον μισό χρόνο για κάθε κίνηση.';
+
+  @override
+  String cameraApproxDuration(Object seconds) {
+    return 'Περίπου $seconds δευτερόλεπτα';
+  }
+
+  @override
+  String get cameraStart => 'Έναρξη';
+
+  @override
+  String get cameraExit => 'Έξοδος';
+
+  @override
+  String get cameraHandLeft => 'Αριστερό χέρι';
+
+  @override
+  String get cameraHandRight => 'Δεξί χέρι';
+
+  @override
+  String get cameraTaskRest => 'Ηρεμία';
+
+  @override
+  String get cameraTaskOpenClose => 'Άνοιγμα και κλείσιμο';
+
+  @override
+  String get cameraTaskFingerTap => 'Χτύπημα δακτύλων';
+
+  @override
+  String get cameraTaskPronation => 'Παλάμη πάνω και κάτω';
+
+  @override
+  String get cameraInstructionRest =>
+      'Αφήστε το χέρι σας ακίνητο και χαλαρό, μπροστά στην κάμερα.';
+
+  @override
+  String get cameraInstructionOpenClose =>
+      'Ανοίξτε την παλάμη σας διάπλατα και κλείστε τη σε γροθιά. Επαναλάβετε όσο πιο πλήρως και γρήγορα μπορείτε.';
+
+  @override
+  String get cameraInstructionFingerTap =>
+      'Χτυπήστε τον αντίχειρα με τον δείκτη. Κάντε κάθε χτύπημα όσο πιο μεγάλο και γρήγορο μπορείτε.';
+
+  @override
+  String get cameraInstructionPronation =>
+      'Γυρίστε την παλάμη σας πάνω και μετά κάτω, ξανά και ξανά. Κάντε κάθε στροφή όσο πιο μεγάλη και γρήγορη μπορείτε.';
+
+  @override
+  String cameraStepOf(Object current, Object total) {
+    return 'Βήμα $current από $total';
+  }
+
+  @override
+  String cameraMdsItem(Object item) {
+    return 'Στοιχείο MDS-UPDRS $item';
+  }
+
+  @override
+  String cameraHandNotVisible(Object hand) {
+    return 'Φέρτε το $hand μπροστά στην κάμερα';
+  }
+
+  @override
+  String get cameraPause => 'Παύση';
+
+  @override
+  String get cameraPausePending => 'Παύση μετά από αυτή την κίνηση';
+
+  @override
+  String get cameraCancelPause => 'Συνέχεια';
+
+  @override
+  String get cameraPausedTitle => 'Σε παύση';
+
+  @override
+  String get cameraPausedBody =>
+      'Πάρτε όσο χρόνο χρειάζεστε. Το τεστ συνεχίζει από την επόμενη κίνηση.';
+
+  @override
+  String cameraNextUp(Object task) {
+    return 'Επόμενο: $task';
+  }
+
+  @override
+  String get cameraResume => 'Συνέχεια';
+
+  @override
+  String get cameraFinishing => 'Αποθήκευση των αποτελεσμάτων σας';
 }

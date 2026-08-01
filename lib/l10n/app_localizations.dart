@@ -1123,6 +1123,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not create the account. Please try again.'**
   String get guestUpgradeFailed;
+
+  /// No description provided for @cameraTestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera hand assessment'**
+  String get cameraTestTitle;
+
+  /// No description provided for @cameraSetupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be guided through a short series of hand movements, one hand at a time. Hold your phone steady, or prop it up, so the hand being tested stays in view.'**
+  String get cameraSetupBody;
+
+  /// No description provided for @cameraTestLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get cameraTestLength;
+
+  /// No description provided for @cameraModeFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get cameraModeFull;
+
+  /// No description provided for @cameraModeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Short'**
+  String get cameraModeShort;
+
+  /// No description provided for @cameraModeShortNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Short mode uses about half the time for each movement.'**
+  String get cameraModeShortNote;
+
+  /// No description provided for @cameraApproxDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About {seconds} seconds'**
+  String cameraApproxDuration(Object seconds);
+
+  /// No description provided for @cameraStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get cameraStart;
+
+  /// No description provided for @cameraExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get cameraExit;
+
+  /// No description provided for @cameraHandLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left hand'**
+  String get cameraHandLeft;
+
+  /// No description provided for @cameraHandRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Right hand'**
+  String get cameraHandRight;
+
+  /// No description provided for @cameraTaskRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest'**
+  String get cameraTaskRest;
+
+  /// No description provided for @cameraTaskOpenClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Open and close'**
+  String get cameraTaskOpenClose;
+
+  /// No description provided for @cameraTaskFingerTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Finger tapping'**
+  String get cameraTaskFingerTap;
+
+  /// No description provided for @cameraTaskPronation.
+  ///
+  /// In en, this message translates to:
+  /// **'Palm up and down'**
+  String get cameraTaskPronation;
+
+  /// No description provided for @cameraInstructionRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest your hand still and relaxed, in view of the camera.'**
+  String get cameraInstructionRest;
+
+  /// No description provided for @cameraInstructionOpenClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your hand wide, then close it into a fist. Repeat as fully and as quickly as you can.'**
+  String get cameraInstructionOpenClose;
+
+  /// No description provided for @cameraInstructionFingerTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap your thumb against your index finger. Make each tap as big and as fast as you can.'**
+  String get cameraInstructionFingerTap;
+
+  /// No description provided for @cameraInstructionPronation.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn your palm up, then down, over and over. Make each turn as big and as fast as you can.'**
+  String get cameraInstructionPronation;
+
+  /// No description provided for @cameraStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String cameraStepOf(Object current, Object total);
+
+  /// No description provided for @cameraMdsItem.
+  ///
+  /// In en, this message translates to:
+  /// **'MDS-UPDRS item {item}'**
+  String cameraMdsItem(Object item);
+
+  /// No description provided for @cameraHandNotVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your {hand} into view'**
+  String cameraHandNotVisible(Object hand);
+
+  /// No description provided for @cameraPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get cameraPause;
+
+  /// No description provided for @cameraPausePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pausing after this movement'**
+  String get cameraPausePending;
+
+  /// No description provided for @cameraCancelPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get cameraCancelPause;
+
+  /// No description provided for @cameraPausedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get cameraPausedTitle;
+
+  /// No description provided for @cameraPausedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Take as long as you need. The test continues from the next movement.'**
+  String get cameraPausedBody;
+
+  /// No description provided for @cameraNextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {task}'**
+  String cameraNextUp(Object task);
+
+  /// No description provided for @cameraResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get cameraResume;
+
+  /// No description provided for @cameraFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving your results'**
+  String get cameraFinishing;
 }
 
 class _AppLocalizationsDelegate

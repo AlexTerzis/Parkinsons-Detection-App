@@ -567,4 +567,111 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get guestUpgradeFailed =>
       'Could not create the account. Please try again.';
+
+  @override
+  String get cameraTestTitle => 'Camera hand assessment';
+
+  @override
+  String get cameraSetupBody =>
+      'You will be guided through a short series of hand movements, one hand at a time. Hold your phone steady, or prop it up, so the hand being tested stays in view.';
+
+  @override
+  String get cameraTestLength => 'Length';
+
+  @override
+  String get cameraModeFull => 'Full';
+
+  @override
+  String get cameraModeShort => 'Short';
+
+  @override
+  String get cameraModeShortNote =>
+      'Short mode uses about half the time for each movement.';
+
+  @override
+  String cameraApproxDuration(Object seconds) {
+    return 'About $seconds seconds';
+  }
+
+  @override
+  String get cameraStart => 'Start';
+
+  @override
+  String get cameraExit => 'Exit';
+
+  @override
+  String get cameraHandLeft => 'Left hand';
+
+  @override
+  String get cameraHandRight => 'Right hand';
+
+  @override
+  String get cameraTaskRest => 'Rest';
+
+  @override
+  String get cameraTaskOpenClose => 'Open and close';
+
+  @override
+  String get cameraTaskFingerTap => 'Finger tapping';
+
+  @override
+  String get cameraTaskPronation => 'Palm up and down';
+
+  @override
+  String get cameraInstructionRest =>
+      'Rest your hand still and relaxed, in view of the camera.';
+
+  @override
+  String get cameraInstructionOpenClose =>
+      'Open your hand wide, then close it into a fist. Repeat as fully and as quickly as you can.';
+
+  @override
+  String get cameraInstructionFingerTap =>
+      'Tap your thumb against your index finger. Make each tap as big and as fast as you can.';
+
+  @override
+  String get cameraInstructionPronation =>
+      'Turn your palm up, then down, over and over. Make each turn as big and as fast as you can.';
+
+  @override
+  String cameraStepOf(Object current, Object total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String cameraMdsItem(Object item) {
+    return 'MDS-UPDRS item $item';
+  }
+
+  @override
+  String cameraHandNotVisible(Object hand) {
+    return 'Move your $hand into view';
+  }
+
+  @override
+  String get cameraPause => 'Pause';
+
+  @override
+  String get cameraPausePending => 'Pausing after this movement';
+
+  @override
+  String get cameraCancelPause => 'Keep going';
+
+  @override
+  String get cameraPausedTitle => 'Paused';
+
+  @override
+  String get cameraPausedBody =>
+      'Take as long as you need. The test continues from the next movement.';
+
+  @override
+  String cameraNextUp(Object task) {
+    return 'Next: $task';
+  }
+
+  @override
+  String get cameraResume => 'Resume';
+
+  @override
+  String get cameraFinishing => 'Saving your results';
 }

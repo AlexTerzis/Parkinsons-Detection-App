@@ -96,11 +96,18 @@ class TestService {
   }
 
   /// Saves a new [TestResult] document along with optional raw data assets.
+  ///
+  /// [taskSegments] carries per-task recordings for tests that are made of
+  /// several timed steps (currently the camera test's MDS-UPDRS task
+  /// sequence). Each entry is uploaded as its own file, keyed by task id, so
+  /// the tasks stay separable after upload. Optional, so every other test flow
+  /// is unaffected.
   Future<void> addResult({
     required TestResult result,
     Uint8List? drawingPng,
     File? audioWav,
     Map<String, dynamic>? sensorData,
+    Map<String, Map<String, dynamic>>? taskSegments,
   }) async {
     final colRef = _categoryCol(result.patientId, result.type);
     final docRef = colRef.doc();
@@ -133,6 +140,20 @@ class TestService {
         }
         break;
       case TestType.cameraDetection:
+        // One file per protocol task, plus the legacy merged blob when the
+        // caller still supplies one. Uploaded before the document is written,
+        // in keeping with the rest of this method.
+        if (taskSegments != null) {
+          for (final entry in taskSegments.entries) {
+            await _storage.uploadCompressedJsonNamed(
+              entry.value,
+              result.patientId,
+              result.type.name,
+              testId,
+              entry.key,
+            );
+          }
+        }
         if (sensorData != null) {
           await _storage.uploadCompressedJson(
             sensorData,

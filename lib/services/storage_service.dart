@@ -38,11 +38,33 @@ class StorageService {
     String userId,
     String testType,
     String testId,
+  ) {
+    return uploadCompressedJsonNamed(
+      rawData,
+      userId,
+      testType,
+      testId,
+      'raw',
+    );
+  }
+
+  /// Compresses [rawData] to `<name>.json.gz` under the usual
+  /// `<category>/<userId>/<testId>/` prefix.
+  ///
+  /// Exists so a single test can upload several files side by side — the camera
+  /// test writes one per protocol task instead of a single merged recording, so
+  /// an analysis job can fetch just the task it cares about.
+  Future<void> uploadCompressedJsonNamed(
+    Map<String, dynamic> rawData,
+    String userId,
+    String testType,
+    String testId,
+    String name,
   ) async {
     final jsonStr = jsonEncode(rawData);
     final bytes = gzip.encode(utf8.encode(jsonStr));
     final ref =
-        _storage.ref().child('$testType/$userId/$testId/raw.json.gz');
+        _storage.ref().child('$testType/$userId/$testId/$name.json.gz');
     await ref.putData(
       Uint8List.fromList(bytes),
       SettableMetadata(contentType: 'application/gzip'),
