@@ -334,5 +334,25 @@
   "fabConflictingTestIntro": "Main task. Apply the rules. Press “Start” to begin.",
   "fabExpectedTapsOnce": "You should have tapped once; you tapped {count} times.",
   "fabExpectedTapsTwice": "You should have tapped twice; you tapped {count} times.",
-  "fabResultStreakStimulus": "You matched the number shown at least 4 times in a row."
+  "fabResultStreakStimulus": "You matched the number shown at least 4 times in a row.",
+
+  "testCompleteTitle": "Test complete",
+  "testCompleteSaved": "Your result has been saved.",
+  "testCompleteNotSaved": "Your result could not be saved, but here it is.",
+  "testCompleteScore": "Score",
+  "testCompleteDone": "Done",
+  "testCompleteViewAll": "See all my results",
+  "bandReassuringWorse": "Nothing notable came up in this test.",
+  "bandBorderlineWorse": "This result sits in the middle range. Repeating the test on another day gives a clearer picture.",
+  "bandNotableWorse": "This result is worth mentioning to your doctor. It is a screening check, not a diagnosis.",
+  "bandReassuringBetter": "This result is in the expected range.",
+  "bandBorderlineBetter": "This result is slightly below the expected range. Repeating it on another day gives a clearer picture.",
+  "bandNotableBetter": "This result is below the expected range and is worth mentioning to your doctor. It is a screening check, not a diagnosis.",
+  "screeningDisclaimer": "This app is a screening aid. It cannot diagnose Parkinson's disease, and only a clinician can interpret these results.",
+  "guestKeepResultsTitle": "Keep these results",
+  "guestKeepResultsBody": "You are using a guest account. Create an account to keep your results and share them with a doctor.",
+  "guestExitTitle": "Leave without an account?",
+  "guestExitBody": "Your results are tied to this guest session on this device. If it is lost, so are they. Creating an account keeps everything you have done so far.",
+  "guestExitStay": "Create an account",
+  "guestExitLeave": "Leave anyway"
 }

@@ -57,18 +57,72 @@ class PatienceView extends StackedView<PatienceViewModel> {
       length: tabs.length,
       // Clamped in case a caller asks for a tab this user does not have.
       initialIndex: initialTab.clamp(0, tabs.length - 1),
-      child: Scaffold(
-        appBar: AppBar(
-          toolbarHeight: 0,
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: tabs,
+      // Builder so the PopScope callback sits below the controller and can
+      // switch tabs when a guest chooses to create an account.
+      child: Builder(
+        builder: (tabContext) => PopScope(
+          // Back from the patient home exits the app on Android. For a guest
+          // that is the moment their results become reachable only from this
+          // device, so it is the one place worth interrupting. Registered
+          // users pop straight through, since they lose nothing by leaving.
+          canPop: !viewModel.isGuest,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop) return;
+            final leave = await _confirmGuestExit(tabContext);
+            if (leave && tabContext.mounted) {
+              Navigator.of(tabContext).pop();
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 0,
+              bottom: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                tabs: tabs,
+              ),
+            ),
+            body: TabBarView(children: tabViews),
           ),
         ),
-        body: TabBarView(children: tabViews),
       ),
     );
+  }
+
+  /// Warns a guest that leaving keeps their results tied to this device.
+  ///
+  /// Returns true when the patient chose to leave anyway. Choosing to create an
+  /// account sends them to the Profile tab, where the upgrade form lives,
+  /// rather than dead-ending the dialog.
+  Future<bool> _confirmGuestExit(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.guestExitTitle),
+        content: Text(l10n.guestExitBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.guestExitStay),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.guestExitLeave),
+          ),
+        ],
+      ),
+    );
+
+    if (leave == false && context.mounted) {
+      // Profile is index 0 and holds the account-upgrade card.
+      DefaultTabController.of(context).animateTo(0);
+    }
+    return leave ?? false;
   }
 
 

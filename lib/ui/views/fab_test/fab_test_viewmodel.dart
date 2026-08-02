@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/ui/views/fab_test/steps/similarities.dart';
 import 'package:stacked/stacked.dart';
-import 'package:stacked_services/stacked_services.dart';
 
 import 'package:parkinsondetetion/ui/views/fab_test/steps/conflicting_instructions.dart';
 import 'package:parkinsondetetion/ui/views/fab_test/steps/fluency.dart';
@@ -13,6 +12,7 @@ import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
+import '../test_complete/test_complete_view.dart';
 
 class FABTestViewModel extends BaseViewModel {
   final TestService _tests = locator<TestService>();
@@ -69,6 +69,8 @@ class FABTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
+    final double normalised = (totalFABScore / 15.0).clamp(0.0, 1.0);
+    bool saved = false;
 
     if (uid != null) {
       try {
@@ -77,19 +79,26 @@ class FABTestViewModel extends BaseViewModel {
           patientId: uid,
           type: TestType.fab,
           performedAt: DateTime.now(),
-          score: (totalFABScore / 15.0).clamp(0.0, 1.0),
+          score: normalised,
           data: {'fabScore': totalFABScore},
         );
         await _tests.addResult(result: result);
+        saved = true;
       } catch (e) {
-        // Known limitation: the 'FAB' subcollection is missing from the
-        // Firestore rules allow-list, so this write is denied today. Getting
-        // the user out of the finished test matters more than the write, so
-        // never let a failure here block the navigation below.
+        // Getting the user out of the finished test matters more than the
+        // write succeeding, so never let a failure here block the result
+        // screen below.
         debugPrint('Could not save FAB result: $e');
       }
     }
 
-    locator<NavigationService>().back();
+    // Out of 15, matching the five items this app implements rather than the
+    // clinical FAB's six, so the number shown is the one that was measured.
+    await showTestComplete(
+      type: TestType.fab,
+      score: normalised,
+      detail: '${totalFABScore.toStringAsFixed(totalFABScore.truncateToDouble() == totalFABScore ? 0 : 1)} / 15',
+      saved: saved,
+    );
   }
 }

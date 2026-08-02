@@ -10,6 +10,8 @@ import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
+import 'package:flutter/foundation.dart';
+import '../test_complete/test_complete_view.dart';
 
 class TremorTestViewModel extends BaseViewModel {
   // Services used for storing results
@@ -260,12 +262,24 @@ class TremorTestViewModel extends BaseViewModel {
       performedAt: DateTime.now(),
       score: score.clamp(0, 1),
     );
-    await _tests.addResult(
-      result: result,
-      sensorData: {
-        'accelerometer': _accData,
-        'gyroscope': _gyroData,
-      },
+    bool saved = true;
+    try {
+      await _tests.addResult(
+        result: result,
+        sensorData: {
+          'accelerometer': _accData,
+          'gyroscope': _gyroData,
+        },
+      );
+    } catch (e) {
+      saved = false;
+      debugPrint('Could not save tremor result: $e');
+    }
+
+    await showTestComplete(
+      type: TestType.tremor,
+      score: result.score,
+      saved: saved,
     );
   }
   

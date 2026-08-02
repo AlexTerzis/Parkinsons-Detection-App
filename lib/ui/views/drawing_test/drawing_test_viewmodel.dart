@@ -10,6 +10,8 @@ import '../../../models/test_type.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/drawing_predictor.dart';
 import '../../../services/test_service.dart';
+import 'package:flutter/foundation.dart';
+import '../test_complete/test_complete_view.dart';
 
 /// Handles drawing classification and uploading the canvas image to storage.
 class DrawingTestViewModel extends BaseViewModel {
@@ -51,6 +53,18 @@ class DrawingTestViewModel extends BaseViewModel {
       score: score.clamp(0, 1),
       data: data,
     );
-    await _tests.addResult(result: result, drawingPng: pngBytes);
+    bool saved = true;
+    try {
+      await _tests.addResult(result: result, drawingPng: pngBytes);
+    } catch (e) {
+      saved = false;
+      debugPrint('Could not save drawing result: $e');
+    }
+
+    await showTestComplete(
+      type: TestType.drawing,
+      score: result.score,
+      saved: saved,
+    );
   }
 }

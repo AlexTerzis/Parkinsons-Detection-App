@@ -2101,6 +2101,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You matched the number shown at least 4 times in a row.'**
   String get fabResultStreakStimulus;
+
+  /// No description provided for @testCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test complete'**
+  String get testCompleteTitle;
+
+  /// No description provided for @testCompleteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your result has been saved.'**
+  String get testCompleteSaved;
+
+  /// No description provided for @testCompleteNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your result could not be saved, but here it is.'**
+  String get testCompleteNotSaved;
+
+  /// No description provided for @testCompleteScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get testCompleteScore;
+
+  /// No description provided for @testCompleteDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get testCompleteDone;
+
+  /// No description provided for @testCompleteViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all my results'**
+  String get testCompleteViewAll;
+
+  /// No description provided for @bandReassuringWorse.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing notable came up in this test.'**
+  String get bandReassuringWorse;
+
+  /// No description provided for @bandBorderlineWorse.
+  ///
+  /// In en, this message translates to:
+  /// **'This result sits in the middle range. Repeating the test on another day gives a clearer picture.'**
+  String get bandBorderlineWorse;
+
+  /// No description provided for @bandNotableWorse.
+  ///
+  /// In en, this message translates to:
+  /// **'This result is worth mentioning to your doctor. It is a screening check, not a diagnosis.'**
+  String get bandNotableWorse;
+
+  /// No description provided for @bandReassuringBetter.
+  ///
+  /// In en, this message translates to:
+  /// **'This result is in the expected range.'**
+  String get bandReassuringBetter;
+
+  /// No description provided for @bandBorderlineBetter.
+  ///
+  /// In en, this message translates to:
+  /// **'This result is slightly below the expected range. Repeating it on another day gives a clearer picture.'**
+  String get bandBorderlineBetter;
+
+  /// No description provided for @bandNotableBetter.
+  ///
+  /// In en, this message translates to:
+  /// **'This result is below the expected range and is worth mentioning to your doctor. It is a screening check, not a diagnosis.'**
+  String get bandNotableBetter;
+
+  /// No description provided for @screeningDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'This app is a screening aid. It cannot diagnose Parkinson\'s disease, and only a clinician can interpret these results.'**
+  String get screeningDisclaimer;
+
+  /// No description provided for @guestKeepResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep these results'**
+  String get guestKeepResultsTitle;
+
+  /// No description provided for @guestKeepResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You are using a guest account. Create an account to keep your results and share them with a doctor.'**
+  String get guestKeepResultsBody;
+
+  /// No description provided for @guestExitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave without an account?'**
+  String get guestExitTitle;
+
+  /// No description provided for @guestExitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your results are tied to this guest session on this device. If it is lost, so are they. Creating an account keeps everything you have done so far.'**
+  String get guestExitBody;
+
+  /// No description provided for @guestExitStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get guestExitStay;
+
+  /// No description provided for @guestExitLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave anyway'**
+  String get guestExitLeave;
 }
 
 class _AppLocalizationsDelegate

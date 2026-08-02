@@ -1164,4 +1164,71 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get fabResultStreakStimulus =>
       'Απαντήσατε ίδιο αριθμό με το ερέθισμα τουλάχιστον 4 συνεχόμενες φορές.';
+
+  @override
+  String get testCompleteTitle => 'Η δοκιμασία ολοκληρώθηκε';
+
+  @override
+  String get testCompleteSaved => 'Το αποτέλεσμά σας αποθηκεύτηκε.';
+
+  @override
+  String get testCompleteNotSaved =>
+      'Το αποτέλεσμα δεν μπόρεσε να αποθηκευτεί, αλλά ορίστε.';
+
+  @override
+  String get testCompleteScore => 'Βαθμολογία';
+
+  @override
+  String get testCompleteDone => 'Τέλος';
+
+  @override
+  String get testCompleteViewAll => 'Δείτε όλα τα αποτελέσματά μου';
+
+  @override
+  String get bandReassuringWorse =>
+      'Δεν προέκυψε κάτι αξιοσημείωτο σε αυτή τη δοκιμασία.';
+
+  @override
+  String get bandBorderlineWorse =>
+      'Το αποτέλεσμα βρίσκεται στο μεσαίο εύρος. Επαναλαμβάνοντας τη δοκιμασία άλλη μέρα θα έχετε σαφέστερη εικόνα.';
+
+  @override
+  String get bandNotableWorse =>
+      'Αξίζει να αναφέρετε αυτό το αποτέλεσμα στον γιατρό σας. Πρόκειται για έλεγχο ανίχνευσης, όχι για διάγνωση.';
+
+  @override
+  String get bandReassuringBetter =>
+      'Το αποτέλεσμα βρίσκεται στο αναμενόμενο εύρος.';
+
+  @override
+  String get bandBorderlineBetter =>
+      'Το αποτέλεσμα είναι ελαφρώς κάτω από το αναμενόμενο εύρος. Επαναλαμβάνοντάς το άλλη μέρα θα έχετε σαφέστερη εικόνα.';
+
+  @override
+  String get bandNotableBetter =>
+      'Το αποτέλεσμα είναι κάτω από το αναμενόμενο εύρος και αξίζει να το αναφέρετε στον γιατρό σας. Πρόκειται για έλεγχο ανίχνευσης, όχι για διάγνωση.';
+
+  @override
+  String get screeningDisclaimer =>
+      'Η εφαρμογή είναι βοήθημα ανίχνευσης. Δεν μπορεί να διαγνώσει τη νόσο του Πάρκινσον και μόνο κλινικός ιατρός μπορεί να ερμηνεύσει αυτά τα αποτελέσματα.';
+
+  @override
+  String get guestKeepResultsTitle => 'Κρατήστε αυτά τα αποτελέσματα';
+
+  @override
+  String get guestKeepResultsBody =>
+      'Χρησιμοποιείτε λογαριασμό επισκέπτη. Δημιουργήστε λογαριασμό για να κρατήσετε τα αποτελέσματά σας και να τα μοιραστείτε με γιατρό.';
+
+  @override
+  String get guestExitTitle => 'Αποχώρηση χωρίς λογαριασμό;';
+
+  @override
+  String get guestExitBody =>
+      'Τα αποτελέσματά σας συνδέονται με αυτή τη συνεδρία επισκέπτη σε αυτή τη συσκευή. Αν χαθεί, χάνονται και αυτά. Δημιουργώντας λογαριασμό κρατάτε ό,τι έχετε κάνει μέχρι τώρα.';
+
+  @override
+  String get guestExitStay => 'Δημιουργία λογαριασμού';
+
+  @override
+  String get guestExitLeave => 'Αποχώρηση ούτως ή άλλως';
 }

@@ -1157,4 +1157,69 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get fabResultStreakStimulus =>
       'You matched the number shown at least 4 times in a row.';
+
+  @override
+  String get testCompleteTitle => 'Test complete';
+
+  @override
+  String get testCompleteSaved => 'Your result has been saved.';
+
+  @override
+  String get testCompleteNotSaved =>
+      'Your result could not be saved, but here it is.';
+
+  @override
+  String get testCompleteScore => 'Score';
+
+  @override
+  String get testCompleteDone => 'Done';
+
+  @override
+  String get testCompleteViewAll => 'See all my results';
+
+  @override
+  String get bandReassuringWorse => 'Nothing notable came up in this test.';
+
+  @override
+  String get bandBorderlineWorse =>
+      'This result sits in the middle range. Repeating the test on another day gives a clearer picture.';
+
+  @override
+  String get bandNotableWorse =>
+      'This result is worth mentioning to your doctor. It is a screening check, not a diagnosis.';
+
+  @override
+  String get bandReassuringBetter => 'This result is in the expected range.';
+
+  @override
+  String get bandBorderlineBetter =>
+      'This result is slightly below the expected range. Repeating it on another day gives a clearer picture.';
+
+  @override
+  String get bandNotableBetter =>
+      'This result is below the expected range and is worth mentioning to your doctor. It is a screening check, not a diagnosis.';
+
+  @override
+  String get screeningDisclaimer =>
+      'This app is a screening aid. It cannot diagnose Parkinson\'s disease, and only a clinician can interpret these results.';
+
+  @override
+  String get guestKeepResultsTitle => 'Keep these results';
+
+  @override
+  String get guestKeepResultsBody =>
+      'You are using a guest account. Create an account to keep your results and share them with a doctor.';
+
+  @override
+  String get guestExitTitle => 'Leave without an account?';
+
+  @override
+  String get guestExitBody =>
+      'Your results are tied to this guest session on this device. If it is lost, so are they. Creating an account keeps everything you have done so far.';
+
+  @override
+  String get guestExitStay => 'Create an account';
+
+  @override
+  String get guestExitLeave => 'Leave anyway';
 }

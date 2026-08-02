@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
-import 'package:stacked_services/stacked_services.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
@@ -23,6 +22,7 @@ import 'steps/fluency.dart';
 import 'steps/trails.dart';
 import 'steps/immediate_recall.dart';
 import 'steps/delayed_recall.dart';
+import '../test_complete/test_complete_view.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
   final TestService _tests = locator<TestService>();
@@ -124,6 +124,8 @@ class NeuroTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
+    final double normalised = (totalMocaScore / 30.0).clamp(0.0, 1.0);
+    bool saved = false;
 
     if (uid != null) {
       try {
@@ -132,10 +134,11 @@ class NeuroTestViewModel extends BaseViewModel {
           patientId: uid,
           type: TestType.neuro,
           performedAt: DateTime.now(),
-          score: (totalMocaScore / 30.0).clamp(0.0, 1.0),
+          score: normalised,
           data: {'mocaScore': totalMocaScore},
         );
         await _tests.addResult(result: result);
+        saved = true;
       } catch (e) {
         // Getting the user out of the finished test matters more than the
         // write succeeding, so a failure here must not block the navigation.
@@ -143,6 +146,14 @@ class NeuroTestViewModel extends BaseViewModel {
       }
     }
 
-    locator<NavigationService>().back();
+    // Shown out of 30, the scale the MoCA is actually reported on — a bare
+    // percentage would invite comparison with the sensor tests, which run the
+    // other way round.
+    await showTestComplete(
+      type: TestType.neuro,
+      score: normalised,
+      detail: '${totalMocaScore.toStringAsFixed(totalMocaScore.truncateToDouble() == totalMocaScore ? 0 : 1)} / 30',
+      saved: saved,
+    );
   }
 }

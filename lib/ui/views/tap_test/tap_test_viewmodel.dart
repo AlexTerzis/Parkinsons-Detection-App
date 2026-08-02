@@ -9,6 +9,7 @@ import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
+import '../test_complete/test_complete_view.dart';
 
 enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed, stopped }
 
@@ -269,9 +270,21 @@ class TapTestViewModel extends BaseViewModel {
             })
         .toList();
 
-    await _tests.addResult(
-      result: result,
-      sensorData: {'hand1': hand1, 'hand2': hand2},
+    bool saved = true;
+    try {
+      await _tests.addResult(
+        result: result,
+        sensorData: {'hand1': hand1, 'hand2': hand2},
+      );
+    } catch (e) {
+      saved = false;
+      debugPrint('Could not save tap result: $e');
+    }
+
+    await showTestComplete(
+      type: TestType.tap,
+      score: result.score,
+      saved: saved,
     );
   }
 

@@ -12,6 +12,8 @@ import '../../../models/test_type.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/test_service.dart';
 import '../../../services/voice_api_service.dart';
+import 'package:flutter/foundation.dart';
+import '../test_complete/test_complete_view.dart';
 
 enum VoiceStatus {
   initial,
@@ -137,7 +139,21 @@ class VoiceTestViewModel extends BaseViewModel {
       score: score.clamp(0, 1),
     );
 
-    await _tests.addResult(result: result, audioWav: wavFile);
+    // The result screen reports whether the save worked rather than implying
+    // success, and a failed upload must never strand the patient here.
+    bool saved = true;
+    try {
+      await _tests.addResult(result: result, audioWav: wavFile);
+    } catch (e) {
+      saved = false;
+      debugPrint('Could not save voice result: $e');
+    }
+
+    await showTestComplete(
+      type: TestType.voice,
+      score: result.score,
+      saved: saved,
+    );
   }
 
   @override
