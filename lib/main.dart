@@ -123,33 +123,26 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkLoginAndNavigate();
   }
 
+  /// Just long enough that a fast launch reads as a brief brand moment rather
+  /// than a flicker. The splash is not padded beyond this — it lasts as long as
+  /// the work below actually takes, and no longer.
+  static const Duration _minimumSplash = Duration(milliseconds: 350);
+
+  /// Cap on the role lookup. Firestore will wait a long time on a bad
+  /// connection, and nothing here is worth blocking the launch for: the cached
+  /// role covers the offline case.
+  static const Duration _roleLookupTimeout = Duration(seconds: 4);
+
+  static const String _cachedRoleKey = 'cachedRole';
+
   Future<void> _checkLoginAndNavigate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keepMeLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
-    final user = FirebaseAuth.instance.currentUser;
-
-    Widget target = LoginView();
-
-    if (keepMeLoggedIn && user != null) {
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        final role = userDoc.data()?['role'] ?? 'patient';
-
-        if (role == 'doctor') {
-          target = const DoctorView();
-        } else {
-          target = const PatienceView();
-        }
-      } catch (_) {
-        // Default fallback remains LoginView
-      }
-    }
-
-    // Wait exactly 3 seconds total (including checks)
-    await Future.delayed(const Duration(seconds: 3));
+    // Run the work and the minimum splash concurrently, so the floor overlaps
+    // the launch instead of being added to it.
+    final results = await Future.wait(<Future<dynamic>>[
+      _resolveTarget(),
+      Future<void>.delayed(_minimumSplash),
+    ]);
+    final target = results.first as Widget;
 
     if (!mounted) return;
 
@@ -159,9 +152,43 @@ class _SplashScreenState extends State<SplashScreen> {
         pageBuilder: (_, __, ___) => target,
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+  }
+
+  /// Decides where to land: login, patient home, or doctor home.
+  Future<Widget> _resolveTarget() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepMeLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!keepMeLoggedIn || user == null) return LoginView();
+
+    // Signed in already, so the only open question is which home to show.
+    // Falling back to the login screen here would be wrong: it would ask a
+    // signed-in user to sign in again just because the network was slow.
+    String role = prefs.getString(_cachedRoleKey) ?? 'patient';
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .timeout(_roleLookupTimeout);
+
+      final fetched = userDoc.data()?['role'] as String?;
+      if (fetched != null) {
+        role = fetched;
+        // Cached so the next launch can route correctly while offline, and
+        // without waiting on the network at all.
+        await prefs.setString(_cachedRoleKey, fetched);
+      }
+    } catch (e) {
+      debugPrint('Role lookup failed, using cached role "$role": $e');
+    }
+
+    return role == 'doctor' ? const DoctorView() : const PatienceView();
   }
 
   @override

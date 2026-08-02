@@ -162,6 +162,9 @@ class DoctorViewModel extends BaseViewModel {
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('keepMeLoggedIn');
+    // Cleared with the session, so the next account to sign in on this device
+    // cannot be routed by the previous one's role on a slow launch.
+    await prefs.remove('cachedRole');
     await FirebaseAuth.instance.signOut();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(

@@ -102,6 +102,20 @@ class TestService {
   /// sequence). Each entry is uploaded as its own file, keyed by task id, so
   /// the tasks stay separable after upload. Optional, so every other test flow
   /// is unaffected.
+  /// The result document is written **before** any raw asset is uploaded, and
+  /// upload failures never propagate.
+  ///
+  /// The previous order was the other way round, to avoid documents pointing at
+  /// assets that were never stored. That traded the wrong way: a single Storage
+  /// error — denied rules, no network, the app being killed mid-upload — meant
+  /// the whole test silently vanished, because the write was never reached. A
+  /// result without its raw blob is still a usable result; a blob with no
+  /// document is invisible to the app entirely.
+  ///
+  /// When an upload does fail the document is marked with `rawDataUploaded:
+  /// false` and the error, so a reviewer can tell "no raw data" from "raw data
+  /// not yet fetched". Absence of the field means there was nothing to upload,
+  /// or it uploaded cleanly.
   Future<void> addResult({
     required TestResult result,
     Uint8List? drawingPng,
@@ -113,7 +127,45 @@ class TestService {
     final docRef = colRef.doc();
     final testId = docRef.id;
 
-    // Upload any provided raw asset first so failures don't create dangling docs.
+    // Firestore first: this is the part the app actually reads back. A failure
+    // here still throws, because then there genuinely is no result.
+    await docRef.set(_toJsonWithGuestFlag(result));
+
+    try {
+      await _uploadRawData(
+        result: result,
+        testId: testId,
+        drawingPng: drawingPng,
+        audioWav: audioWav,
+        sensorData: sensorData,
+        taskSegments: taskSegments,
+      );
+    } catch (e) {
+      // Best effort: the result is already saved and the patient keeps it.
+      try {
+        await docRef.set(
+          <String, dynamic>{
+            'rawDataUploaded': false,
+            'rawDataError': e.toString(),
+          },
+          SetOptions(merge: true),
+        );
+      } catch (_) {
+        // Even the marker is optional; never let bookkeeping lose a result.
+      }
+    }
+  }
+
+  /// Uploads whichever raw asset this test type produces. May throw; the caller
+  /// treats that as non-fatal.
+  Future<void> _uploadRawData({
+    required TestResult result,
+    required String testId,
+    Uint8List? drawingPng,
+    File? audioWav,
+    Map<String, dynamic>? sensorData,
+    Map<String, Map<String, dynamic>>? taskSegments,
+  }) async {
     switch (result.type) {
       case TestType.drawing:
         if (drawingPng != null) {
@@ -141,8 +193,7 @@ class TestService {
         break;
       case TestType.cameraDetection:
         // One file per protocol task, plus the legacy merged blob when the
-        // caller still supplies one. Uploaded before the document is written,
-        // in keeping with the rest of this method.
+        // caller still supplies one.
         if (taskSegments != null) {
           for (final entry in taskSegments.entries) {
             await _storage.uploadCompressedJsonNamed(
@@ -168,8 +219,6 @@ class TestService {
       case TestType.fab:
         break;
     }
-
-    await docRef.set(_toJsonWithGuestFlag(result));
   }
   /// Creates or updates the questionnaire result for a patient.
   ///
