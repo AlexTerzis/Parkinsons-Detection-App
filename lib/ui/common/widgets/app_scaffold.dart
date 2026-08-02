@@ -46,7 +46,16 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Padding(padding: padding, child: body);
+    // Held in its own final, never reassigned. The builder below runs at
+    // layout time, long after this method returns, and a closure captures the
+    // variable rather than its value — so referring to a reassigned `content`
+    // in there would hand the IntrinsicHeight the LayoutBuilder that contains
+    // it. That self-reference makes IntrinsicHeight ask LayoutBuilder for an
+    // intrinsic height, which it cannot supply, and the whole body fails to
+    // lay out while the bottom bar, outside the body, still renders.
+    final Widget padded = Padding(padding: padding, child: body);
+
+    Widget content = padded;
 
     if (scrollable) {
       // The min-height + IntrinsicHeight pairing lets a body use Expanded or
@@ -56,7 +65,7 @@ class AppScaffold extends StatelessWidget {
         builder: (context, constraints) => SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(child: content),
+            child: IntrinsicHeight(child: padded),
           ),
         ),
       );
