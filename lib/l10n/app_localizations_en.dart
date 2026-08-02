@@ -1222,4 +1222,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guestExitLeave => 'Leave anyway';
+
+  @override
+  String get guestSignInDisabled =>
+      'Guest sign-in is not enabled for this app yet. Please create an account, or try again later.';
 }

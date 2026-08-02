@@ -232,7 +232,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
               children: report.results.map((r) {
                 return ExpansionTile(
                   title: Text(r.type.name),
-                  subtitle: Text(l10n.scorePercent((r.score * 100).round())),
+                  subtitle: Text(l10n.scorePercent((r.concernScore * 100).round())),
                   children: [
                     if (r.data.isEmpty)
                       Padding(

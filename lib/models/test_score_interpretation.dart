@@ -55,17 +55,21 @@ abstract final class TestScoreInterpretation {
   static const double sensorNotableAtOrAbove =
       ParkinsonConfig.symptomThreshold;
 
-  /// MoCA: 26 of 30 is the usual normal cut-off, so 0.867 on the stored scale.
-  static const double mocaReassuringAtOrAbove = 26 / 30;
+  /// MoCA: 26 of 30 is the usual normal cut-off, which is 4 of 30 *missed*.
+  ///
+  /// Expressed as concern directly rather than as `1 - 26/30`: that
+  /// subtraction lands a hair below 4/30 in binary floating point, so a
+  /// patient scoring exactly 26 fell into the wrong band.
+  static const double mocaConcernReassuringAtOrBelow = 4 / 30;
 
-  /// Below this a MoCA result is the clearly notable one.
-  static const double mocaNotableBelow = 0.6;
+  /// Above this a MoCA result is the clearly notable one — worse than 18/30.
+  static const double mocaConcernNotableAbove = 0.4;
 
   /// FAB is stored over the app's five implemented items rather than the
-  /// clinical six, so this is expressed against that scale rather than the
-  /// published 16/18.
-  static const double fabReassuringAtOrAbove = 0.8;
-  static const double fabNotableBelow = 0.6;
+  /// clinical six, so these are against that scale rather than the published
+  /// 16/18.
+  static const double fabConcernReassuringAtOrBelow = 0.2;
+  static const double fabConcernNotableAbove = 0.4;
 
   static ScoreDirection directionOf(TestType type) {
     switch (type) {
@@ -82,19 +86,23 @@ abstract final class TestScoreInterpretation {
     }
   }
 
-  /// The band [score] falls into for [type].
-  static ScoreBand bandOf(TestType type, double score) {
-    final double s = score.clamp(0.0, 1.0);
+  /// The band a concern value falls into for [type].
+  ///
+  /// Takes `TestResult.concernScore`, never the raw stored score: concern
+  /// always runs the same way, so the only thing varying per type is where the
+  /// cut-offs sit.
+  static ScoreBand bandOfConcern(TestType type, double concern) {
+    final double c = concern.clamp(0.0, 1.0);
 
     switch (type) {
       case TestType.neuro:
-        if (s >= mocaReassuringAtOrAbove) return ScoreBand.reassuring;
-        if (s < mocaNotableBelow) return ScoreBand.notable;
+        if (c <= mocaConcernReassuringAtOrBelow) return ScoreBand.reassuring;
+        if (c > mocaConcernNotableAbove) return ScoreBand.notable;
         return ScoreBand.borderline;
 
       case TestType.fab:
-        if (s >= fabReassuringAtOrAbove) return ScoreBand.reassuring;
-        if (s < fabNotableBelow) return ScoreBand.notable;
+        if (c <= fabConcernReassuringAtOrBelow) return ScoreBand.reassuring;
+        if (c > fabConcernNotableAbove) return ScoreBand.notable;
         return ScoreBand.borderline;
 
       case TestType.cameraDetection:
@@ -103,19 +111,20 @@ abstract final class TestScoreInterpretation {
       case TestType.tremor:
       case TestType.tap:
       case TestType.questionnaire:
-        if (s < sensorReassuringBelow) return ScoreBand.reassuring;
-        if (s >= sensorNotableAtOrAbove) return ScoreBand.notable;
+        if (c < sensorReassuringBelow) return ScoreBand.reassuring;
+        if (c >= sensorNotableAtOrAbove) return ScoreBand.notable;
         return ScoreBand.borderline;
     }
   }
 
-  /// The fraction to fill a progress bar with, so the bar always grows toward
-  /// the *worrying* end regardless of which way the underlying score runs.
+  /// Converts a *native* score — the value the test naturally produces — into
+  /// concern.
   ///
-  /// Without this a good MoCA would draw a nearly full bar and a good camera
-  /// result a nearly empty one, which reads as the opposite of what it means.
-  static double concernFraction(TestType type, double score) {
-    final double s = score.clamp(0.0, 1.0);
+  /// Used when writing a result and when reading a legacy document. New code
+  /// working with a stored result should read `TestResult.concernScore`
+  /// instead, which has already done this.
+  static double concernFromNative(TestType type, double nativeScore) {
+    final double s = nativeScore.clamp(0.0, 1.0);
     return directionOf(type) == ScoreDirection.higherIsBetter ? 1 - s : s;
   }
 }

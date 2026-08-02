@@ -2215,6 +2215,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leave anyway'**
   String get guestExitLeave;
+
+  /// No description provided for @guestSignInDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest sign-in is not enabled for this app yet. Please create an account, or try again later.'**
+  String get guestSignInDisabled;
 }
 
 class _AppLocalizationsDelegate

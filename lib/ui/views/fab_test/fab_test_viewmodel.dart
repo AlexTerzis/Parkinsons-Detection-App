@@ -12,6 +12,7 @@ import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
+import '../../../models/test_score_interpretation.dart';
 import '../test_complete/test_complete_view.dart';
 
 class FABTestViewModel extends BaseViewModel {
@@ -69,7 +70,11 @@ class FABTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
-    final double normalised = (totalFABScore / 15.0).clamp(0.0, 1.0);
+    // Stored as concern so it runs the same way as every other test; the
+    // FAB's own scale stays in `data` and on screen.
+    final double performance = (totalFABScore / 15.0).clamp(0.0, 1.0);
+    final double concern =
+        TestScoreInterpretation.concernFromNative(TestType.fab, performance);
     bool saved = false;
 
     if (uid != null) {
@@ -79,8 +84,8 @@ class FABTestViewModel extends BaseViewModel {
           patientId: uid,
           type: TestType.fab,
           performedAt: DateTime.now(),
-          score: normalised,
-          data: {'fabScore': totalFABScore},
+          score: concern,
+          data: {'fabScore': totalFABScore, 'fabMax': 15},
         );
         await _tests.addResult(result: result);
         saved = true;
@@ -96,7 +101,7 @@ class FABTestViewModel extends BaseViewModel {
     // clinical FAB's six, so the number shown is the one that was measured.
     await showTestComplete(
       type: TestType.fab,
-      score: normalised,
+      concern: concern,
       detail: '${totalFABScore.toStringAsFixed(totalFABScore.truncateToDouble() == totalFABScore ? 0 : 1)} / 15',
       saved: saved,
     );

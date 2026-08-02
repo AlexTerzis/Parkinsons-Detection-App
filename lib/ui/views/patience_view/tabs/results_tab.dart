@@ -35,7 +35,7 @@ class ResultsTab extends StatelessWidget {
               context,
               label: viewModel.labelForType(entry.key),
               points: entry.value
-                  .map((e) => ScorePoint(e.performedAt, e.score))
+                  .map((e) => ScorePoint(e.performedAt, e.concernScore))
                   .toList(),
             ),
           ),

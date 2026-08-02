@@ -63,7 +63,7 @@ class DrawingTestViewModel extends BaseViewModel {
 
     await showTestComplete(
       type: TestType.drawing,
-      score: result.score,
+      concern: result.concernScore,
       saved: saved,
     );
   }

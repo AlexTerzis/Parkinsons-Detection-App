@@ -151,7 +151,7 @@ class VoiceTestViewModel extends BaseViewModel {
 
     await showTestComplete(
       type: TestType.voice,
-      score: result.score,
+      concern: result.concernScore,
       saved: saved,
     );
   }

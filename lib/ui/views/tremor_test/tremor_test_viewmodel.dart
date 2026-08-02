@@ -278,7 +278,7 @@ class TremorTestViewModel extends BaseViewModel {
 
     await showTestComplete(
       type: TestType.tremor,
-      score: result.score,
+      concern: result.concernScore,
       saved: saved,
     );
   }

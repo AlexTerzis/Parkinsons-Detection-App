@@ -22,6 +22,7 @@ import 'steps/fluency.dart';
 import 'steps/trails.dart';
 import 'steps/immediate_recall.dart';
 import 'steps/delayed_recall.dart';
+import '../../../models/test_score_interpretation.dart';
 import '../test_complete/test_complete_view.dart';
 
 class NeuroTestViewModel extends BaseViewModel {
@@ -124,7 +125,13 @@ class NeuroTestViewModel extends BaseViewModel {
 
   Future<void> _finishTest() async {
     final uid = _auth.currentUser?.uid;
-    final double normalised = (totalMocaScore / 30.0).clamp(0.0, 1.0);
+    // Stored as concern, like every other test: 0 is the best possible
+    // result, 1 the most concerning. The MoCA's own scale is kept in `data`
+    // and shown to the patient, but the stored score no longer runs backwards
+    // relative to the sensor tests.
+    final double performance = (totalMocaScore / 30.0).clamp(0.0, 1.0);
+    final double concern =
+        TestScoreInterpretation.concernFromNative(TestType.neuro, performance);
     bool saved = false;
 
     if (uid != null) {
@@ -134,8 +141,8 @@ class NeuroTestViewModel extends BaseViewModel {
           patientId: uid,
           type: TestType.neuro,
           performedAt: DateTime.now(),
-          score: normalised,
-          data: {'mocaScore': totalMocaScore},
+          score: concern,
+          data: {'mocaScore': totalMocaScore, 'mocaMax': 30},
         );
         await _tests.addResult(result: result);
         saved = true;
@@ -151,7 +158,7 @@ class NeuroTestViewModel extends BaseViewModel {
     // other way round.
     await showTestComplete(
       type: TestType.neuro,
-      score: normalised,
+      concern: concern,
       detail: '${totalMocaScore.toStringAsFixed(totalMocaScore.truncateToDouble() == totalMocaScore ? 0 : 1)} / 30',
       saved: saved,
     );

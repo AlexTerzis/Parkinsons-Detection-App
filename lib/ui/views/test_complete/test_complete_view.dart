@@ -21,15 +21,15 @@ class TestCompleteView extends StatelessWidget {
   const TestCompleteView({
     super.key,
     required this.type,
-    required this.score,
+    required this.concern,
     this.detail,
     this.saved = true,
   });
 
   final TestType type;
 
-  /// Normalised 0-1 score as stored on the result.
-  final double score;
+  /// 0-1 where higher is more concerning, as stored on the result.
+  final double concern;
 
   /// Optional raw form, e.g. "24 / 30", shown beside the percentage where the
   /// underlying scale is more meaningful to a patient than a percentage.
@@ -45,9 +45,8 @@ class TestCompleteView extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final semantic = AppSemanticColors.of(context);
 
-    final band = TestScoreInterpretation.bandOf(type, score);
+    final band = TestScoreInterpretation.bandOfConcern(type, concern);
     final direction = TestScoreInterpretation.directionOf(type);
-    final concern = TestScoreInterpretation.concernFraction(type, score);
 
     final Color bandColor = switch (band) {
       ScoreBand.reassuring => semantic.success,
@@ -210,7 +209,7 @@ class _GuestKeepCard extends StatelessWidget {
 /// patient can never be stranded on a finished test.
 Future<void> showTestComplete({
   required TestType type,
-  required double score,
+  required double concern,
   String? detail,
   bool saved = true,
 }) async {
@@ -225,7 +224,7 @@ Future<void> showTestComplete({
     MaterialPageRoute<void>(
       builder: (_) => TestCompleteView(
         type: type,
-        score: score,
+        concern: concern,
         detail: detail,
         saved: saved,
       ),

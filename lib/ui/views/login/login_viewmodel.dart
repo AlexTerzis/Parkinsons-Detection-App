@@ -128,7 +128,15 @@ class LoginViewModel extends BaseViewModel {
 
       await _navigationService.navigateToPatienceView();
     } on FirebaseAuthException catch (e) {
-      _setError(e.message ?? l10n.authenticationError);
+      // Both codes mean the same thing here: the Anonymous provider is
+      // switched off in the Firebase console. Firebase phrases that as
+      // "restricted to administrators", which reads to a patient as though
+      // they did something wrong rather than as a setting nobody enabled.
+      final bool providerDisabled = e.code == 'admin-restricted-operation' ||
+          e.code == 'operation-not-allowed';
+      _setError(providerDisabled
+          ? l10n.guestSignInDisabled
+          : (e.message ?? l10n.authenticationError));
     } catch (e) {
       _setError(l10n.unexpectedError);
     } finally {

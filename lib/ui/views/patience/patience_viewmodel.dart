@@ -64,7 +64,7 @@ class PatienceViewModel extends BaseViewModel {
   }
 
   double latestScoreForType(TestType type) =>
-      groupedResults[type]?.first.score ?? 0.0;
+      groupedResults[type]?.first.concernScore ?? 0.0;
 
   List<PatientReport> _reports = [];
   List<PatientReport> get reports => _reports;
@@ -96,7 +96,7 @@ class PatienceViewModel extends BaseViewModel {
       .map((r) => {
             'date': '${r.performedAt.month}/${r.performedAt.day}  ${r.performedAt.hour.toString().padLeft(2, '0')}:${r.performedAt.minute.toString().padLeft(2, '0')}',
             'test': _labelForType(r),
-            'result': '${(r.score * 100).round()}%',
+            'result': '${(r.concernScore * 100).round()}%',
           })
       .toList();
 
@@ -306,7 +306,7 @@ class PatienceViewModel extends BaseViewModel {
 
     // 2. Compute the average score for each day
     final dailyAvg = daily.entries.map((e) {
-      final scores = e.value.map((r) => r.score).toList();
+      final scores = e.value.map((r) => r.concernScore).toList();
       final avg = scores.reduce((a, b) => a + b) / scores.length;
       return MapEntry(e.key, avg);
     }).toList();

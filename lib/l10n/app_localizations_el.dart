@@ -1231,4 +1231,8 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get guestExitLeave => 'Αποχώρηση ούτως ή άλλως';
+
+  @override
+  String get guestSignInDisabled =>
+      'Η είσοδος ως επισκέπτης δεν είναι ακόμη ενεργοποιημένη. Δημιουργήστε λογαριασμό ή δοκιμάστε αργότερα.';
 }

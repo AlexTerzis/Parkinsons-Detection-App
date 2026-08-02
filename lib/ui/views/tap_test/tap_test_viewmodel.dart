@@ -283,7 +283,7 @@ class TapTestViewModel extends BaseViewModel {
 
     await showTestComplete(
       type: TestType.tap,
-      score: result.score,
+      concern: result.concernScore,
       saved: saved,
     );
   }

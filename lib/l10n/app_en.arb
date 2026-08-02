@@ -354,5 +354,6 @@
   "guestExitTitle": "Leave without an account?",
   "guestExitBody": "Your results are tied to this guest session on this device. If it is lost, so are they. Creating an account keeps everything you have done so far.",
   "guestExitStay": "Create an account",
-  "guestExitLeave": "Leave anyway"
+  "guestExitLeave": "Leave anyway",
+  "guestSignInDisabled": "Guest sign-in is not enabled for this app yet. Please create an account, or try again later."
 }

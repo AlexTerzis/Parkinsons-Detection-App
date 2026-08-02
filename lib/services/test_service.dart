@@ -243,7 +243,8 @@ class TestService {
     final Map<String, double> summary = {};
     grouped.forEach((type, list) {
       final double avg =
-          list.map((e) => e.score).reduce((a, b) => a + b) / list.length;
+          list.map((e) => e.concernScore).reduce((a, b) => a + b) /
+              list.length;
       summary[_typeToLabel(type)] = avg;
     });
     return summary;
