@@ -42,7 +42,10 @@ class AppPreferencesSection extends StatelessWidget {
 
             DropdownButtonFormField<Locale>(
               initialValue: localization.locale,
-              decoration: InputDecoration(labelText: l10n.language),
+              decoration: InputDecoration(
+                labelText: l10n.language,
+                prefixIcon: const Icon(Icons.translate),
+              ),
               items: [
                 DropdownMenuItem(
                   value: const Locale('en'),
@@ -73,51 +76,34 @@ class AppPreferencesSection extends StatelessWidget {
 
             // Discrete presets rather than a slider: a slider needs a
             // sustained precise drag, which is exactly what hand tremor makes
-            // hard. Each chip clears the minimum tap target via the theme.
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
+            // hard. One equal-width tile per step, so the row stays symmetric
+            // whatever the localized labels are — a Wrap of chips broke into
+            // ragged rows as soon as the labels grew.
+            Row(
               children: List.generate(
                 TextScaleService.steps.length,
-                (i) => ChoiceChip(
-                  label: Text(sizeLabels[i]),
-                  selected: textScale.stepIndex == i,
-                  onSelected: (_) => textScale.setStepIndex(i),
+                (i) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.only(
+                      end: i == TextScaleService.steps.length - 1
+                          ? 0
+                          : AppSpacing.sm,
+                    ),
+                    child: _TextSizeTile(
+                      label: sizeLabels[i],
+                      // The glyph itself grows with the step, so the control
+                      // shows what it does without a separate preview block.
+                      scale: TextScaleService.steps[i] /
+                          TextScaleService.defaultScale,
+                      selected: textScale.stepIndex == i,
+                      onTap: () => textScale.setStepIndex(i),
+                    ),
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: AppSpacing.md),
-
-            // Not wrapped in its own MediaQuery: the app-wide override already
-            // applies here, so this genuinely shows what every other screen
-            // will look like. A locally scaled preview would drift from
-            // reality, which is the usual bug in this kind of control.
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: cs.outlineVariant),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.textSizePreviewTitle,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.textSizePreviewBody,
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.sm),
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: TextButton.icon(
@@ -129,6 +115,85 @@ class AppPreferencesSection extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One text-size preset: a sample glyph at that step's scale over its label.
+class _TextSizeTile extends StatelessWidget {
+  final String label;
+  final double scale;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TextSizeTile({
+    required this.label,
+    required this.scale,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final foreground = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected ? cs.primaryContainer : cs.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(
+              color: selected ? cs.primary : cs.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.xs,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Fixed box so every tile is the same height whatever the glyph
+              // scale, which is what keeps the row symmetric.
+              SizedBox(
+                height: 36,
+                // scaleDown so the app-wide text scale, which also applies
+                // here, cannot push the glyph out of its fixed box.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'A',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize:
+                          (theme.textTheme.titleLarge?.fontSize ?? 22) * scale,
+                      color: foreground,
+                      fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(color: foreground),
+              ),
+            ],
+          ),
         ),
       ),
     );

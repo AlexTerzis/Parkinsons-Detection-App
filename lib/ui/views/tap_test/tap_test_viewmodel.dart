@@ -13,6 +13,17 @@ import '../test_complete/test_complete_view.dart';
 
 enum TapTestStatus { initial, starting, rightHand, switchHands, leftHand, completed, stopped }
 
+class TapHandMetrics {
+  const TapHandMetrics({required this.hand, required this.tapCount,
+    required this.tapsPerSecond, required this.averageInterval,
+    required this.consistency});
+  final String hand;
+  final int tapCount;
+  final double tapsPerSecond;
+  final double averageInterval;
+  final double consistency;
+}
+
 class TapTestViewModel extends BaseViewModel {
   // Services used to persist results and fetch the current user
   final TestService _tests = locator<TestService>();
@@ -22,9 +33,15 @@ class TapTestViewModel extends BaseViewModel {
 
   int secondsLeft = 0;
   bool isTesting = false;
+  bool isPadPressed = false;
   TapTestStatus status = TapTestStatus.initial;
   String resultHand1 = '';
   String resultHand2 = '';
+  TapHandMetrics? rightMetrics;
+  TapHandMetrics? leftMetrics;
+  bool isSavingResult = false;
+  bool _resultSaved = true;
+  double _completionConcern = 0;
 
   double _score1 = 0.0;
   double _score2 = 0.0;
@@ -38,7 +55,21 @@ class TapTestViewModel extends BaseViewModel {
   late final Interpreter _interpreter;
   bool _modelLoaded = false;
 
-  double get progress => secondsLeft / testDuration;
+  double get progress {
+    final total = _phase == 1 ? pauseDuration : testDuration;
+    return ((total - secondsLeft) / total).clamp(0, 1).toDouble();
+  }
+
+  int get currentTapCount =>
+      _tapPairs.where((pair) => pair.containsKey('up')).length;
+
+  double get currentTapsPerSecond {
+    final elapsed = testDuration - secondsLeft;
+    return elapsed <= 0 ? 0 : currentTapCount / elapsed;
+  }
+
+  double get currentConsistency => _metricsFrom(
+        _phase == 2 ? 'left' : 'right', List.of(_tapPairs)).consistency;
 
   String statusText(AppLocalizations l10n) {
     switch (status) {
@@ -73,16 +104,20 @@ class TapTestViewModel extends BaseViewModel {
 
   void onTapDown() {
     if (isTesting && (_phase == 0 || _phase == 2)) {
+      isPadPressed = true;
       _tapPairs.add({'down': DateTime.now()});
+      notifyListeners();
     }
   }
 
   void onTapUp() {
+    isPadPressed = false;
     if (isTesting && (_phase == 0 || _phase == 2)) {
       if (_tapPairs.isNotEmpty && !_tapPairs.last.containsKey('up')) {
         _tapPairs.last['up'] = DateTime.now();
       }
     }
+    notifyListeners();
   }
 
   Future<void> startTest(AppLocalizations l10n) async {
@@ -100,8 +135,12 @@ class TapTestViewModel extends BaseViewModel {
     _historyHand2.clear();
     _score1 = 0.0;
     _score2 = 0.0;
+    rightMetrics = null;
+    leftMetrics = null;
+    isSavingResult = false;
     status = TapTestStatus.starting;
     isTesting = true;
+    isPadPressed = false;
     _phase = 0;
     notifyListeners();
   }
@@ -114,6 +153,7 @@ class TapTestViewModel extends BaseViewModel {
     _tapPairs.clear();
 
     _startTimer(() async {
+      rightMetrics = _metricsFrom('right', List.of(_tapPairs));
       resultHand1 = await _predictFromTaps(
         l10n.rightHandLabel,
         List.of(_tapPairs),
@@ -131,6 +171,7 @@ class TapTestViewModel extends BaseViewModel {
     secondsLeft = pauseDuration;
     _tapTimes.clear();
     _tapPairs.clear();
+    isPadPressed = false;
 
     _startTimer(() => _startHand2(l10n));
   }
@@ -143,6 +184,7 @@ class TapTestViewModel extends BaseViewModel {
     _tapPairs.clear();
 
     _startTimer(() async {
+      leftMetrics = _metricsFrom('left', List.of(_tapPairs));
       resultHand2 = await _predictFromTaps(
         l10n.leftHandLabel,
         List.of(_tapPairs),
@@ -152,10 +194,41 @@ class TapTestViewModel extends BaseViewModel {
       _historyHand2.addAll(List.of(_tapPairs));
       status = TapTestStatus.completed;
       isTesting = false;
+      isSavingResult = true;
       _phase = 3;
       notifyListeners();
       await _saveResult(max(_score1, _score2));
     });
+  }
+
+  TapHandMetrics _metricsFrom(
+      String hand, List<Map<String, DateTime>> tapPairs) {
+    final completed = tapPairs
+        .where((pair) => pair['down'] != null && pair['up'] != null)
+        .toList();
+    final intervals = <double>[];
+    for (var i = 1; i < completed.length; i++) {
+      intervals.add(completed[i]['down']!
+          .difference(completed[i - 1]['down']!)
+          .inMicroseconds / 1000000);
+    }
+    final average = intervals.isEmpty
+        ? 0.0
+        : intervals.reduce((a, b) => a + b) / intervals.length;
+    final variance = intervals.isEmpty
+        ? 0.0
+        : intervals.map((v) => (v - average) * (v - average))
+            .reduce((a, b) => a + b) / intervals.length;
+    final consistency = average <= 0
+        ? 0.0
+        : (1 - sqrt(variance) / average).clamp(0, 1).toDouble();
+    return TapHandMetrics(
+      hand: hand,
+      tapCount: completed.length,
+      tapsPerSecond: completed.length / testDuration,
+      averageInterval: average,
+      consistency: consistency,
+    );
   }
 
   void _startTimer(Function onFinish) {
@@ -249,13 +322,20 @@ class TapTestViewModel extends BaseViewModel {
   // Persists the normalized score to Firestore
   Future<void> _saveResult(double score) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
     final result = TestResult(
       id: '',
-      patientId: uid,
+      patientId: uid ?? '',
       type: TestType.tap,
       performedAt: DateTime.now(),
-      score: score.clamp(0, 1),
+      score: score.clamp(0, 1).toDouble(),
+      data: {
+        'rightTapCount': rightMetrics?.tapCount,
+        'leftTapCount': leftMetrics?.tapCount,
+        'rightTapsPerSecond': rightMetrics?.tapsPerSecond,
+        'leftTapsPerSecond': leftMetrics?.tapsPerSecond,
+        'rightConsistency': rightMetrics?.consistency,
+        'leftConsistency': leftMetrics?.consistency,
+      },
     );
     final hand1 = _historyHand1
         .map((p) => {
@@ -270,27 +350,35 @@ class TapTestViewModel extends BaseViewModel {
             })
         .toList();
 
-    bool saved = true;
-    try {
-      await _tests.addResult(
+    bool saved = uid != null;
+    if (uid != null) {
+      try {
+        await _tests.addResult(
         result: result,
         sensorData: {'hand1': hand1, 'hand2': hand2},
-      );
-    } catch (e) {
-      saved = false;
-      debugPrint('Could not save tap result: $e');
+        );
+      } catch (e) {
+        saved = false;
+        debugPrint('Could not save tap result: $e');
+      }
     }
 
-    await showTestComplete(
-      type: TestType.tap,
-      concern: result.concernScore,
-      saved: saved,
-    );
+    _resultSaved = saved;
+    _completionConcern = result.concernScore;
+    isSavingResult = false;
+    notifyListeners();
   }
+
+  Future<void> continueToCompletion() => showTestComplete(
+        type: TestType.tap,
+        concern: _completionConcern,
+        saved: _resultSaved,
+      );
 
   void stopTest() {
     _timer?.cancel();
     isTesting = false;
+    isPadPressed = false;
     status = TapTestStatus.stopped;
     notifyListeners();
   }

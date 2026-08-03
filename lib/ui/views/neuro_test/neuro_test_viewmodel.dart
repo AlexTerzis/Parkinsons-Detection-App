@@ -31,6 +31,11 @@ class NeuroTestViewModel extends BaseViewModel {
 
   int _currentStep = 0;
   double totalMocaScore = 0.0;
+  bool hasStarted = false;
+  bool isFinishing = false;
+  bool showResults = false;
+  bool resultSaved = false;
+  double resultConcern = 0;
   late List<Widget> _steps;
   List<String> _immediateAnswers = [];
 
@@ -112,6 +117,11 @@ class NeuroTestViewModel extends BaseViewModel {
   int get currentStepNumber => _currentStep + 1;
   int get stepCount => _steps.length;
 
+  void startTest() {
+    hasStarted = true;
+    notifyListeners();
+  }
+
   // ✅ Move to the next step
   void nextStep() {
     if (_currentStep < _steps.length - 1) {
@@ -124,6 +134,9 @@ class NeuroTestViewModel extends BaseViewModel {
   }
 
   Future<void> _finishTest() async {
+    if (isFinishing || showResults) return;
+    isFinishing = true;
+    notifyListeners();
     final uid = _auth.currentUser?.uid;
     // Stored as concern, like every other test: 0 is the best possible
     // result, 1 the most concerning. The MoCA's own scale is kept in `data`
@@ -153,14 +166,20 @@ class NeuroTestViewModel extends BaseViewModel {
       }
     }
 
-    // Shown out of 30, the scale the MoCA is actually reported on — a bare
-    // percentage would invite comparison with the sensor tests, which run the
-    // other way round.
-    await showTestComplete(
-      type: TestType.neuro,
-      concern: concern,
-      detail: '${totalMocaScore.toStringAsFixed(totalMocaScore.truncateToDouble() == totalMocaScore ? 0 : 1)} / 30',
-      saved: saved,
-    );
+    resultConcern = concern;
+    resultSaved = saved;
+    isFinishing = false;
+    showResults = true;
+    notifyListeners();
   }
+
+  String get scoreDetail =>
+      '${totalMocaScore.toStringAsFixed(totalMocaScore.truncateToDouble() == totalMocaScore ? 0 : 1)} / 30';
+
+  Future<void> continueToCompletion() => showTestComplete(
+        type: TestType.neuro,
+        concern: resultConcern,
+        detail: scoreDetail,
+        saved: resultSaved,
+      );
 }

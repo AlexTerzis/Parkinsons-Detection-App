@@ -115,6 +115,8 @@ class DoctorView extends StackedView<DoctorViewModel> {
             icon: const Icon(Icons.logout),
             label: Text(l10n.logOut),
           ),
+          const AppGap.lg(),
+          const AppFooter(),
         ],
       ),
     );

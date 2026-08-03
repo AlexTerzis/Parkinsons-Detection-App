@@ -4,9 +4,8 @@ import 'package:parkinsondetetion/ui/views/login/login_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stacked/stacked.dart';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:stacked_services/stacked_services.dart';
-import 'dart:math' as math;
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -20,6 +19,8 @@ import '../../../models/test_result.dart';
 import '../../../models/patient_report.dart';
 import '../../../models/app_user.dart';
 import '../../../models/test_type.dart';
+import '../drawing_test/drawing_result_view.dart';
+import '../drawing_test/signature_canvas_view.dart';
 
 class PatienceViewModel extends BaseViewModel {
   final AuthenticationService _authService = locator<AuthenticationService>();
@@ -33,16 +34,8 @@ class PatienceViewModel extends BaseViewModel {
   String _name = '--';
   String get name => _name.isEmpty ? '--' : _name;
 
-  String _dob = ''; // Date of birth
-  String get dob => _dob;
-
-  String _medication = ''; // Medication info
-  String get medication => _medication;
-
   // Controllers for editing profile fields
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
-  final TextEditingController medicationController = TextEditingController();
 
   // --- Reactive data ---
   List<TestResult> _results = [];
@@ -52,12 +45,36 @@ class PatienceViewModel extends BaseViewModel {
   int _selectedAverageWindow = 7;
   int get selectedAverageWindow => _selectedAverageWindow;
 
-  Map<String, double> get resultsSummary =>
-      _testService.computeSummary(_results);
+  /// Test types kept out of the charts.
+  ///
+  /// The questionnaire is self-reported history, not a measurement: it barely
+  /// changes between sittings, so as a trend line it is a flat bar that drags
+  /// the overall average around, and on the radar it sits next to five measured
+  /// tests as though it were one of them. It is still stored and still sent to
+  /// the doctor — it is only excluded from the score charts.
+  static const Set<TestType> _excludedFromCharts = {TestType.questionnaire};
+
+  /// Results that the score charts are built from.
+  List<TestResult> get scoredResults =>
+      _results.where((r) => !_excludedFromCharts.contains(r.type)).toList();
+
+  /// Average concern per test, across every attempt of it.
+  ///
+  /// Keyed by [TestType] rather than by a name: the name is language-dependent
+  /// and belongs to the widget that draws it, which is what `computeSummary`
+  /// got wrong — its hardcoded English keys were drawn straight onto the radar,
+  /// so the Greek app labelled its spokes "Drawing" and "Tremor".
+  Map<TestType, double> get averageConcernByType {
+    return groupedResults.map((type, list) {
+      final avg = list.map((r) => r.concernScore).reduce((a, b) => a + b) /
+          list.length;
+      return MapEntry(type, avg);
+    });
+  }
 
   Map<TestType, List<TestResult>> get groupedResults {
     final Map<TestType, List<TestResult>> map = {};
-    for (var r in _results) {
+    for (var r in scoredResults) {
       map.putIfAbsent(r.type, () => []).add(r);
     }
     return map;
@@ -90,15 +107,6 @@ class PatienceViewModel extends BaseViewModel {
   // Subscriptions for realtime updates
   StreamSubscription<List<TestResult>>? _resultsSub;
   StreamSubscription<List<PatientReport>>? _reportsSub;
-
-  // Summary items for display
-  List<Map<String, String>> get historyItems => _results
-      .map((r) => {
-            'date': '${r.performedAt.month}/${r.performedAt.day}  ${r.performedAt.hour.toString().padLeft(2, '0')}:${r.performedAt.minute.toString().padLeft(2, '0')}',
-            'test': _labelForType(r),
-            'result': '${(r.concernScore * 100).round()}%',
-          })
-      .toList();
 
   /// Whether this session is an anonymous guest one.
   ///
@@ -150,7 +158,7 @@ class PatienceViewModel extends BaseViewModel {
           });
         }
 
-        // Fetch extra profile data (DOB + medication) from Firestore
+        // Fetch the profile document for the chosen doctor.
         try {
           final doc = await FirebaseFirestore.instance
               .collection('users')
@@ -159,11 +167,7 @@ class PatienceViewModel extends BaseViewModel {
 
           final data = doc.data();
           if (data != null) {
-            _dob = data['dob'] ?? '';
-            _medication = data['medication'] ?? '';
             _primaryDoctorId = data['primaryDoctorId'] as String?;
-            dobController.text = _dob;
-            medicationController.text = _medication;
           }
         } catch (e) {
           debugPrint('Could not load profile fields: $e');
@@ -204,35 +208,12 @@ class PatienceViewModel extends BaseViewModel {
     await updateName(nameController.text);
   }
 
-  // Save extra profile fields (DOB and medication) to Firestore
-  Future<void> saveExtraProfileFields() async {
-    final String? uid = _authService.currentUser?.uid;
-    if (uid == null) return;
-
-    _dob = dobController.text.trim();
-    _medication = medicationController.text.trim();
-    notifyListeners();
-
-    // set(merge) rather than update(): update() throws when the profile
-    // document does not exist yet, which is reachable for any account whose
-    // document was never created.
-    await FirebaseFirestore.instance.collection('users').doc(uid).set(
-      {
-        'dob': _dob,
-        'medication': _medication,
-      },
-      SetOptions(merge: true),
-    );
-  }
-
   @override
   void dispose() {
     // Cancel subscriptions to avoid memory leaks
     _resultsSub?.cancel();
     _reportsSub?.cancel();
     nameController.dispose();
-    dobController.dispose();
-    medicationController.dispose();
     super.dispose();
   }
 
@@ -292,71 +273,59 @@ class PatienceViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  /// Calculate the N-day moving average trend for all test scores
-  List<FlSpot> getAverageTrend() {
-    // Nothing to plot if there are no results
-    if (_results.isEmpty) return [];
+  /// One point per day on which tests were taken inside the selected window,
+  /// oldest first, each the average concern across that day's tests.
+  ///
+  /// The window is counted in real calendar days back from today, which is what
+  /// "last 7 days" plainly means. It used to be a moving average over the last
+  /// N *entries*, so picking 30 on an account with eight results changed
+  /// nothing, and the smoothing quietly flattened exactly the change the chart
+  /// existed to show.
+  List<MapEntry<DateTime, double>> dailyAverages() {
+    final scored = scoredResults;
+    if (scored.isEmpty) return [];
 
-    // 1. Bucket every result by its calendar day
-    final Map<DateTime, List<TestResult>> daily = {};
-    for (final r in _results) {
-      final d = DateTime(r.performedAt.year, r.performedAt.month, r.performedAt.day);
-      daily.putIfAbsent(d, () => []).add(r);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // Inclusive of today, so a 7-day window spans today and the six days
+    // before it rather than eight days in total.
+    final cutoff = today.subtract(Duration(days: _selectedAverageWindow - 1));
+
+    final Map<DateTime, List<double>> byDay = {};
+    for (final r in scored) {
+      final d = DateTime(
+        r.performedAt.year,
+        r.performedAt.month,
+        r.performedAt.day,
+      );
+      if (d.isBefore(cutoff)) continue;
+      byDay.putIfAbsent(d, () => []).add(r.concernScore);
     }
 
-    // 2. Compute the average score for each day
-    final dailyAvg = daily.entries.map((e) {
-      final scores = e.value.map((r) => r.concernScore).toList();
-      final avg = scores.reduce((a, b) => a + b) / scores.length;
-      return MapEntry(e.key, avg);
-    }).toList();
+    final points = byDay.entries
+        .map((e) => MapEntry(
+              e.key,
+              e.value.reduce((a, b) => a + b) / e.value.length,
+            ))
+        .toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
 
-    // 3. Sort days chronologically for cumulative processing
-    dailyAvg.sort((a, b) => a.key.compareTo(b.key));
-
-    // 4. Walk through the list computing moving averages
-    final List<FlSpot> spots = [];
-    final values = dailyAvg.map((e) => e.value).toList();
-    for (int i = 0; i < values.length; i++) {
-      final start = math.max(0, i - _selectedAverageWindow + 1);
-      final slice = values.sublist(start, i + 1);
-      final avg = slice.reduce((a, b) => a + b) / slice.length;
-      spots.add(FlSpot(i.toDouble(), avg));
-    }
-
-    return spots;
+    return points;
   }
 
-  // Type to label mapping
-  String _labelForType(TestResult r) {
-    return labelForType(r.type);
-  }
-
-  String labelForType(TestType type) {
-    switch (type) {
-      case TestType.drawing:
-        return 'Drawing';
-      case TestType.questionnaire:
-        return 'Questionnaire';
-      case TestType.tremor:
-        return 'Tremor';
-      case TestType.tap:
-        return 'Tap';
-      case TestType.voice:
-        return 'Voice';
-      case TestType.cameraDetection:
-        return 'Camera Detection';
-      case TestType.neuro:
-        return 'Neuropsychological';
-      case TestType.fab:
-        return 'FAB';
-    }
-  }
+  // Test names are localized, so they are built in the widget layer from
+  // AppLocalizations — see `testTypeLabel`. A view model has no context and
+  // cannot produce them correctly.
 
   /// Generic handler that decides how to process [source] and stores the
   /// resulting score. The [source] can be a [ui.Image] from the drawing
   /// canvas or a [File] from the gallery/camera.
-  Future<DrawingPrediction> handleDrawingPrediction(dynamic source) async {
+  Future<DrawingPrediction> handleDrawingPrediction(
+    dynamic source, {
+    required String drawingType,
+    required String inputMethod,
+    bool replaceCurrent = false,
+  }) async {
     DrawingPrediction prediction;
     if (source is ui.Image) {
       prediction = await _drawingPredictor.predictCanvas(source);
@@ -368,25 +337,32 @@ class PatienceViewModel extends BaseViewModel {
 
     // Persist the confidence score so it appears in history.
     final uid = _authService.currentUser?.uid;
+    final pngBytes = source is ui.Image
+        ? (await source.toByteData(format: ui.ImageByteFormat.png))!
+            .buffer
+            .asUint8List()
+        : await (source as File).readAsBytes();
+    var saved = uid != null;
     if (uid != null) {
-      final pngBytes = source is ui.Image
-          ? (await source
-                  .toByteData(format: ui.ImageByteFormat.png))!
-              .buffer
-              .asUint8List()
-          : await (source as File).readAsBytes();
       final result = TestResult(
         id: '',
         patientId: uid,
         type: TestType.drawing,
         performedAt: DateTime.now(),
-        score: prediction.confidence.clamp(0, 1),
-        data: {'label': prediction.label},
+        score: prediction.confidence.clamp(0, 1).toDouble(),
+        data: {
+          'label': prediction.label,
+          'drawingType': drawingType,
+          'inputMethod': inputMethod,
+          'protocol': 'freehand',
+        },
       );
-      await _testService.addResult(
-        result: result,
-        drawingPng: pngBytes,
-      );
+      try {
+        await _testService.addResult(result: result, drawingPng: pngBytes);
+      } catch (error) {
+        saved = false;
+        debugPrint('Could not save drawing result: $error');
+      }
       if (source is File) {
         try {
           await source.delete();
@@ -394,35 +370,84 @@ class PatienceViewModel extends BaseViewModel {
       }
     }
 
-     final ctx = locator<NavigationService>().navigatorKey!.currentContext;
-     if (ctx != null) {
-      String message;
-      if (prediction.label == 'Parkinson') {
-        message =
-            '🧠 Parkinson with probability ${(prediction.confidence * 100).toStringAsFixed(1)}%';
-      } else {
-        final healthyProb =
-            ((1 - prediction.confidence) * 100).clamp(0, 100).toStringAsFixed(1);
-        message = '💪 Healthy with probability $healthyProb%';
-      }
-
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(content: Text(message)),
+    final navigator = locator<NavigationService>().navigatorKey?.currentState;
+    if (navigator != null) {
+      final route = MaterialPageRoute<bool>(
+        builder: (_) => DrawingResultView(
+          pngBytes: pngBytes,
+          drawingType: drawingType,
+          inputMethod: inputMethod,
+          label: prediction.label,
+          parkinsonProbability: prediction.confidence,
+          saved: saved,
+        ),
       );
+      final retry = replaceCurrent
+          ? await navigator.pushReplacement<bool, void>(route)
+          : await navigator.push<bool>(route);
+      if (retry == true) {
+        if (inputMethod == 'canvas') {
+          _openDrawingCanvas(drawingType);
+        } else if (inputMethod == 'camera') {
+          pickDrawingFromCamera(drawingType);
+        } else {
+          pickDrawingFromGallery(drawingType);
+        }
+      }
     }
 
     return prediction;
   }
 
-  Future<void> handleCanvasDrawing(ui.Image img) async {
-    await handleDrawingPrediction(img);
+  Future<void> handleCanvasDrawing(
+    ui.Image img, {
+    String drawingType = 'spiral',
+    String inputMethod = 'canvas',
+    bool replaceCurrent = false,
+  }) async {
+    await handleDrawingPrediction(img,
+        drawingType: drawingType,
+        inputMethod: inputMethod,
+        replaceCurrent: replaceCurrent);
   }
 
-  Future<void> handleCameraImage(File file) async {
-    await handleDrawingPrediction(file);
+  Future<void> handleCameraImage(File file,
+      {String drawingType = 'spiral'}) async {
+    await handleDrawingPrediction(file,
+        drawingType: drawingType, inputMethod: 'camera');
   }
 
-  Future<void> handleGalleryImage(File file) async {
-    await handleDrawingPrediction(file);
+  Future<void> handleGalleryImage(File file,
+      {String drawingType = 'spiral'}) async {
+    await handleDrawingPrediction(file,
+        drawingType: drawingType, inputMethod: 'gallery');
+  }
+
+  void _openDrawingCanvas(String drawingType) {
+    final navigator = locator<NavigationService>().navigatorKey?.currentState;
+    navigator?.push(MaterialPageRoute<void>(
+      builder: (_) => SignatureCanvasView(
+        drawingType: drawingType,
+        onImageReady: (_) {},
+        onAnalyze: (image) => handleCanvasDrawing(image,
+            drawingType: drawingType,
+            inputMethod: 'canvas',
+            replaceCurrent: true),
+      ),
+    ));
+  }
+
+  Future<void> pickDrawingFromCamera(String drawingType) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (picked != null) {
+      await handleCameraImage(File(picked.path), drawingType: drawingType);
+    }
+  }
+
+  Future<void> pickDrawingFromGallery(String drawingType) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      await handleGalleryImage(File(picked.path), drawingType: drawingType);
+    }
   }
 }

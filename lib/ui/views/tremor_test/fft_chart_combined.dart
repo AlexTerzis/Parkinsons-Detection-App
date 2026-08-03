@@ -7,6 +7,7 @@ class FFTChartCombined extends StatelessWidget {
   final List<double> spectrumX;
   final List<double> spectrumY;
   final List<double> spectrumZ;
+  final double binWidthHz;
 
   const FFTChartCombined({
     super.key,
@@ -14,34 +15,35 @@ class FFTChartCombined extends StatelessWidget {
     required this.spectrumX,
     required this.spectrumY,
     required this.spectrumZ,
+    required this.binWidthHz,
   });
 
   List<FlSpot> _toSpots(List<double> data) {
-    // Only include values from 2.5 Hz onwards (index 2+)
     final List<FlSpot> spots = [];
-    for (int i = 2; i < data.length && (i - 2) * 2.5 + 2.5 <= 12.5; i++) {
-      final x = (i - 2) * 2.5 + 2.5;
-      spots.add(FlSpot(x, data[i]));
+    for (int i = 1; i < data.length; i++) {
+      final hz = i * binWidthHz;
+      if (hz >= 2.5 && hz <= 12.5) spots.add(FlSpot(hz, data[i]));
     }
     return spots;
   }
 
   FlSpot _getPeak(List<double> data) {
-    if (data.length <= 2) return const FlSpot(0, 0);
-    double maxVal = data[2];
-    int maxIndex = 2;
-    for (int i = 3; i < data.length && (i - 2) * 2.5 + 2.5 <= 12.5; i++) {
+    if (data.length <= 1 || binWidthHz <= 0) return const FlSpot(0, 0);
+    double maxVal = 0;
+    int maxIndex = 0;
+    for (int i = 1; i < data.length; i++) {
+      final hz = i * binWidthHz;
+      if (hz < 2.5 || hz > 12.5) continue;
       if (data[i] > maxVal) {
         maxVal = data[i];
         maxIndex = i;
       }
     }
-    final x = (maxIndex - 2) * 2.5 + 2.5;
-    return FlSpot(x, maxVal);
+    return FlSpot(maxIndex * binWidthHz, maxVal);
   }
 
   bool get _hasData =>
-      spectrumX.length > 2 && spectrumY.length > 2 && spectrumZ.length > 2;
+      binWidthHz > 0 && spectrumX.length > 2 && spectrumY.length > 2 && spectrumZ.length > 2;
 
   @override
   Widget build(BuildContext context) {

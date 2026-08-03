@@ -21,6 +21,11 @@ class FABTestViewModel extends BaseViewModel {
 
   int _currentStep = 0;
   double totalFABScore = 0.0;
+  bool hasStarted = false;
+  bool isFinishing = false;
+  bool showResults = false;
+  bool resultSaved = false;
+  double resultConcern = 0;
   late List<Widget> _steps;
 
   // ✅ Constructor: define the steps
@@ -57,6 +62,11 @@ class FABTestViewModel extends BaseViewModel {
   int get currentStepNumber => _currentStep + 1;
   int get stepCount => _steps.length;
 
+  void startTest() {
+    hasStarted = true;
+    notifyListeners();
+  }
+
   // ✅ Move to the next step
   void nextStep() {
     if (_currentStep < _steps.length - 1) {
@@ -69,6 +79,9 @@ class FABTestViewModel extends BaseViewModel {
   }
 
   Future<void> _finishTest() async {
+    if (isFinishing || showResults) return;
+    isFinishing = true;
+    notifyListeners();
     final uid = _auth.currentUser?.uid;
     // Stored as concern so it runs the same way as every other test; the
     // FAB's own scale stays in `data` and on screen.
@@ -97,13 +110,20 @@ class FABTestViewModel extends BaseViewModel {
       }
     }
 
-    // Out of 15, matching the five items this app implements rather than the
-    // clinical FAB's six, so the number shown is the one that was measured.
-    await showTestComplete(
-      type: TestType.fab,
-      concern: concern,
-      detail: '${totalFABScore.toStringAsFixed(totalFABScore.truncateToDouble() == totalFABScore ? 0 : 1)} / 15',
-      saved: saved,
-    );
+    resultConcern = concern;
+    resultSaved = saved;
+    isFinishing = false;
+    showResults = true;
+    notifyListeners();
   }
+
+  String get scoreDetail =>
+      '${totalFABScore.toStringAsFixed(totalFABScore.truncateToDouble() == totalFABScore ? 0 : 1)} / 15';
+
+  Future<void> continueToCompletion() => showTestComplete(
+        type: TestType.fab,
+        concern: resultConcern,
+        detail: scoreDetail,
+        saved: resultSaved,
+      );
 }

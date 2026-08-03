@@ -12,6 +12,8 @@ export '../app_semantic_colors.dart';
 export '../app_tokens.dart';
 export 'app_card.dart';
 export 'app_feedback.dart';
+export 'app_footer.dart';
+export 'app_info_button.dart';
 export 'app_list_tile_card.dart';
 export 'app_metric.dart';
 export 'app_preferences_section.dart';

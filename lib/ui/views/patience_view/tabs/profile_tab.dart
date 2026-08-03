@@ -16,97 +16,63 @@ class ProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            // Generic profile avatar icon.
-            child: const Icon(Icons.person, size: 48),
+          // Identity header: who is signed in, at a glance.
+          Column(
+            children: [
+              CircleAvatar(
+                radius: 44,
+                backgroundColor: cs.primaryContainer,
+                foregroundColor: cs.onPrimaryContainer,
+                child: const Icon(Icons.person, size: 44),
+              ),
+              const AppGap.md(),
+              Text(
+                viewModel.name,
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const AppGap.xs(),
+              Text(
+                viewModel.email,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const AppGap.md(),
-          Text(viewModel.name, style: theme.textTheme.headlineSmall),
-          const AppGap.xs(),
-          Text(viewModel.email, style: theme.textTheme.bodyMedium),
           const AppGap.lg(),
           if (viewModel.isGuest) ...[
             const _GuestUpgradeCard(),
-            const AppGap.lg(),
+            const AppGap.md(),
           ],
-          // Name editing field.
-          TextField(
-            controller: viewModel.nameController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.editName,
-            ),
-          ),
-          const AppGap.md(),
-          // Date of birth field with localized hint.
-          TextField(
-            controller: viewModel.dobController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.dateOfBirth,
-              hintText: AppLocalizations.of(context)!.dobHint,
-            ),
-          ),
-          const AppGap.md(),
-          // Medication field.
-          TextField(
-            controller: viewModel.medicationController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.addMedication,
-            ),
-          ),
+          // The only editable profile field: the display name. Date of birth
+          // and medication used to live here, but nothing in the app ever read
+          // them back, so they only asked for health data with no purpose.
+          _NameEditor(viewModel: viewModel),
           const AppGap.md(),
           const AppPreferencesSection(),
-          const AppGap.md(),
-          ElevatedButton.icon(
-            onPressed: viewModel.isBusy
-                ? null
-                : () async {
-                    await viewModel.saveExtraProfileFields();
-                    if (context.mounted) {
-                      AppFeedback.success(
-                        context,
-                        AppLocalizations.of(context)!.profileSaved,
-                      );
-                    }
-                  },
-            icon: const Icon(Icons.save_alt),
-            label: Text(AppLocalizations.of(context)!.saveProfile),
-          ),
-          const AppGap.lg(),
-          ElevatedButton.icon(
-            onPressed: viewModel.isBusy
-                ? null
-                : () async {
-                    await viewModel.saveName();
-                    if (context.mounted) {
-                      AppFeedback.success(
-                        context,
-                        AppLocalizations.of(context)!.savedSuccessfully,
-                      );
-                    }
-                  },
-            icon: const Icon(Icons.save),
-            label: Text(AppLocalizations.of(context)!.saveChanges),
-          ),
           const AppGap.lg(),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.error,
-                width: 1.5,
-              ),
+              foregroundColor: cs.error,
+              side: BorderSide(color: cs.outlineVariant),
+              padding:
+                  const EdgeInsets.symmetric(vertical: AppSpacing.md),
             ),
             onPressed: () => _confirmLogout(context),
             icon: const Icon(Icons.logout),
-            label: Text(AppLocalizations.of(context)!.logOut),
+            label: Text(l10n.logOut),
           ),
+          const AppGap.lg(),
+          const AppFooter(),
         ],
       ),
     );
@@ -149,6 +115,100 @@ class ProfileTab extends StatelessWidget {
     if (confirmed == true && context.mounted) {
       await viewModel.logout(context);
     }
+  }
+}
+
+/// Edits the display name, with a save action that only lights up once the
+/// field actually differs from the saved name.
+///
+/// Replaces the two former buttons: one saved fields nothing read back, and the
+/// other was a permanently enabled "save changes" that usually saved nothing.
+class _NameEditor extends StatefulWidget {
+  final PatienceViewModel viewModel;
+  const _NameEditor({required this.viewModel});
+
+  @override
+  State<_NameEditor> createState() => _NameEditorState();
+}
+
+class _NameEditorState extends State<_NameEditor> {
+  late final TextEditingController _controller = widget.viewModel.nameController;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    // The controller belongs to the view model, so only the listener is ours.
+    _controller.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  bool get _dirty {
+    final text = _controller.text.trim();
+    return text.isNotEmpty && text != widget.viewModel.name.trim();
+  }
+
+  Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _saving = true);
+    try {
+      await widget.viewModel.saveName();
+      if (mounted) AppFeedback.success(context, l10n.savedSuccessfully);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.editName, style: theme.textTheme.titleLarge),
+            const AppGap.md(),
+            TextField(
+              controller: _controller,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                if (_dirty && !_saving) _save();
+              },
+              decoration: InputDecoration(
+                labelText: l10n.editName,
+                prefixIcon: const Icon(Icons.badge_outlined),
+              ),
+            ),
+            const AppGap.sm(),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.icon(
+                onPressed: (_dirty && !_saving) ? _save : null,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check),
+                label: Text(l10n.saveChanges),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

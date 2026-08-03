@@ -355,5 +355,48 @@
   "guestExitBody": "Your results are tied to this guest session on this device. If it is lost, so are they. Creating an account keeps everything you have done so far.",
   "guestExitStay": "Create an account",
   "guestExitLeave": "Leave anyway",
-  "guestSignInDisabled": "Guest sign-in is not enabled for this app yet. Please create an account, or try again later."
+  "guestSignInDisabled": "Guest sign-in is not enabled for this app yet. Please create an account, or try again later.",
+
+  "testNameDrawing": "Drawing",
+  "testNameQuestionnaire": "Questionnaire",
+  "testNameTremor": "Tremor",
+  "testNameTap": "Tapping",
+  "testNameVoice": "Voice",
+  "testNameCamera": "Camera",
+  "testNameNeuro": "Memory",
+  "testNameFab": "Reasoning",
+
+  "bandLabelReassuring": "Reassuring",
+  "bandLabelBorderline": "Borderline",
+  "bandLabelNotable": "Notable",
+
+  "resultsInfoTitle": "About these scores",
+  "resultsInfoBody": "Each bar is the most recent result for that test, shown as a level of concern from 0% to 100%. Higher always means more worth looking at, whichever test it came from.\n\nThat needs saying because the tests do not all count the same way. On the tapping or tremor tests a high raw score means more sign of tremor; on the memory and reasoning batteries a high raw score means you did well. Both are converted here, so a low bar is always the calmer one.\n\nThe three bands — reassuring, borderline and notable — are provisional cut-offs, not clinical thresholds. A single notable result on one day means far less than the same result appearing again and again across weeks.\n\nTap a test to see how it has changed over time.",
+
+  "overallTrend": "Overall trend",
+  "trendInfoTitle": "About the trend",
+  "trendInfoBody": "One point per day on which you took at least one test, averaged across every test you took that day.\n\nUse it to see direction rather than detail: a line drifting upwards over several weeks is worth mentioning to your doctor, while a single spike usually says more about a tired hand, a rushed attempt or a noisy room than about your health.\n\nDays with no tests are simply missing from the line, so a stretch of activity followed by a gap will look like one long step. Taking tests at roughly the same time of day makes the comparison fairer.",
+  "trendWindowLabel": "Averaged over",
+  "trendWindowLast": "Last {count} days",
+  "@trendWindowLast": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "trendNeedsMoreDays": "Not enough tests in this period to draw a trend. Choose a longer period, or take a test on another day.",
+
+  "summaryInfoTitle": "About the summary",
+  "summaryInfoBody": "Each spoke is one test, and the distance from the centre is your average level of concern for it across every attempt.\n\nA small, even shape means nothing stands out. A shape stretched towards one spoke means that one test reads differently from the rest — which is the thing actually worth showing a clinician, since Parkinson's rarely affects everything equally at first.\n\nBecause these are averages over all your attempts, the shape moves slowly and early results keep pulling on it for a long time.",
+
+  "appVersion": "Version {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": { "type": "String", "example": "2.0.0 (2)" }
+    }
+  },
+  "medicalDisclaimer": "Medical disclaimer",
+  "medicalDisclaimerBody": "This app is not a medical device and does not provide a diagnosis.\n\nThe tests here are screening aids. They look for patterns that are common in Parkinson's disease, but many other things — tiredness, caffeine, medication, anxiety, an unrelated condition, or simply an awkward grip on the phone — produce the same patterns. A concerning score does not mean you have Parkinson's disease, and a reassuring score does not rule it out.\n\nOnly a qualified clinician can diagnose Parkinson's disease, and only after an in-person examination. Take any result that worries you to your doctor, and never start, stop or change a medication based on what this app shows you.\n\nIf you have sudden or severe symptoms, seek medical help immediately rather than taking a test.",
+  "privacyPolicy": "Privacy policy",
+  "termsOfService": "Terms of use",
+  "legalDocumentPlaceholder": "This document has not been published yet.\n\nUntil it is, here is what the app actually does with your data: your test results, questionnaire answers and voice recordings are stored in your account and are visible to you and to any doctor you choose to share them with. Nothing is shared with anyone else.\n\nPlease contact the app's provider if you need the full document before it is available here."
 }
