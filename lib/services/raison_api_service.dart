@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -36,7 +37,7 @@ class RaisonApiService {
         'Content-Type': 'application/json',
       },
     );
-    print('🔍 [Raison API] SCHEMA GET → ${res.statusCode}\n'
+    debugPrint('🔍 [Raison API] SCHEMA GET → ${res.statusCode}\n'
           'Response: ${res.body}');
     if (res.statusCode != 200) {
       throw Exception('Failed to load schema: ${res.statusCode}');
@@ -87,7 +88,7 @@ class RaisonApiService {
     );
 
     // ▶️ Log the real request + the response
-    print('🔍 [Raison API] EXECUTE POST → ${response.statusCode}\n'
+    debugPrint('🔍 [Raison API] EXECUTE POST → ${response.statusCode}\n'
           'Request:  $requestBody\n'
           'Response: ${response.body}');
 

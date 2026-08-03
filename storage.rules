@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Raw test assets uploaded by StorageService.
+//
+// Layout is always <category>/<userId>/<testId>/<file>, matching
+// lib/services/storage_service.dart:
+//
+//   drawing/{uid}/{testId}/drawing.png
+//   voice/{uid}/{testId}/audio.wav
+//   tremor/{uid}/{testId}/raw.json.gz
+//   tap/{uid}/{testId}/raw.json.gz
+//   cameraDetection/{uid}/{testId}/raw.json.gz
+//   cameraDetection/{uid}/{testId}/{taskId}.json.gz   (one per MDS-UPDRS task)
+//
+// Category names come from TestType.name for the sensor tests, so the camera
+// folder is `cameraDetection` here even though its Firestore subcollection is
+// `camera`. The two lists are not interchangeable.
+//
+// The app never reads from Storage; backend analysis jobs use the Admin SDK,
+// which bypasses these rules entirely. Owner reads are allowed anyway so a
+// patient can be shown their own drawing back without another rules change.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Sizes are ceilings meant to stop abuse, not to fit any real recording;
+    // a long voice sample is a couple of MB and a camera task a few hundred KB.
+    function withinSize(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024;
+    }
+
+    match /drawing/{userId}/{testId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && withinSize(10)
+                   && request.resource.contentType == 'image/png';
+    }
+
+    match /voice/{userId}/{testId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+                   && withinSize(25)
+                   && request.resource.contentType == 'audio/wav';
+    }
+
+    // Compressed sensor and landmark recordings.
+    match /{category}/{userId}/{testId}/{fileName} {
+      allow read: if isOwner(userId)
+                  && category in ['tremor', 'tap', 'cameraDetection'];
+      allow write: if isOwner(userId)
+                   && category in ['tremor', 'tap', 'cameraDetection']
+                   && withinSize(20)
+                   && request.resource.contentType == 'application/gzip';
+    }
+
+    // Everything else is denied, including any path shape not listed above.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

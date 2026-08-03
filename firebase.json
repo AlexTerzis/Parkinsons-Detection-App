@@ -1,1 +1,38 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"parkinsonaidetector","appId":"1:659877999449:android:3ecfbb2c2156d63b0cd248","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"parkinsondetection-4803f","appId":"1:559294794835:ios:7a5de34ace68d71c148aa6","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"parkinsonaidetector","configurations":{"android":"1:659877999449:android:3ecfbb2c2156d63b0cd248","ios":"1:659877999449:ios:1e019afa74a6f24d0cd248","web":"1:659877999449:web:7c00b4cc9b4c5e3f0cd248"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "parkinsonaidetector",
+          "appId": "1:659877999449:android:3ecfbb2c2156d63b0cd248",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "parkinsondetection-4803f",
+          "appId": "1:559294794835:ios:7a5de34ace68d71c148aa6",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "parkinsonaidetector",
+          "configurations": {
+            "android": "1:659877999449:android:3ecfbb2c2156d63b0cd248",
+            "ios": "1:659877999449:ios:1e019afa74a6f24d0cd248",
+            "web": "1:659877999449:web:7c00b4cc9b4c5e3f0cd248"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

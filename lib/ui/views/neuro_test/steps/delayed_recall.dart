@@ -2,15 +2,23 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+import 'greek_text.dart';
+
+/// MoCA delayed recall, with the two graded cues: a category hint, then a
+/// three-way multiple choice.
+///
+/// The words, cues and distractors are the instrument's own and stay Greek.
 class DelayedRecallStep extends StatefulWidget {
   final void Function(int score, VerbalMemoryResult result) onFinished;
   final List<String> immediateTrials;
 
   const DelayedRecallStep({
-    Key? key,
+    super.key,
     required this.onFinished,
     required this.immediateTrials,
-  }) : super(key: key);
+  });
 
   @override
   State<DelayedRecallStep> createState() => _DelayedRecallStepState();
@@ -22,6 +30,12 @@ class _RowAnswer {
   int? wordIndex; // Which word (index in _words) this row is matched to (if locked)
   int hintStep = 0;
   String? choiceAnswer;
+
+  /// Multiple-choice options, shuffled once when the second cue is revealed.
+  /// Shuffling inside `build` reordered the options on every rebuild — every
+  /// keystroke and every recognizer partial result — which made them
+  /// impossible to read, let alone answer.
+  List<String>? shuffledChoices;
 }
 
 class _DelayedRecallStepState extends State<DelayedRecallStep> {
@@ -54,29 +68,16 @@ class _DelayedRecallStepState extends State<DelayedRecallStep> {
   bool _speechReady = false;
   bool _finished = false;
 
-  final ScrollController _scrollController = ScrollController();
-  bool _showScrollArrow = false;
-
   @override
   void initState() {
     super.initState();
     _initSpeech();
-    _scrollController.addListener(_checkScrollArrow);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollArrow());
     _refreshUnclaimedMapping();
   }
 
   Future<void> _initSpeech() async {
     await _speech.initialize();
-    setState(() => _speechReady = true);
-  }
-
-  void _checkScrollArrow() {
-    if (!_scrollController.hasClients) return;
-    final show = !_scrollController.position.atEdge || _scrollController.position.pixels == 0.0;
-    setState(() {
-      _showScrollArrow = show && _scrollController.position.maxScrollExtent > 0;
-    });
+    if (mounted) setState(() => _speechReady = true);
   }
 
   void _toggleListening(int i) async {
@@ -95,33 +96,6 @@ class _DelayedRecallStepState extends State<DelayedRecallStep> {
         });
       },
     );
-  }
-
-  String normalizeGreek(String s) {
-    return s
-        .replaceAll('ά', 'α')
-        .replaceAll('έ', 'ε')
-        .replaceAll('ή', 'η')
-        .replaceAll('ί', 'ι')
-        .replaceAll('ό', 'ο')
-        .replaceAll('ύ', 'υ')
-        .replaceAll('ώ', 'ω')
-        .replaceAll('Ά', 'Α')
-        .replaceAll('Έ', 'Ε')
-        .replaceAll('Ή', 'Η')
-        .replaceAll('Ί', 'Ι')
-        .replaceAll('Ό', 'Ο')
-        .replaceAll('Ύ', 'Υ')
-        .replaceAll('Ώ', 'Ω')
-        .replaceAll('ϊ', 'ι')
-        .replaceAll('ΐ', 'ι')
-        .replaceAll('Ϊ', 'Ι')
-        .replaceAll('ϋ', 'υ')
-        .replaceAll('ΰ', 'υ')
-        .replaceAll('Ϋ', 'Υ')
-        .replaceAll(RegExp(r'[^\p{L}]', unicode: true), '')
-        .toUpperCase()
-        .trim();
   }
 
   // Set of all claimed word indices (via text or choice)
@@ -183,6 +157,8 @@ class _DelayedRecallStepState extends State<DelayedRecallStep> {
         _rows[i].hintStep = 1;
       } else if (_rows[i].hintStep == 1) {
         _rows[i].hintStep = 2;
+        _rows[i].shuffledChoices =
+            List<String>.from(_choices[_rows[i].wordIndex!])..shuffle(Random());
       }
     });
   }
@@ -228,149 +204,126 @@ class _DelayedRecallStepState extends State<DelayedRecallStep> {
     for (final c in _controllers) {
       c.dispose();
     }
-    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final allDone = _rows.every((r) => r.locked);
     _refreshUnclaimedMapping();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Καθυστερημένη Ανάκληση')),
-      body: Stack(
+
+    return TestStepScaffold(
+      title: l10n.stepTitleDelayedRecall,
+      instruction: '${l10n.stepInstructionDelayedRecall}\n'
+          '${l10n.stepInstructionDelayedRecallHint}',
+      onNext: _finish,
+      nextLabel: allDone ? l10n.stepDone : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          for (int i = 0; i < 5; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _row(context, i),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// One recall slot: the spoken answer, its two graded cues, and its state.
+  Widget _row(BuildContext context, int i) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+    final row = _rows[i];
+    final available = !row.locked && row.wordIndex != null;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.stepWordNumbered(i + 1),
+            style: theme.textTheme.titleSmall,
+          ),
+          const AppGap.xs(),
+          SpeechTextField(
+            controller: _controllers[i],
+            // Voice only: the MoCA scores recall, not spelling.
+            readOnly: true,
+            listening: false,
+            onListen:
+                available && _speechReady ? () => _toggleListening(i) : null,
+            hintText: row.wordIndex != null || row.locked
+                ? l10n.stepSayWithMic
+                : l10n.stepAllWordsFound,
+            micTooltip: l10n.stepSayWithMic,
+            correct: row.locked ? true : null,
+          ),
+          const AppGap.xs(),
+          if (row.locked)
+            Row(
               children: [
-                const Text(
-                  'Πείτε όσες λέξεις θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).',
-                  style: TextStyle(fontSize: 16),
+                Icon(Icons.check_circle, color: semantic.success, size: 20),
+                const AppGap.wide(AppSpacing.xs),
+                Text(
+                  l10n.stepCorrectAnswer,
+                  style: theme.textTheme.labelLarge
+                      ?.copyWith(color: semantic.success),
                 ),
-                const SizedBox(height: 12),
-                for (int i = 0; i < 5; i++)
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    color: _rows[i].locked ? Colors.green.withOpacity(0.08) : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Λέξη ${i + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextField(
-                            controller: _controllers[i],
-                            readOnly: true,
-                            enableInteractiveSelection: false,
-                            showCursor: false,
-                            decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              hintText: (_rows[i].locked || _rows[i].wordIndex != null)
-                                  ? 'Πείτε τη λέξη με το μικρόφωνο'
-                                  : 'Όλες οι λέξεις έχουν βρεθεί!',
-                              suffixIcon: IconButton(
-                                icon: Icon(_rows[i].locked ? Icons.check : Icons.mic),
-                                onPressed: (!_rows[i].locked && _rows[i].wordIndex != null)
-                                    ? () => _toggleListening(i)
-                                    : null,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              ElevatedButton(
-                                onPressed: (!_rows[i].locked &&
-                                        _controllers[i].text.trim().isNotEmpty &&
-                                        _rows[i].wordIndex != null)
-                                    ? () => _onSubmit(i)
-                                    : null,
-                                child: const Text('Υποβολή'),
-                              ),
-                              const SizedBox(width: 10),
-                              ElevatedButton(
-                                onPressed: (!_rows[i].locked && _rows[i].wordIndex != null)
-                                    ? () => _onHint(i)
-                                    : null,
-                                child: const Text('Υπόδειξη'),
-                              ),
-                            ],
-                          ),
-                          if (_rows[i].locked)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0, left: 2.0),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.check_circle, color: Colors.green, size: 22),
-                                  SizedBox(width: 6),
-                                  Text("Σωστό!", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          if (_rows[i].hintStep == 1 &&
-                              !_rows[i].locked &&
-                              _rows[i].wordIndex != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 10.0, left: 2.0),
-                              child: Text('Υπόδειξη: ${_cues[_rows[i].wordIndex!]}',
-                                  style: const TextStyle(color: Colors.blue)),
-                            ),
-                          if (_rows[i].hintStep == 2 &&
-                              !_rows[i].locked &&
-                              _rows[i].wordIndex != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 10.0, left: 2.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Ποια από τις παρακάτω λέξεις ήταν στη λίστα;'),
-                                  ...(() {
-                                    final opts =
-                                        List<String>.from(_choices[_rows[i].wordIndex!]);
-                                    opts.shuffle(Random());
-                                    return opts.map((opt) => RadioListTile<String>(
-                                          value: opt,
-                                          groupValue: _rows[i].choiceAnswer,
-                                          title: Text(opt),
-                                          onChanged: (v) => _onChoice(i, v!),
-                                        ));
-                                  })(),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 60),
+              ],
+            )
+          else
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                FilledButton.tonal(
+                  onPressed:
+                      available && _controllers[i].text.trim().isNotEmpty
+                          ? () => _onSubmit(i)
+                          : null,
+                  child: Text(l10n.stepSubmit),
+                ),
+                OutlinedButton.icon(
+                  onPressed: available ? () => _onHint(i) : null,
+                  icon: const Icon(Icons.lightbulb_outline),
+                  label: Text(l10n.stepHint),
+                ),
               ],
             ),
-          ),
-          if (_showScrollArrow)
-            Positioned(
-              right: 12,
-              bottom: 80,
-              child: Icon(Icons.keyboard_arrow_down, size: 38, color: Colors.black45),
+          // First cue: the word's category, worth half a point.
+          if (row.hintStep == 1 && available) ...[
+            const AppGap.xs(),
+            HintPanel(lines: [_cues[row.wordIndex!]]),
+          ],
+          // Second cue: recognition among three options.
+          if (row.hintStep == 2 && available) ...[
+            const AppGap.xs(),
+            Text(
+              l10n.stepInstructionWhichWordWasInList,
+              style: theme.textTheme.bodyMedium,
             ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 10,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-                onPressed: _finish,
-                child: Text(allDone ? 'Ολοκλήρωση' : 'Επόμενο'),
+            RadioGroup<String>(
+              groupValue: row.choiceAnswer,
+              onChanged: (v) {
+                if (v != null) _onChoice(i, v);
+              },
+              child: Column(
+                children: [
+                  for (final opt
+                      in row.shuffledChoices ?? _choices[row.wordIndex!])
+                    RadioListTile<String>(
+                      value: opt,
+                      title: Text(opt),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

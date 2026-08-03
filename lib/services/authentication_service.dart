@@ -36,6 +36,82 @@ class AuthenticationService {
   // Provides the currently signed-in user, or null if the user is not logged in.
   User? get currentUser => _firebaseAuth.currentUser;
 
+  /// Whether the current session is an anonymous "guest" one.
+  ///
+  /// Guests get a real auth uid, so the security rules and every
+  /// `users/{uid}/...` path keep working unchanged; the distinction only
+  /// governs which features the UI offers them.
+  bool get isGuest => _firebaseAuth.currentUser?.isAnonymous ?? false;
+
+  /// Signs in anonymously and makes sure a profile document exists.
+  ///
+  /// The document is created eagerly rather than on first write because
+  /// several call sites use `update()`, which throws when it is missing.
+  Future<UserCredential> signInAnonymously() async {
+    final UserCredential credential = await _firebaseAuth.signInAnonymously();
+
+    final User? user = credential.user;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).set(
+        <String, Object?>{
+          // Guests are patients as far as routing is concerned; `isGuest`
+          // carries the distinction, which saves the upgrade path from having
+          // to rewrite `role`.
+          'role': UserRole.patient.value,
+          'isGuest': true,
+          'created_at': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    }
+
+    return credential;
+  }
+
+  /// Upgrades the current anonymous account to a permanent email/password one,
+  /// keeping the same uid so no test history is lost.
+  ///
+  /// Deliberately separate from [signUp], which calls
+  /// `createUserWithEmailAndPassword` and would mint a *new* uid, orphaning
+  /// everything the guest recorded.
+  Future<UserCredential> linkAnonymousToEmail({
+    required String email,
+    required String password,
+    String? name,
+  }) async {
+    final User? user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'There is no signed-in account to upgrade.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email.trim(),
+      password: password,
+    );
+    final UserCredential result = await user.linkWithCredential(credential);
+
+    await _firestore.collection('users').doc(user.uid).set(
+      <String, Object?>{
+        // Taken from the argument rather than `user.email`, which is still
+        // null on the in-memory user until it is reloaded.
+        'email': email.trim(),
+        'role': UserRole.patient.value,
+        'isGuest': false,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      },
+      SetOptions(merge: true),
+    );
+
+    if (name != null && name.trim().isNotEmpty) {
+      await result.user?.updateDisplayName(name.trim());
+    }
+
+    return result;
+  }
+
   // Signs the user in using an email and password combination.
   Future<UserCredential> signIn({
     required String email,
@@ -64,12 +140,19 @@ class AuthenticationService {
 
     final User? user = credential.user;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set(<String, Object?>{
-        'email': user.email,
-        'role': userRole.value,
-        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-        'created_at': FieldValue.serverTimestamp(),
-      });
+      // Merged rather than a whole-document overwrite: a plain set() here
+      // would discard anything already on the profile, such as date of birth,
+      // medication or a chosen doctor.
+      await _firestore.collection('users').doc(user.uid).set(
+        <String, Object?>{
+          'email': user.email,
+          'role': userRole.value,
+          'isGuest': false,
+          if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+          'created_at': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
 
       if (name != null && name.trim().isNotEmpty) {
         await user.updateDisplayName(name.trim());

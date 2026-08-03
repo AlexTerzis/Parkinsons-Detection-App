@@ -7,7 +7,6 @@ import '../login/login_view.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/reports_service.dart';
 import '../../../services/authentication_service.dart';
-import '../../../models/app_user.dart';
 import '../../../models/patient_report.dart';
 import '../../../models/doctor_note.dart';
 
@@ -163,6 +162,9 @@ class DoctorViewModel extends BaseViewModel {
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('keepMeLoggedIn');
+    // Cleared with the session, so the next account to sign in on this device
+    // cannot be routed by the previous one's role on a slow launch.
+    await prefs.remove('cachedRole');
     await FirebaseAuth.instance.signOut();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(

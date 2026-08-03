@@ -13,7 +13,11 @@ service cloud.firestore {
                          'tapping',
                          'voice',
                          'camera',
-                         'neuropsychological'
+                         'neuropsychological',
+                         // Must match TestService._typeToPath(TestType.fab)
+                         // exactly, including the capitals. Without it every
+                         // FAB score is denied and silently discarded.
+                         'FAB'
                        ];
     }
 

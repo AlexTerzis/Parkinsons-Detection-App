@@ -7,6 +7,9 @@ import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:parkinsondetetion/services/localization_service.dart';
+import 'package:parkinsondetetion/services/text_scale_service.dart';
+import 'package:parkinsondetetion/ui/common/app_theme.dart';
+import 'package:parkinsondetetion/ui/common/app_tokens.dart';
 import 'package:parkinsondetetion/app/app.router.dart';
 import 'package:parkinsondetetion/firebase_options.dart';
 import 'package:parkinsondetetion/ui/views/login/login_view.dart';
@@ -27,6 +30,9 @@ Future<void> main() async {
   // Load persisted locale before the UI starts so the correct language
   // renders immediately. The service notifies listeners on changes.
   await locator<LocalizationService>().init();
+  // Load the saved text size before the first frame, otherwise the whole app
+  // visibly reflows a frame after launch.
+  await locator<TextScaleService>().init();
   setupDialogUi();
   setupBottomSheetUi();
 
@@ -38,12 +44,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obtain the localization service which holds the current locale.
+    // Obtain the services holding the current locale and text size.
     final localizationService = locator<LocalizationService>();
+    final textScaleService = locator<TextScaleService>();
 
-    // AnimatedBuilder rebuilds MaterialApp whenever the locale changes.
+    // Rebuilds MaterialApp whenever the locale or the text size changes. Both
+    // invalidate the same subtree, so one merged listenable beats nesting two
+    // builders.
     return AnimatedBuilder(
-      animation: localizationService,
+      animation: Listenable.merge([localizationService, textScaleService]),
       builder: (context, _) => ResponsiveApp(
         builder: (_) => MaterialApp(
           // onGenerateTitle uses the localized string at runtime.
@@ -57,12 +66,24 @@ class MainApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 7, 24, 51),
-            ),
-            useMaterial3: true,
+          theme: AppTheme.light(
+            tabBarTextScaler: textScaleService.tabBarTextScaler,
           ),
+
+          // Deliberately in MaterialApp.builder rather than above MaterialApp.
+          // MediaQuery.of depends on the whole MediaQueryData, so an override
+          // higher up would rebuild the entire Navigator every time the
+          // keyboard animates open or closed - which this app does constantly,
+          // between the login form, both profile tabs and the speech-driven
+          // test steps. Down here, element reuse keeps the route subtree
+          // untouched. It also covers dialogs and sheets pushed through the
+          // stacked navigator key.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: textScaleService.textScaler),
+            child: child!,
+          ),
+
           debugShowCheckedModeBanner: false,
           home: const SplashScreen(),
           onGenerateRoute: StackedRouter().onGenerateRoute,
@@ -102,33 +123,26 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkLoginAndNavigate();
   }
 
+  /// Just long enough that a fast launch reads as a brief brand moment rather
+  /// than a flicker. The splash is not padded beyond this — it lasts as long as
+  /// the work below actually takes, and no longer.
+  static const Duration _minimumSplash = Duration(milliseconds: 350);
+
+  /// Cap on the role lookup. Firestore will wait a long time on a bad
+  /// connection, and nothing here is worth blocking the launch for: the cached
+  /// role covers the offline case.
+  static const Duration _roleLookupTimeout = Duration(seconds: 4);
+
+  static const String _cachedRoleKey = 'cachedRole';
+
   Future<void> _checkLoginAndNavigate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keepMeLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
-    final user = FirebaseAuth.instance.currentUser;
-
-    Widget target = LoginView();
-
-    if (keepMeLoggedIn && user != null) {
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        final role = userDoc.data()?['role'] ?? 'patient';
-
-        if (role == 'doctor') {
-          target = const DoctorView();
-        } else {
-          target = const PatienceView();
-        }
-      } catch (_) {
-        // Default fallback remains LoginView
-      }
-    }
-
-    // Wait exactly 3 seconds total (including checks)
-    await Future.delayed(const Duration(seconds: 3));
+    // Run the work and the minimum splash concurrently, so the floor overlaps
+    // the launch instead of being added to it.
+    final results = await Future.wait(<Future<dynamic>>[
+      _resolveTarget(),
+      Future<void>.delayed(_minimumSplash),
+    ]);
+    final target = results.first as Widget;
 
     if (!mounted) return;
 
@@ -138,9 +152,43 @@ class _SplashScreenState extends State<SplashScreen> {
         pageBuilder: (_, __, ___) => target,
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+  }
+
+  /// Decides where to land: login, patient home, or doctor home.
+  Future<Widget> _resolveTarget() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepMeLoggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!keepMeLoggedIn || user == null) return LoginView();
+
+    // Signed in already, so the only open question is which home to show.
+    // Falling back to the login screen here would be wrong: it would ask a
+    // signed-in user to sign in again just because the network was slow.
+    String role = prefs.getString(_cachedRoleKey) ?? 'patient';
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .timeout(_roleLookupTimeout);
+
+      final fetched = userDoc.data()?['role'] as String?;
+      if (fetched != null) {
+        role = fetched;
+        // Cached so the next launch can route correctly while offline, and
+        // without waiting on the network at all.
+        await prefs.setString(_cachedRoleKey, fetched);
+      }
+    } catch (e) {
+      debugPrint('Role lookup failed, using cached role "$role": $e');
+    }
+
+    return role == 'doctor' ? const DoctorView() : const PatienceView();
   }
 
   @override
@@ -154,8 +202,9 @@ class _SplashScreenState extends State<SplashScreen> {
       opacity: _currentDot == index ? 1.0 : 0.3,
       duration: const Duration(milliseconds: 300),
       child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4.0),
-        child: CircleAvatar(radius: 5, backgroundColor: Colors.cyanAccent),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+        // Brand accent that reads against the dark splash background.
+        child: CircleAvatar(radius: 5, backgroundColor: Color(0xFF7FD3C9)),
       ),
     );
   }
@@ -163,7 +212,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 7, 24, 51),
+      // Matches flutter_native_splash's configured colour in pubspec.yaml, so
+      // there is no flash between the native splash and this screen.
+      backgroundColor: AppTokens.splashBackground,
       body: Stack(
         children: [
           // Background image

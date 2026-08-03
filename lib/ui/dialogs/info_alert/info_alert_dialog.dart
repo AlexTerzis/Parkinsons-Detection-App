@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:parkinsondetetion/ui/common/app_colors.dart';
-import 'package:parkinsondetetion/ui/common/ui_helpers.dart';
 import 'package:stacked/stacked.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
+import '../../common/app_tokens.dart';
 import 'info_alert_dialog_model.dart';
 
 const double _graphicSize = 60;
@@ -14,10 +13,10 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
   final Function(DialogResponse) completer;
 
   const InfoAlertDialog({
-    Key? key,
+    super.key,
     required this.request,
     required this.completer,
-  }) : super(key: key);
+  });
 
   @override
   Widget builder(
@@ -25,11 +24,12 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
     InfoAlertDialogModel viewModel,
     Widget? child,
   ) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      backgroundColor: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -41,20 +41,12 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        request.title!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      verticalSpaceTiny,
+                      Text(request.title!, style: theme.textTheme.titleMedium),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         request.description!,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: kcMediumGrey,
-                        ),
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: cs.onSurfaceVariant),
                         maxLines: 3,
                         softWrap: true,
                       ),
@@ -64,9 +56,9 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
                 Container(
                   width: _graphicSize,
                   height: _graphicSize,
-                  decoration: const BoxDecoration(
-                    color: Color(0xffF6E7B0),
-                    borderRadius: BorderRadius.all(
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer,
+                    borderRadius: const BorderRadius.all(
                       Radius.circular(_graphicSize / 2),
                     ),
                   ),
@@ -75,25 +67,15 @@ class InfoAlertDialog extends StackedView<InfoAlertDialogModel> {
                 ),
               ],
             ),
-            verticalSpaceMedium,
-            GestureDetector(
-              onTap: () => completer(DialogResponse(confirmed: true)),
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  AppLocalizations.of(context)!.gotIt,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+            const SizedBox(height: AppSpacing.lg),
+            // A real button rather than a fixed-height Container + tap
+            // handler, so it meets the minimum tap target and grows when the
+            // user scales text up.
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => completer(DialogResponse(confirmed: true)),
+                child: Text(AppLocalizations.of(context)!.gotIt),
               ),
             ),
           ],

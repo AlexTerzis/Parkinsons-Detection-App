@@ -23,10 +23,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.parkinson.detector"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -34,9 +31,12 @@ android {
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        getByName("release") {
+            // ✅ Correct Kotlin DSL syntax
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+            // Use debug signing for now (you can later replace this with a real keystore)
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -58,12 +58,10 @@ dependencies {
     // MediaPipe Tasks Vision
     implementation("com.google.mediapipe:tasks-vision:latest.release")
 
-    // Kotlin coroutines (optional, if you use them)
+    // Kotlin coroutines (optional)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-
 }
 
 flutter {
     source = "../.."
 }
-

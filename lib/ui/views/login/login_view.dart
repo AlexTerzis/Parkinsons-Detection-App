@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:stacked/stacked.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/authentication_service.dart';
+import '../../common/widgets/widgets.dart';
 import 'login_viewmodel.dart';
 
+/// Sign-in and sign-up, plus the guest entry point.
 class LoginView extends StackedView<LoginViewModel> {
-  LoginView({Key? key}) : super(key: key);
+  LoginView({super.key});
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -17,197 +18,47 @@ class LoginView extends StackedView<LoginViewModel> {
     LoginViewModel viewModel,
     Widget? child,
   ) {
-    final ThemeData theme = Theme.of(context);
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: GestureDetector(
+        // Tapping the backdrop dismisses the keyboard, which otherwise hides
+        // the primary button on short screens.
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Container(
+        child: DecoratedBox(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color.fromARGB(255, 7, 24, 51), Color.fromARGB(255, 1, 2, 23)],
+              colors: [
+                AppTokens.splashBackground,
+                AppTokens.primaryDark,
+              ],
             ),
           ),
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Card(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  elevation: 8,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Header switches text based on authentication mode.
-                          Text(
-                            viewModel.isLoginMode
-                                ? AppLocalizations.of(context)!.welcome
-                                : AppLocalizations.of(context)!.createAccount,
-                            style: theme.textTheme.headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-
-                          if (!viewModel.isLoginMode) ...[
-                            TextFormField(
-                              controller: viewModel.nameController,
-                              validator: viewModel.validateName,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.person_outline),
-                                // Localized label for user's name.
-                                labelText:
-                                    AppLocalizations.of(context)!.nameLabel,
-                                border: const OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          TextFormField(
-                            controller: viewModel.emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: viewModel.validateEmail,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.email_outlined),
-                              labelText:
-                                  AppLocalizations.of(context)!.emailLabel,
-                              border: const OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          TextFormField(
-                            controller: viewModel.passwordController,
-                            obscureText: !viewModel.passwordVisible,
-                            validator: viewModel.validatePassword,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              labelText:
-                                  AppLocalizations.of(context)!.passwordLabel,
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(viewModel.passwordVisible
-                                    ? Icons.visibility_off
-                                    : Icons.visibility),
-                                onPressed: viewModel.togglePasswordVisibility,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          if (!viewModel.isLoginMode) ...[
-                            TextFormField(
-                              controller: viewModel.confirmPasswordController,
-                              obscureText: !viewModel.confirmPasswordVisible,
-                              validator: viewModel.validateConfirmPassword,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                labelText: AppLocalizations.of(context)!
-                                    .confirmPasswordLabel,
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: Icon(viewModel.confirmPasswordVisible
-                                      ? Icons.visibility_off
-                                      : Icons.visibility),
-                                  onPressed:
-                                      viewModel.toggleConfirmPasswordVisibility,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Role selection prompt.
-                            Text(AppLocalizations.of(context)!.iAmA,
-                                style: theme.textTheme.bodyLarge),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 12,
-                              children: UserRole.values.map((role) {
-                                return ChoiceChip(
-                                  label: Text(role == UserRole.patient
-                                      ? AppLocalizations.of(context)!.patient
-                                      : AppLocalizations.of(context)!.doctor),
-                                  selected: viewModel.selectedRole == role,
-                                  onSelected: (_) => viewModel.selectRole(role),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          CheckboxListTile(
-                            title: Text(
-                                AppLocalizations.of(context)!.keepMeLoggedIn),
-                            value: viewModel.keepMeLoggedIn,
-                            onChanged: (value) => viewModel.setKeepMeLoggedIn(value ?? false),
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-
-                          if (viewModel.errorMessage != null) ...[
-                            Text(
-                              viewModel.errorMessage!,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: theme.colorScheme.error),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: viewModel.isBusy
-                                  ? null
-                                  : () => _onAuthenticatePressed(viewModel),
-                              child: Text(viewModel.isLoginMode
-                                  ? AppLocalizations.of(context)!.login
-                                  : AppLocalizations.of(context)!.signUp),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          if (viewModel.isLoginMode) ...[
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: viewModel.isBusy
-                                    ? null
-                                    : () => _showForgotPasswordDialog(
-                                        context, viewModel),
-                                child: Text(
-                                    AppLocalizations.of(context)!.forgotPassword),
-                              ),
-                            ),
-                          ],
-
-                          TextButton(
-                            onPressed:
-                                viewModel.isBusy ? null : viewModel.toggleMode,
-                            child: Text(viewModel.isLoginMode
-                                ? AppLocalizations.of(context)!.dontHaveAccount
-                                : AppLocalizations.of(context)!
-                                    .alreadyHaveAccount),
-                          ),
-
-                          if (viewModel.isBusy) ...[
-                            const SizedBox(height: 16),
-                            const Center(child: CircularProgressIndicator()),
-                          ],
-                        ],
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.lg,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  // Elevated rather than the themed outlined default: this card
+                  // is a hero surface floating on the brand gradient.
+                  child: Card(
+                    elevation: 8,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _form(context, viewModel, theme, l10n),
+                        ),
                       ),
                     ),
                   ),
@@ -220,64 +71,247 @@ class LoginView extends StackedView<LoginViewModel> {
     );
   }
 
+  List<Widget> _form(
+    BuildContext context,
+    LoginViewModel viewModel,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final signingUp = !viewModel.isLoginMode;
+
+    return [
+      Text(
+        viewModel.isLoginMode ? l10n.welcome : l10n.createAccount,
+        style: theme.textTheme.headlineMedium
+            ?.copyWith(fontWeight: FontWeight.bold),
+        textAlign: TextAlign.center,
+      ),
+      const AppGap.lg(),
+
+      if (signingUp) ...[
+        TextFormField(
+          controller: viewModel.nameController,
+          textInputAction: TextInputAction.next,
+          validator: (v) => viewModel.validateName(v, l10n),
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.person_outline),
+            labelText: l10n.nameLabel,
+          ),
+        ),
+        const AppGap.md(),
+      ],
+
+      TextFormField(
+        controller: viewModel.emailController,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
+        validator: (v) => viewModel.validateEmail(v, l10n),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.email_outlined),
+          labelText: l10n.emailLabel,
+        ),
+      ),
+      const AppGap.md(),
+
+      TextFormField(
+        controller: viewModel.passwordController,
+        obscureText: !viewModel.passwordVisible,
+        textInputAction:
+            signingUp ? TextInputAction.next : TextInputAction.done,
+        validator: (v) => viewModel.validatePassword(v, l10n),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.lock_outline),
+          labelText: l10n.passwordLabel,
+          suffixIcon: IconButton(
+            icon: Icon(viewModel.passwordVisible
+                ? Icons.visibility_off
+                : Icons.visibility),
+            onPressed: viewModel.togglePasswordVisibility,
+          ),
+        ),
+      ),
+      const AppGap.md(),
+
+      if (signingUp) ...[
+        TextFormField(
+          controller: viewModel.confirmPasswordController,
+          obscureText: !viewModel.confirmPasswordVisible,
+          textInputAction: TextInputAction.done,
+          validator: (v) => viewModel.validateConfirmPassword(v, l10n),
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.lock_outline),
+            labelText: l10n.confirmPasswordLabel,
+            suffixIcon: IconButton(
+              icon: Icon(viewModel.confirmPasswordVisible
+                  ? Icons.visibility_off
+                  : Icons.visibility),
+              onPressed: viewModel.toggleConfirmPasswordVisibility,
+            ),
+          ),
+        ),
+        const AppGap.md(),
+        Text(l10n.iAmA, style: theme.textTheme.bodyLarge),
+        const AppGap.xs(),
+        Wrap(
+          spacing: AppSpacing.sm,
+          children: UserRole.values.map((role) {
+            return ChoiceChip(
+              label: Text(
+                role == UserRole.patient ? l10n.patient : l10n.doctor,
+              ),
+              selected: viewModel.selectedRole == role,
+              onSelected: (_) => viewModel.selectRole(role),
+            );
+          }).toList(),
+        ),
+        const AppGap.md(),
+      ],
+
+      CheckboxListTile(
+        title: Text(l10n.keepMeLoggedIn),
+        value: viewModel.keepMeLoggedIn,
+        onChanged: (value) => viewModel.setKeepMeLoggedIn(value ?? false),
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.zero,
+      ),
+
+      if (viewModel.errorMessage != null) ...[
+        const AppGap.xs(),
+        Text(
+          viewModel.errorMessage!,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: theme.colorScheme.error),
+          textAlign: TextAlign.center,
+        ),
+        const AppGap.sm(),
+      ],
+
+      // The button reports progress itself, rather than a separate spinner
+      // appearing below and pushing the layout around mid-submit.
+      PrimaryAction(
+        label: viewModel.isLoginMode ? l10n.login : l10n.signUp,
+        busy: viewModel.isBusy,
+        onPressed: () => _onAuthenticatePressed(context, viewModel),
+      ),
+      const AppGap.xs(),
+
+      if (viewModel.isLoginMode)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: viewModel.isBusy
+                ? null
+                : () => _showForgotPasswordDialog(context, viewModel),
+            child: Text(l10n.forgotPassword),
+          ),
+        ),
+
+      TextButton(
+        onPressed: viewModel.isBusy ? null : viewModel.toggleMode,
+        child: Text(viewModel.isLoginMode
+            ? l10n.dontHaveAccount
+            : l10n.alreadyHaveAccount),
+      ),
+
+      if (viewModel.isLoginMode) ...[
+        const Divider(height: AppSpacing.lg),
+        OutlinedButton.icon(
+          onPressed:
+              viewModel.isBusy ? null : () => viewModel.continueAsGuest(l10n),
+          icon: const Icon(Icons.person_outline),
+          label: Text(l10n.continueAsGuest),
+        ),
+      ],
+    ];
+  }
+
   @override
   LoginViewModel viewModelBuilder(BuildContext context) => LoginViewModel();
 
   void _showForgotPasswordDialog(
       BuildContext context, LoginViewModel viewModel) {
-    final TextEditingController emailCtrl = TextEditingController();
-
     showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(AppLocalizations.of(context)!.passwordRecovery),
-          content: TextField(
-            controller: emailCtrl,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.emailLabel,
-              prefixIcon: const Icon(Icons.email_outlined),
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(AppLocalizations.of(context)!.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await viewModel.sendPasswordReset(emailCtrl.text);
-                if (context.mounted) {
-                  Navigator.of(dialogContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          AppLocalizations.of(context)!.emailSent),
-                    ),
-                  );
-                }
-              },
-              child: Text(AppLocalizations.of(context)!.send),
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext) =>
+          _ForgotPasswordDialog(viewModel: viewModel),
     );
   }
 
-  void _onAuthenticatePressed(LoginViewModel viewModel) {
+  void _onAuthenticatePressed(BuildContext context, LoginViewModel viewModel) {
     if (_formKey.currentState?.validate() ?? false) {
       viewModel.authenticate(
         email: viewModel.emailController.text,
         password: viewModel.passwordController.text,
         confirmPassword: viewModel.confirmPasswordController.text,
+        l10n: AppLocalizations.of(context)!,
       );
+    }
+  }
+}
+
+/// Collects an address for a password-reset email.
+///
+/// Stateful so its controller is disposed. The version this replaces created a
+/// `TextEditingController` inside the show call and never disposed it, leaking
+/// one per attempt.
+class _ForgotPasswordDialog extends StatefulWidget {
+  const _ForgotPasswordDialog({required this.viewModel});
+
+  final LoginViewModel viewModel;
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  final _email = TextEditingController();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return AlertDialog(
+      title: Text(l10n.passwordRecovery),
+      content: TextField(
+        controller: _email,
+        keyboardType: TextInputType.emailAddress,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: l10n.emailLabel,
+          prefixIcon: const Icon(Icons.email_outlined),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _send,
+          child: Text(l10n.send),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _send() async {
+    final l10n = AppLocalizations.of(context)!;
+    // Captured before the await: this dialog's context dies with the pop.
+    final messengerContext = Navigator.of(context).context;
+
+    await widget.viewModel.sendPasswordReset(_email.text, l10n);
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+
+    if (messengerContext.mounted) {
+      AppFeedback.success(messengerContext, l10n.emailSent);
     }
   }
 }

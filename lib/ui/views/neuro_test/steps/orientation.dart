@@ -4,6 +4,13 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA orientation: date, weekday, city and country.
+///
+/// The weekday and month names stay Greek: they are compared against the
+/// patient's dropdown choice, and the comparison is what carries the score.
 class OrientationStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
@@ -121,14 +128,24 @@ class _OrientationStepState extends State<OrientationStep> {
     if (_selectedMonth == now.month) score++;
     if (_selectedYear == now.year) score++;
     if (_weekdayNames[_selectedWeekday].toLowerCase() ==
-        _weekdayNames[now.weekday - 1].toLowerCase()) score++;
+        _weekdayNames[now.weekday - 1].toLowerCase()) {
+      score++;
+    }
 
     final enteredCity = _city.text.trim().toLowerCase();
     final enteredCountry = _country.text.trim().toLowerCase();
     if (_deviceLocation != null) {
-      if (enteredCity.isNotEmpty && enteredCity == _deviceLocation!["city"]) score++;
-      if (enteredCountry.isNotEmpty && enteredCountry == _deviceLocation!["country"]) score++;
+      if (enteredCity.isNotEmpty && enteredCity == _deviceLocation!["city"]) {
+        score++;
+      }
+      if (enteredCountry.isNotEmpty &&
+          enteredCountry == _deviceLocation!["country"]) {
+        score++;
+      }
     } else {
+      // Without a location fix there is nothing to check against, so any
+      // non-empty answer is credited rather than penalising the patient for a
+      // permission they were never asked about.
       if (enteredCity.isNotEmpty) score++;
       if (enteredCountry.isNotEmpty) score++;
     }
@@ -137,196 +154,132 @@ class _OrientationStepState extends State<OrientationStep> {
     widget.onNext();
   }
 
-  Widget _rollPicker<T>({
+  /// A labelled dropdown. [flex] shares the date row's width between the day,
+  /// month and year pickers rather than pinning each to a fixed pixel count
+  /// that clips once the text scaler grows.
+  Widget _picker<T>({
     required T value,
     required List<T> items,
+    required String Function(T) labelOf,
     required void Function(T) onChanged,
-    required double width,
   }) {
-    return SizedBox(
-      width: width,
-      height: 42,
-      child: DropdownButton<T>(
-        value: value,
-        isExpanded: true,
-        onChanged: (v) {
-          if (v != null) onChanged(v);
-        },
-        items: items
-            .map((e) => DropdownMenuItem(
-                  value: e,
-                  child: Center(child: Text('$e', style: const TextStyle(fontSize: 15))),
-                ))
-            .toList(),
-      ),
+    return DropdownButtonFormField<T>(
+      initialValue: value,
+      isExpanded: true,
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(labelOf(e))))
+          .toList(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Προσανατολισμός')),
-      body: Stack(
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+
+    return TestStepScaffold(
+      title: l10n.stepTitleOrientation,
+      instruction: '${l10n.stepInstructionOrientation}\n'
+          '• ${l10n.stepInstructionOrientationDate}\n'
+          '• ${l10n.stepInstructionOrientationDay}\n'
+          '• ${l10n.stepInstructionOrientationCountry}\n'
+          '• ${l10n.stepInstructionOrientationCity}\n\n'
+          '${l10n.stepTypeOrUseMic}',
+      onNext: _submit,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 18),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withOpacity(0.93),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Συμπληρώστε τα παρακάτω:\n\n'
-                      '• Ημερομηνία (π.χ. 01 / 01 / 2020)\n'
-                      '• Ημέρα (π.χ. Δευτέρα)\n'
-                      '• Χώρα\n'
-                      '• Πόλη\n\n'
-                      'Μπορείτε να γράψετε ή να χρησιμοποιήσετε το μικρόφωνο.',
-                      style: TextStyle(fontSize: 15.5),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                  // DATE
-                  const Text("Ημερομηνία", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _rollPicker<int>(
-                        value: _selectedDate,
-                        items: List.generate(31, (i) => i + 1),
-                        onChanged: (v) => setState(() => _selectedDate = v),
-                        width: 55,
-                      ),
-                      const SizedBox(width: 4),
-                      // Month dropdown with Greek names
-                      SizedBox(
-                        width: 110,
-                        height: 42,
-                        child: DropdownButton<int>(
-                          value: _selectedMonth,
-                          isExpanded: true,
-                          onChanged: (v) {
-                            if (v != null) setState(() => _selectedMonth = v);
-                          },
-                          items: List.generate(
-                            12,
-                            (i) => DropdownMenuItem(
-                              value: i + 1,
-                              child: Center(child: Text(_monthNames[i], style: const TextStyle(fontSize: 15))),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      _rollPicker<int>(
-                        value: _selectedYear,
-                        items: List.generate(11, (i) => 2020 + i),
-                        onChanged: (v) => setState(() => _selectedYear = v),
-                        width: 75,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // DAY
-                  const Text("Ημέρα", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 180,
-                        height: 42,
-                        child: DropdownButton<int>(
-                          value: _selectedWeekday,
-                          isExpanded: true,
-                          onChanged: (v) {
-                            if (v != null) setState(() => _selectedWeekday = v);
-                          },
-                          items: List.generate(
-                            7,
-                            (i) => DropdownMenuItem(
-                              value: i,
-                              child: Center(child: Text(_weekdayNames[i], style: const TextStyle(fontSize: 15))),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  // COUNTRY
-                  const Text("Χώρα", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _country,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: 'π.χ. Ελλάδα',
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(_listening[1] ? Icons.mic : Icons.mic_none),
-                        color: _listening[1] ? Colors.green : null,
-                        onPressed: _listening[1] ? null : () => _startListening(1),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // CITY
-                  const Text("Πόλη", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _city,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: 'π.χ. Αθήνα',
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(_listening[0] ? Icons.mic : Icons.mic_none),
-                        color: _listening[0] ? Colors.green : null,
-                        onPressed: _listening[0] ? null : () => _startListening(0),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
-                  // Show spinner while fetching location if not yet tried
-                  if (!_locationTried)
-                    Center(child: Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(),
-                    )),
-                  if (_locationTried && _deviceLocation == null)
-                    Center(child: Text(
-                      'Δεν επιτράπηκε η πρόσβαση στην τοποθεσία.\nΟι απαντήσεις στην Πόλη/Χώρα θα γίνουν δεκτές όπως είναι.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.redAccent, fontSize: 14),
-                    )),
-                ],
-              ),
-            ),
+          Text(
+            l10n.stepInstructionOrientationDate,
+            style: theme.textTheme.titleSmall,
           ),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, bottom: 16),
-              child: ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Επόμενο'),
+          const AppGap.xs(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: _picker<int>(
+                  value: _selectedDate,
+                  items: List.generate(31, (i) => i + 1),
+                  labelOf: (v) => '$v',
+                  onChanged: (v) => setState(() => _selectedDate = v),
+                ),
               ),
-            ),
+              const AppGap.wide(AppSpacing.xs),
+              Expanded(
+                flex: 4,
+                child: _picker<int>(
+                  value: _selectedMonth,
+                  items: List.generate(12, (i) => i + 1),
+                  labelOf: (v) => _monthNames[v - 1],
+                  onChanged: (v) => setState(() => _selectedMonth = v),
+                ),
+              ),
+              const AppGap.wide(AppSpacing.xs),
+              Expanded(
+                flex: 3,
+                child: _picker<int>(
+                  value: _selectedYear,
+                  items: List.generate(11, (i) => 2020 + i),
+                  labelOf: (v) => '$v',
+                  onChanged: (v) => setState(() => _selectedYear = v),
+                ),
+              ),
+            ],
           ),
+          const AppGap.md(),
+          Text(
+            l10n.stepInstructionOrientationDay,
+            style: theme.textTheme.titleSmall,
+          ),
+          const AppGap.xs(),
+          _picker<int>(
+            value: _selectedWeekday,
+            items: List.generate(7, (i) => i),
+            labelOf: (v) => _weekdayNames[v],
+            onChanged: (v) => setState(() => _selectedWeekday = v),
+          ),
+          const AppGap.md(),
+          Text(
+            l10n.stepInstructionOrientationCountry,
+            style: theme.textTheme.titleSmall,
+          ),
+          const AppGap.xs(),
+          SpeechTextField(
+            controller: _country,
+            listening: _listening[1],
+            onListen: () => _startListening(1),
+            hintText: l10n.stepHintCountryExample,
+            micTooltip: l10n.stepSayWithMic,
+          ),
+          const AppGap.md(),
+          Text(
+            l10n.stepInstructionOrientationCity,
+            style: theme.textTheme.titleSmall,
+          ),
+          const AppGap.xs(),
+          SpeechTextField(
+            controller: _city,
+            listening: _listening[0],
+            onListen: () => _startListening(0),
+            hintText: l10n.stepHintCityExample,
+            micTooltip: l10n.stepSayWithMic,
+          ),
+          const AppGap.lg(),
+          if (!_locationTried)
+            const AppLoading()
+          else if (_deviceLocation == null)
+            Text(
+              l10n.stepLocationDenied,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: semantic.warning),
+            ),
         ],
       ),
     );

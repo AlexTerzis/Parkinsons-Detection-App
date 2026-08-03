@@ -1,4 +1,5 @@
 import 'package:parkinsondetetion/services/localization_service.dart';
+import 'package:parkinsondetetion/services/text_scale_service.dart';
 import 'package:parkinsondetetion/services/storage_service.dart';
 import 'package:parkinsondetetion/ui/bottom_sheets/notice/notice_sheet.dart';
 import 'package:parkinsondetetion/ui/dialogs/info_alert/info_alert_dialog.dart';
@@ -25,6 +26,8 @@ import 'package:parkinsondetetion/ui/views/voice_test/voice_test_view.dart';
 import 'package:parkinsondetetion/ui/views/neuro_test/neuro_test_view.dart';
 import 'package:parkinsondetetion/services/raison_api_service.dart';
 import '../services/hand_metrics.dart';
+import '../services/scoring/camera_scoring_service.dart';
+import '../services/tremor_analysis_service.dart';
 // @stacked-import
 
 @StackedApp(
@@ -57,8 +60,11 @@ import '../services/hand_metrics.dart';
     LazySingleton(classType: VoiceApiService),
     LazySingleton(classType: RaisonApiService),
     LazySingleton(classType: HandMetrics),
+    LazySingleton(classType: TremorAnalysisService),
+    LazySingleton(classType: CameraScoringService),
     LazySingleton(classType: StorageService),
     LazySingleton(classType: LocalizationService),
+    LazySingleton(classType: TextScaleService),
     
 // @stacked-service
   ],

@@ -1,1 +1,15 @@
 include: package:flutter_lints/flutter.yaml
+
+# Rules added alongside the shared UI component layer in lib/ui/common/widgets/.
+# They exist to stop the design system being bypassed by accident, and each one
+# targets a habit the pre-refactor code had actually accumulated.
+linter:
+  rules:
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - use_super_parameters
+    - sized_box_for_whitespace
+    - avoid_unnecessary_containers
+    - sort_child_properties_last
+    - unnecessary_to_list_in_spreads
+    - curly_braces_in_flow_control_structures

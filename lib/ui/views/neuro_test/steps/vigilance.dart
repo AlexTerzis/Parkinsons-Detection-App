@@ -2,6 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../../../../l10n/app_localizations.dart';
+import '../../../common/widgets/widgets.dart';
+
+/// MoCA vigilance: the patient taps whenever the letter Α is read out.
+///
+/// The letter sequence is the instrument's own and stays Greek regardless of
+/// the app's language — it is also what the `el-GR` speech synthesizer reads.
 class VigilanceStep extends StatefulWidget {
   final VoidCallback onNext;
   final Function(int score) onScored;
@@ -102,78 +109,47 @@ class _VigilanceStepState extends State<VigilanceStep> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     if (_phase == 0) {
-      // Instruction phase
-      return Scaffold(
-        appBar: AppBar(title: const Text('Εγρήγορση')),
-        body: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  SizedBox(height: 48),
-                  Text(
-                    'Oδηγίες:\nΑυτό το τεστ μετρά την εγρήγορση και την προσοχή σας.\n'
-                    'Θα εμφανιστεί μία σειρά από γράμματα, ένα κάθε φορά.\n'
-                    'Πατήστε το κουμπί όταν βλέπετε το γράμμα "Α".\n',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: ElevatedButton(
-                onPressed: _startPhase2,
-                child: const Text('Επόμενο'),
-              ),
-            ),
-          ],
-        ),
+      return TestStepScaffold(
+        title: l10n.stepTitleVigilance,
+        instruction: '${l10n.stepInstructionVigilance}\n'
+            '${l10n.stepInstructionVigilanceLetters}\n'
+            '${l10n.stepInstructionVigilanceTap}',
+        onNext: _startPhase2,
+        child: const SizedBox.shrink(),
       );
     }
 
-    // Phase 2: Test
-    return Scaffold(
-      appBar: AppBar(title: const Text('Εγρήγορση')),
-      body: Stack(
+    return TestStepScaffold(
+      title: l10n.stepTitleVigilance,
+      onNext: _finish,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _current.isEmpty ? '-' : _current,
-                  style: const TextStyle(
-                    fontSize: 72,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _buttonEnabled && !_testDone ? _pressed : null,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(180, 48),
-                  ),
-                  child: const Text('Άκουσα Α'),
-                ),
-              ],
+          // The letter under test. Deliberately the largest thing on screen.
+          Text(
+            _current.isEmpty ? '—' : _current,
+            style: theme.textTheme.displayLarge?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
-          if (_phase == 1)
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: ElevatedButton(
-                onPressed: _finish,
-                child: const Text('Επόμενο'),
+          const AppGap.xl(),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonal(
+              onPressed: _buttonEnabled && !_testDone ? _pressed : null,
+              style: FilledButton.styleFrom(
+                // Oversized: this is the only control on the screen and it is
+                // pressed under time pressure.
+                minimumSize: const Size.fromHeight(72),
+                textStyle: theme.textTheme.headlineSmall,
               ),
+              child: Text(l10n.stepHeardTargetLetter),
             ),
+          ),
         ],
       ),
     );
