@@ -97,12 +97,51 @@ void main() {
   });
 
   group('CameraScoringService - flag -', () {
-    test('selects the legacy scorer by default', () {
+    test('selects the enhanced scorer', () {
+      // The legacy formula merges every movement task into one trajectory and
+      // treats frame-to-frame displacement as speed without dividing by
+      // elapsed time. The enhanced scorer's ranges are uncalibrated, which is
+      // a weaker fault than being wrong by construction.
       final comparison = service.scoreAll(Synthetic.parkinsonian());
 
-      expect(EnhancedScoringConfig.useEnhancedScoring, isFalse);
+      expect(EnhancedScoringConfig.useEnhancedScoring, isTrue);
+      expect(comparison.selected.scorerId, 'heuristic_v1');
+      expect(comparison.likelihood, comparison.enhanced.likelihood);
+    });
+
+    test('still runs and stores the legacy scorer for comparison', () {
+      // Both verdicts on every recording is what will make calibrating the
+      // enhanced ranges possible later.
+      final comparison = service.scoreAll(Synthetic.parkinsonian());
+
+      expect(comparison.legacy.scorerId, 'legacy_weighted');
+      expect(comparison.toJson()['legacy'], isNotNull);
+      expect(comparison.toJson()['enhanced'], isNotNull);
+      expect(comparison.toJson()['selected'], 'heuristic_v1');
+    });
+
+    test('falls back to legacy when the enhanced scorer measured nothing', () {
+      // The enhanced scorer returns a likelihood of 0 when it could measure
+      // nothing — and 0 is the *best* value on this scale. Selecting it would
+      // file an unreadable recording as a perfect result. The legacy formula is
+      // cruder but always produces a number, so it wins when the better
+      // analysis has nothing to say.
+      const empty = CameraRecording(
+        tasks: <RecordedTask>[],
+        mode: CameraTestMode.full,
+      );
+
+      final comparison = service.scoreAll(empty);
+
+      expect(comparison.enhanced.hasMeasuredFeatures, isFalse);
       expect(comparison.selected.scorerId, 'legacy_weighted');
-      expect(comparison.likelihood, comparison.legacy.likelihood);
+    });
+
+    test('prefers the enhanced scorer whenever it measured something', () {
+      final comparison = service.scoreAll(Synthetic.healthy());
+
+      expect(comparison.enhanced.hasMeasuredFeatures, isTrue);
+      expect(comparison.selected.scorerId, 'heuristic_v1');
     });
 
     test('the selected score is whichever the flag names', () {

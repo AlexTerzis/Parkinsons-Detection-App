@@ -29,5 +29,7 @@ String testTypeLabel(AppLocalizations l10n, TestType type) {
       return l10n.testNameNeuro;
     case TestType.fab:
       return l10n.testNameFab;
+    case TestType.posture:
+      return l10n.testNamePosture;
   }
 }

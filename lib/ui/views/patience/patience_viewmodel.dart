@@ -14,9 +14,14 @@ import '../../../app/app.locator.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/test_service.dart';
 import '../../../services/reports_service.dart';
+import '../../../services/appointment_service.dart';
+import '../../../services/availability_service.dart';
+import '../../../services/test_series_analysis.dart';
 import '../../../services/drawing_predictor.dart';
 import '../../../models/test_result.dart';
 import '../../../models/patient_report.dart';
+import '../../../models/appointment.dart';
+import '../../../models/availability_slot.dart';
 import '../../../models/app_user.dart';
 import '../../../models/test_type.dart';
 import '../drawing_test/drawing_result_view.dart';
@@ -26,6 +31,8 @@ class PatienceViewModel extends BaseViewModel {
   final AuthenticationService _authService = locator<AuthenticationService>();
   final TestService _testService = locator<TestService>();
   final ReportsService _reportsService = locator<ReportsService>();
+  final AppointmentService _appointments = locator<AppointmentService>();
+  final AvailabilityService _availability = locator<AvailabilityService>();
   final DrawingPredictor _drawingPredictor = DrawingPredictor();
 
   String get email => _authService.currentUser?.email ?? '--';
@@ -52,11 +59,35 @@ class PatienceViewModel extends BaseViewModel {
   /// the overall average around, and on the radar it sits next to five measured
   /// tests as though it were one of them. It is still stored and still sent to
   /// the doctor — it is only excluded from the score charts.
-  static const Set<TestType> _excludedFromCharts = {TestType.questionnaire};
+  /// Test types whose `score` is not meaningful to chart over time.
+  ///
+  /// The questionnaire is a one-off inventory rather than a repeated
+  /// measurement.
+  ///
+  /// The camera test is excluded for two reasons. Its score changed scale when
+  /// the enhanced scorer was selected, and old documents cannot be rescored —
+  /// the landmarks behind them live in Storage, not Firestore — so a single
+  /// series would splice two incompatible quantities together. More
+  /// importantly, that score is an explicitly experimental heuristic with
+  /// uncalibrated normalization ranges; drawing it as a trend line presents it
+  /// with a confidence it has not earned. The camera test's own results screen
+  /// reports what was actually measured, per hand and per task, alongside how
+  /// well it was recorded.
+  static const Set<TestType> _excludedFromCharts = {
+    TestType.questionnaire,
+    TestType.cameraDetection,
+    TestType.voice,
+  };
 
   /// Results that the score charts are built from.
   List<TestResult> get scoredResults =>
       _results.where((r) => !_excludedFromCharts.contains(r.type)).toList();
+
+  List<TestResult> get experimentalVoiceResults =>
+      _results.where((result) => result.isExperimentalVoicePrototype).toList();
+
+  List<TestResult> get clinicalResults =>
+      _results.where((result) => result.isEligibleForClinicalSummary).toList();
 
   /// Average concern per test, across every attempt of it.
   ///
@@ -66,8 +97,8 @@ class PatienceViewModel extends BaseViewModel {
   /// so the Greek app labelled its spokes "Drawing" and "Tremor".
   Map<TestType, double> get averageConcernByType {
     return groupedResults.map((type, list) {
-      final avg = list.map((r) => r.concernScore).reduce((a, b) => a + b) /
-          list.length;
+      final avg =
+          list.map((r) => r.concernScore).reduce((a, b) => a + b) / list.length;
       return MapEntry(type, avg);
     });
   }
@@ -86,6 +117,20 @@ class PatienceViewModel extends BaseViewModel {
   List<PatientReport> _reports = [];
   List<PatientReport> get reports => _reports;
 
+  List<Appointment> _appointmentList = [];
+  List<Appointment> get appointments => _appointmentList;
+
+  /// Appointments still going to happen, soonest first.
+  List<Appointment> get upcomingAppointments {
+    final open = _appointmentList.where((a) => a.status.isOpen).toList()
+      ..sort((a, b) => a.effectiveTime.compareTo(b.effectiveTime));
+    return open;
+  }
+
+  /// Appointments that are over, one way or another.
+  List<Appointment> get pastAppointments =>
+      _appointmentList.where((a) => !a.status.isOpen).toList();
+
   final Map<String, AppUser> _doctorLookup = {};
   String doctorName(String id) => _doctorLookup[id]?.name ?? id;
   AppUser? doctorById(String id) => _doctorLookup[id];
@@ -98,6 +143,30 @@ class PatienceViewModel extends BaseViewModel {
   List<AppUser> _doctors = [];
   List<AppUser> get doctors => _doctors;
 
+  /// Whether the doctor list could not be loaded at all.
+  ///
+  /// Distinct from an empty list. "No doctors are registered" and "we were not
+  /// allowed to look" are different problems, and only one of them is fixed by
+  /// registering a doctor.
+  bool _doctorsLoadFailed = false;
+  bool get doctorsLoadFailed => _doctorsLoadFailed;
+
+  /// Re-runs the doctor lookup, for the retry on the picker.
+  Future<void> reloadDoctors() async {
+    try {
+      _doctors = await _reportsService.fetchAllDoctors();
+      for (final d in _doctors) {
+        _doctorLookup[d.uid] = d;
+      }
+      _doctorsLoadFailed = false;
+    } catch (e) {
+      debugPrint('Could not load doctors: $e');
+      _doctors = [];
+      _doctorsLoadFailed = true;
+    }
+    notifyListeners();
+  }
+
   List<String> get secondOpinionDoctorIds {
     final ids = _reports.map((r) => r.doctorId).toSet();
     ids.remove(_primaryDoctorId);
@@ -107,6 +176,7 @@ class PatienceViewModel extends BaseViewModel {
   // Subscriptions for realtime updates
   StreamSubscription<List<TestResult>>? _resultsSub;
   StreamSubscription<List<PatientReport>>? _reportsSub;
+  StreamSubscription<List<Appointment>>? _appointmentsSub;
 
   /// Whether this session is an anonymous guest one.
   ///
@@ -156,6 +226,20 @@ class PatienceViewModel extends BaseViewModel {
             _reports = data;
             notifyListeners();
           });
+
+          // onError rather than a bare listen: this query needs a composite
+          // index, and a missing one fails at runtime with no build-time
+          // warning. Swallowing that silently is how the doctor list came to
+          // look permanently empty.
+          _appointmentsSub = _appointments.watchForPatient(uid).listen(
+            (data) {
+              _appointmentList = data;
+              notifyListeners();
+            },
+            onError: (Object e) {
+              debugPrint('Could not watch appointments: $e');
+            },
+          );
         }
 
         // Fetch the profile document for the chosen doctor.
@@ -173,19 +257,24 @@ class PatienceViewModel extends BaseViewModel {
           debugPrint('Could not load profile fields: $e');
         }
 
-        // Preload doctor lookup map. This is a collection query over `users`,
-        // which the security rules deny for non-doctor accounts; without this
-        // guard the throw skipped setBusy(false) and the home screen hung on
-        // its spinner forever, which looked like a failed login.
+        // Preload the doctor lookup. Still guarded, because a throw here used
+        // to skip setBusy(false) and hang the home screen on its spinner.
+        //
+        // The failure is now recorded rather than swallowed. Setting the list
+        // to empty and saying nothing made a permissions failure look exactly
+        // like "there are no doctors registered", which is why the picker
+        // appeared broken with no clue as to why.
         if (!isGuest) {
           try {
             _doctors = await _reportsService.fetchAllDoctors();
             for (var d in _doctors) {
               _doctorLookup[d.uid] = d;
             }
+            _doctorsLoadFailed = false;
           } catch (e) {
             debugPrint('Could not preload doctors: $e');
             _doctors = [];
+            _doctorsLoadFailed = true;
           }
         }
       }
@@ -213,23 +302,49 @@ class PatienceViewModel extends BaseViewModel {
     // Cancel subscriptions to avoid memory leaks
     _resultsSub?.cancel();
     _reportsSub?.cancel();
+    _appointmentsSub?.cancel();
     nameController.dispose();
     super.dispose();
   }
 
+  /// Busy key for sending a report.
+  ///
+  /// Deliberately *not* [setBusy]. `PatienceView` swaps its whole tree for a
+  /// spinner while `isBusy`, which destroys the `DefaultTabController` with it;
+  /// when the send finished the controller was rebuilt at `initialIndex`, so
+  /// sending results from the Tests or Doctor tab dumped the patient back on
+  /// Profile. Scoping the flag leaves the screen — and the tab they were on —
+  /// exactly where it was.
+  static const String sendingResultsKey = 'sendingResults';
+
+  bool get isSendingResults => busy(sendingResultsKey);
+
   // Send results to selected doctor
   Future<void> sendResultsToDoctor(String doctorId) async {
-    if (_results.isEmpty) return;
+    if (clinicalResults.isEmpty) return;
     final String? uid = _authService.currentUser?.uid;
     if (uid == null) return;
 
-    setBusy(true);
-    await _reportsService.sendResultsToDoctor(
-      patientId: uid,
-      doctorId: doctorId,
-      results: _results,
-    );
-    setBusy(false);
+    setBusyForObject(sendingResultsKey, true);
+    try {
+      final all = clinicalResults;
+      await _reportsService.sendResultsToDoctor(
+        patientId: uid,
+        doctorId: doctorId,
+        // Only the recent attempts of each test travel. The whole history used
+        // to, which grows without limit and would eventually exceed what
+        // Firestore will store in one document.
+        results: TestSeriesAnalysis.recentPerType(all),
+        // Summarised over everything *before* truncating, because these are
+        // all-time figures and cannot be recovered from what is sent.
+        summaries: TestSeriesAnalysis.summarise(all),
+        // Sent with the report so the doctor never has to read this patient's
+        // profile document, which the rules rightly deny them.
+        patientName: _name == '--' ? null : _name,
+      );
+    } finally {
+      setBusyForObject(sendingResultsKey, false);
+    }
   }
 
   Future<void> sendResultsToPrimaryDoctor() async {
@@ -247,6 +362,80 @@ class PatienceViewModel extends BaseViewModel {
         .collection('users')
         .doc(uid)
         .set({'primaryDoctorId': doctorId}, SetOptions(merge: true));
+  }
+
+  // --- Appointments ---
+
+  /// The times this doctor has published and nobody has taken.
+  ///
+  /// Handed out as a stream rather than mirrored into a field: it is scoped to
+  /// one doctor and only matters while the booking sheet is open, so the sheet
+  /// subscribes for as long as it is on screen and the view model does not
+  /// carry a subscription per doctor the patient happens to look at.
+  Stream<List<AvailabilitySlot>> openSlotsFor(String doctorId) =>
+      _availability.watchOpenFor(doctorId);
+
+  /// Takes a published time.
+  ///
+  /// The patient's name goes onto the appointment, because the doctor cannot
+  /// read their profile to look it up — the same reason it travels on a report.
+  ///
+  /// Throws [SlotUnavailableException] if someone else got there first.
+  Future<Appointment> bookSlot(
+    AvailabilitySlot slot, {
+    String? note,
+  }) async {
+    final String? uid = _authService.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Cannot book an appointment while signed out.');
+    }
+
+    return _availability.book(
+      slot: slot,
+      patientId: uid,
+      patientName: _name == '--' ? null : _name,
+      patientNote: note,
+    );
+  }
+
+  /// Calls off a booking, which puts its time back on the doctor's calendar.
+  Future<void> cancelAppointment(Appointment appointment) =>
+      _availability.cancelBooking(appointment);
+
+  // --- Doctor relationship ---
+
+  /// Ends the relationship with the current primary doctor.
+  ///
+  /// Reports already sent stay with them. A report records something genuinely
+  /// shared at the time and the doctor may have written notes against it, so
+  /// retracting it would rewrite history rather than stop something ongoing.
+  /// Appointments not yet held are a different matter — those are about the
+  /// future — so they are cancelled.
+  Future<void> leavePrimaryDoctor() async {
+    final String? uid = _authService.currentUser?.uid;
+    final String? doctorId = _primaryDoctorId;
+    if (uid == null || doctorId == null) return;
+
+    _primaryDoctorId = null;
+    notifyListeners();
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({'primaryDoctorId': null}, SetOptions(merge: true));
+
+    try {
+      // Frees the slots those appointments were holding as well, so the doctor
+      // does not keep hours blocked by someone who has left them.
+      await _availability.cancelOpenBetween(
+        patientId: uid,
+        doctorId: doctorId,
+      );
+    } catch (e) {
+      // The relationship is already ended; a failure to tidy up the
+      // appointments must not undo that or block the patient.
+      debugPrint('Could not cancel appointments on leaving doctor: $e');
+    }
   }
 
   // Demo generator

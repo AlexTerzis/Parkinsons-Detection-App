@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.util.Size
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -53,6 +54,19 @@ class HandLandmarkerHelper(
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var cameraExecutor: ExecutorService
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraProvider: ProcessCameraProvider? = null
+
+    /**
+     * Whether the frames handed to MediaPipe are mirrored.
+     *
+     * This matters far more than it looks. The front camera is mirrored in
+     * [analyze] so the preview behaves like a mirror for the user — but a
+     * mirrored right hand is geometrically indistinguishable from a left hand,
+     * so MediaPipe reports the opposite side from the one the user is actually
+     * holding up. Anything that names a hand has to know this.
+     */
+    val isMirrored: Boolean
+        get() = cameraFacing == CameraSelector.LENS_FACING_FRONT
 
     init {
         initHandLandmarker()
@@ -120,6 +134,11 @@ class HandLandmarkerHelper(
     }
 
     private fun bindCameraUseCases(cameraProvider: ProcessCameraProvider) {
+        // Kept so shutdown can release the camera. Binding is tied to the
+        // Activity lifecycle, which outlives this view, so nothing unbinds it
+        // when the view goes away unless we do it ourselves.
+        this.cameraProvider = cameraProvider
+
         val cameraSelector = CameraSelector.Builder().requireLensFacing(cameraFacing).build()
 
         // Preview Use Case
@@ -128,8 +147,12 @@ class HandLandmarkerHelper(
 
         // Image Analysis Use Case
         val analysisUseCase = ImageAnalysis.Builder()
-            // Set target resolution if needed, defaults may work
-            // .setTargetResolution(Size(1280, 720))
+            // Capped deliberately. Every analysis frame is copied into a bitmap
+            // and rotated on the CPU, so the cost of this scales with the pixel
+            // count — and the landmark model downsamples its input anyway, so a
+            // larger frame buys precision the detector then throws away. The
+            // preview stays at full resolution; only analysis is capped.
+            .setTargetResolution(Size(640, 480))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
@@ -159,18 +182,30 @@ class HandLandmarkerHelper(
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
         val frameTime = SystemClock.uptimeMillis()
-        
-        bitmapBuffer = Bitmap.createBitmap(
-            imageProxy.width,
-            imageProxy.height,
-            Bitmap.Config.ARGB_8888
-        )
-        
-        imageProxy.use { bitmapBuffer?.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
-        if (bitmapBuffer == null) {
-            imageProxy.close()
-            return
+
+        // The source buffer is allocated once and reused.
+        //
+        // It used to be reallocated on every frame, which at 30fps meant
+        // throwing away a full-resolution ARGB bitmap thirty times a second.
+        // The resulting garbage collection is what made the landmarks lag
+        // behind the hand: the detector was not slow, it was starved by the
+        // allocator. Reused here, and only replaced if the frame size changes.
+        val buffer = bitmapBuffer.let { existing ->
+            if (existing != null &&
+                existing.width == imageProxy.width &&
+                existing.height == imageProxy.height
+            ) {
+                existing
+            } else {
+                Bitmap.createBitmap(
+                    imageProxy.width,
+                    imageProxy.height,
+                    Bitmap.Config.ARGB_8888
+                ).also { bitmapBuffer = it }
+            }
         }
+
+        imageProxy.use { buffer.copyPixelsFromBuffer(it.planes[0].buffer) }
 
         // Handle rotation
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
@@ -182,27 +217,63 @@ class HandLandmarkerHelper(
             }
         }
         val rotatedBitmap = Bitmap.createBitmap(
-            bitmapBuffer!!,
+            buffer,
             0, 0,
             imageProxy.width, imageProxy.height,
-            matrix, true
+            matrix,
+            // No bilinear filtering. This is fed to a landmark detector, not to
+            // a display, and the smoothing costs time without adding accuracy.
+            false
         )
 
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
         handLandmarker?.detectAsync(mpImage, frameTime)
-        
+
         // No need to close imageProxy here as it's handled by the use block
     }
 
     fun shutdown() {
+        // Release the camera FIRST, and on the main thread, which is where
+        // CameraX requires it.
+        //
+        // This used to be left to the lifecycle owner on the assumption that
+        // "CameraX should handle it". It does not: the lifecycle owner here is
+        // the Activity, which is still very much alive when this view is
+        // disposed, so the use cases stayed bound and the device kept showing
+        // the camera-in-use indicator after the test had finished.
+        try {
+            mainHandler.post {
+                try {
+                    cameraProvider?.unbindAll()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error unbinding camera: ${e.message}")
+                } finally {
+                    cameraProvider = null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error posting camera release: ${e.message}")
+        }
+
         try {
             cameraExecutor.shutdown()
-            cameraExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
-            handLandmarker?.close()
-            // It might be good practice to unbind use cases here too, but CameraX should handle it with lifecycle
+            // Bounded, and never on an unbounded wait. The previous
+            // Long.MAX_VALUE could block the caller — the main thread, during
+            // view disposal — indefinitely if an analysis frame were stuck.
+            if (!cameraExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                cameraExecutor.shutdownNow()
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error shutting down: ${e.message}")
+            Log.e(TAG, "Error stopping analysis executor: ${e.message}")
+        }
+
+        try {
+            handLandmarker?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing landmarker: ${e.message}")
+        } finally {
+            handLandmarker = null
         }
     }
 

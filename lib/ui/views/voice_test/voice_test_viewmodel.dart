@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:stacked/stacked.dart';
+import 'package:stacked_services/stacked_services.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../models/test_result.dart';
@@ -43,8 +43,9 @@ class VoiceTestViewModel extends BaseViewModel {
   int countdownValue = 3;
   bool isRecording = false;
   bool isSavingResult = false;
-  bool resultSaved = true;
+  bool resultSaved = false;
   double resultScore = 0;
+  VoicePrediction? prediction;
   double recordedDuration = 0;
   double volumeLevel = 0;
   final List<double> waveform = [];
@@ -55,12 +56,19 @@ class VoiceTestViewModel extends BaseViewModel {
   final List<double> _decibels = [];
   File? _pendingFile;
 
-  double get progress =>
-      ((recordingSeconds - secondsLeft) / recordingSeconds)
-          .clamp(0, 1)
-          .toDouble();
+  double get progress => ((recordingSeconds - secondsLeft) / recordingSeconds)
+      .clamp(0, 1)
+      .toDouble();
   bool get hasResult => status == VoiceStatus.result;
   bool get canUseRecording => quality == VoiceRecordingQuality.good;
+  bool get resultConclusive => prediction?.isUsable ?? false;
+  VoiceAcousticAnalysis? get acousticAnalysis => prediction?.acousticAnalysis;
+  bool get hasAcousticResult => acousticAnalysis != null;
+  double? get experimentalModelScore => prediction?.experimentalModelScore;
+  bool get experimentalAboveThreshold =>
+      (experimentalModelScore ?? 0) >= resultDecisionThreshold;
+  double get resultDecisionThreshold => prediction?.decisionThreshold ?? .7;
+  String get resultStatus => prediction?.status ?? 'invalid_response';
 
   Future<void> startTest() async {
     if (isRecording || status == VoiceStatus.countdown) return;
@@ -89,7 +97,8 @@ class VoiceTestViewModel extends BaseViewModel {
   Future<void> _beginRecording() async {
     try {
       final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/voice_test_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final path =
+          '${dir.path}/voice_test_${DateTime.now().millisecondsSinceEpoch}.wav';
       const config = RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 44100,
@@ -122,7 +131,8 @@ class VoiceTestViewModel extends BaseViewModel {
 
   void _startAmplitudeSampling() {
     _amplitudeTimer?.cancel();
-    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
+    _amplitudeTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (_) async {
       if (!isRecording) return;
       try {
         final amplitude = await _recorder.getAmplitude();
@@ -179,6 +189,8 @@ class VoiceTestViewModel extends BaseViewModel {
     status = VoiceStatus.initial;
     quality = VoiceRecordingQuality.good;
     resultScore = 0;
+    resultSaved = false;
+    prediction = null;
     volumeLevel = 0;
     waveform.clear();
     notifyListeners();
@@ -194,8 +206,24 @@ class VoiceTestViewModel extends BaseViewModel {
     status = VoiceStatus.processing;
     notifyListeners();
     try {
-      resultScore = await _api.predict(file).timeout(const Duration(seconds: 45));
-      await _saveResult(resultScore, file);
+      final outcome =
+          await _api.predict(file).timeout(const Duration(seconds: 90));
+      prediction = outcome;
+      if (outcome.isUsable) {
+        resultScore = outcome.screeningScore!;
+        await _saveResult(outcome, file);
+      } else if (outcome.acousticAnalysis != null &&
+          outcome.experimentalModelScore != null) {
+        resultScore = outcome.acousticAnalysis!.overallScore;
+        await _saveExperimentalResult(outcome);
+      } else {
+        // Do not insert a neutral or extrapolated score into the patient's
+        // history. It would contaminate trends and could look reassuring or
+        // concerning even though the model explicitly abstained.
+        resultScore = outcome.acousticAnalysis?.overallScore ?? 0;
+        resultSaved = false;
+        await _deletePendingFile();
+      }
       status = VoiceStatus.result;
     } on TimeoutException {
       status = VoiceStatus.processingFailed;
@@ -208,8 +236,9 @@ class VoiceTestViewModel extends BaseViewModel {
 
   Future<void> retryProcessing() => useRecording();
 
-  Future<void> _saveResult(double score, File wavFile) async {
+  Future<void> _saveResult(VoicePrediction outcome, File wavFile) async {
     final uid = _auth.currentUser?.uid;
+    final score = outcome.screeningScore!;
     isSavingResult = true;
     notifyListeners();
     final result = TestResult(
@@ -223,6 +252,11 @@ class VoiceTestViewModel extends BaseViewModel {
         'durationSeconds': recordedDuration,
         'recordingQuality': quality.name,
         'sampleRateHz': 44100,
+        'scoreType': 'research_voice_pattern_score',
+        'modelVersion': outcome.modelVersion,
+        'validatedForClinicalUse': outcome.validatedForClinicalUse,
+        'decisionThreshold': outcome.decisionThreshold,
+        'resultStatus': outcome.status,
       },
     );
     var saved = uid != null;
@@ -239,11 +273,81 @@ class VoiceTestViewModel extends BaseViewModel {
     await _deletePendingFile();
   }
 
+  Future<void> _saveExperimentalResult(VoicePrediction outcome) async {
+    final uid = _auth.currentUser?.uid;
+    final analysis = outcome.acousticAnalysis!;
+    final experimentalScore = outcome.experimentalModelScore!;
+    isSavingResult = true;
+    notifyListeners();
+
+    final result = TestResult(
+      id: '',
+      patientId: uid ?? '',
+      type: TestType.voice,
+      performedAt: DateTime.now(),
+      score: experimentalScore,
+      data: {
+        'task': 'sustained_a_vowel',
+        'durationSeconds': recordedDuration,
+        'recordingQuality': quality.name,
+        'sampleRateHz': 44100,
+        'scoreType': 'experimental_voice_pattern_score',
+        'displayAsExperimentalPrototype': true,
+        'validatedForClinicalUse': false,
+        'modelVersion': outcome.modelVersion,
+        'decisionThreshold': outcome.decisionThreshold,
+        'resultStatus': outcome.status,
+        'experimentalModelScore': experimentalScore,
+        'experimentalAboveThreshold':
+            experimentalScore >= outcome.decisionThreshold,
+        'acousticStabilityScore': analysis.overallScore,
+        'pitchSteadiness': analysis.pitchSteadiness,
+        'amplitudeSteadiness': analysis.amplitudeSteadiness,
+        'tonalClarity': analysis.tonalClarity,
+        'sustainQuality': analysis.sustainQuality,
+        'meanPitchHz': analysis.meanPitchHz,
+        'jitterPercent': analysis.jitterPercent,
+        'shimmerPercent': analysis.shimmerPercent,
+        'hnrDb': analysis.hnrDb,
+        'warnings': outcome.warnings,
+      },
+    );
+
+    var saved = uid != null;
+    if (uid != null) {
+      try {
+        // Save derived prototype metrics only. The WAV remains temporary and
+        // is never uploaded to Storage for an unvalidated model result.
+        await _tests.addResult(result: result);
+      } catch (error) {
+        saved = false;
+        debugPrint('Could not save experimental voice result: $error');
+      }
+    }
+    resultSaved = saved;
+    isSavingResult = false;
+    await _deletePendingFile();
+  }
+
   Future<void> continueToCompletion() async {
+    if (hasAcousticResult) {
+      await showTestComplete(
+        type: TestType.voice,
+        concern: resultScore.clamp(0, 1).toDouble(),
+        saved: resultSaved,
+        researchOnly: true,
+      );
+      return;
+    }
+    if (!resultConclusive) {
+      locator<NavigationService>().back();
+      return;
+    }
     await showTestComplete(
       type: TestType.voice,
       concern: resultScore.clamp(0, 1).toDouble(),
       saved: resultSaved,
+      researchOnly: true,
     );
   }
 

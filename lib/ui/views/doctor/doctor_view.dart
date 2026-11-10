@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../../models/patient_report.dart';
 import '../../common/widgets/widgets.dart';
+import '../../../models/appointment.dart';
+import 'doctor_appointments_tab.dart';
 import 'doctor_viewmodel.dart';
+import 'patient_detail_view.dart';
 
 /// Doctor dashboard with tab navigation similar to the patient view.
 /// Tabs: profile editing, list of patient reports and a shared community feed.
@@ -25,7 +27,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 0,
@@ -37,6 +39,10 @@ class DoctorView extends StackedView<DoctorViewModel> {
             tabs: [
               Tab(text: l10n.tabProfile, icon: const Icon(Icons.person)),
               Tab(text: l10n.tabMyPatients, icon: const Icon(Icons.people)),
+              Tab(
+                text: l10n.apptTabTitle,
+                icon: const Icon(Icons.event_available),
+              ),
               Tab(text: l10n.tabCommunity, icon: const Icon(Icons.diversity_1)),
             ],
           ),
@@ -45,6 +51,7 @@ class DoctorView extends StackedView<DoctorViewModel> {
           children: [
             _buildProfileTab(context, vm, theme, l10n),
             _buildPatientsTab(vm, theme, l10n),
+            DoctorAppointmentsTab(viewModel: vm),
             _buildCommunityTab(vm, theme, l10n),
           ],
         ),
@@ -122,10 +129,29 @@ class DoctorView extends StackedView<DoctorViewModel> {
     );
   }
 
-  /// Displays patients that have sent reports to this doctor.
+  /// Displays patients this doctor has heard from.
+  ///
+  /// Each row opens a screen rather than expanding in place. The expanding
+  /// version carried a note field in every row backed by one shared controller,
+  /// so a note typed for one patient appeared in all of them, and it attached
+  /// to whichever of that patient's reports sorted first rather than the one
+  /// being read.
+  ///
+  /// Patients are drawn from reports *and* appointments: someone who booked but
+  /// has not sent results yet is still a patient, and used to be invisible.
   Widget _buildPatientsTab(
       DoctorViewModel vm, ThemeData theme, AppLocalizations l10n) {
-    final patients = vm.reports.map((r) => r.patientId).toSet().toList();
+    final patients = <String>{
+      ...vm.reports.map((r) => r.patientId),
+      ...vm.appointments.map((a) => a.patientId),
+    }.toList();
+
+    // A failed query is reported as a failure. Falling through to the empty
+    // state made a permissions or index error look like a doctor with no
+    // patients, which is the one reading that suggests doing nothing about it.
+    if (vm.reportsError != null && patients.isEmpty) {
+      return AppErrorState(message: l10n.reportsLoadFailed);
+    }
 
     if (patients.isEmpty) {
       return AppEmptyState(
@@ -140,47 +166,26 @@ class DoctorView extends StackedView<DoctorViewModel> {
       separatorBuilder: (_, __) => const AppGap.sm(),
       itemBuilder: (context, index) {
         final pid = patients[index];
-        final reports =
-            vm.reports.where((r) => r.patientId == pid).toList();
-        return Card(
-          child: ExpansionTile(
-            title: Text(vm.patientName(pid)),
-            subtitle: Text(l10n.reportsCountLabel(reports.length)),
-            childrenPadding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: reports.length,
-                itemBuilder: (context, rIndex) {
-                  final rep = reports[rIndex];
-                  return ListTile(
-                    title: Text(l10n.sentAtLabel(rep.sentAt.toLocal().toString())),
-                    subtitle: Text(l10n.testsCountLabel(rep.results.length)),
-                    onTap: () => _showReportDialog(context, rep, l10n),
-                  );
-                },
-              ),
-              const AppGap.sm(),
-              TextField(
-                controller: vm.noteController,
-                minLines: 3,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: l10n.writeNotesHint,
-                ),
-              ),
-              const AppGap.xs(),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await vm.addNoteToReportForPatient(pid);
-                  },
-                  child: Text(l10n.addNote),
-                ),
-              ),
-            ],
+        final reports = vm.reports.where((r) => r.patientId == pid).length;
+        final pending = vm.appointments
+            .where((a) => a.patientId == pid && a.status.needsDoctor)
+            .length;
+
+        return AppTileCard(
+          icon: Icons.person_outline,
+          title: vm.patientName(pid),
+          subtitle: l10n.reportsCountLabel(reports),
+          // Surfaces a waiting request on the patient row, so a doctor working
+          // through their list does not have to visit the other tab to find out
+          // which of them is waiting on an answer.
+          trailing: pending > 0
+              ? Chip(label: Text(l10n.apptPending))
+              : const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  PatientDetailView(viewModel: vm, patientId: pid),
+            ),
           ),
         );
       },
@@ -215,53 +220,6 @@ class DoctorView extends StackedView<DoctorViewModel> {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showReportDialog(
-      BuildContext context, PatientReport report, AppLocalizations l10n) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(l10n.reportTitle(report.sentAt.toLocal().toString())),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: report.results.map((r) {
-                return ExpansionTile(
-                  title: Text(r.type.name),
-                  subtitle: Text(l10n.scorePercent((r.concernScore * 100).round())),
-                  children: [
-                    if (r.data.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xs),
-                        child: Text(l10n.noAdditionalData),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xs),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: r.data.entries
-                              .map((e) => Text('${e.key}: ${e.value}'))
-                              .toList(),
-                        ),
-                      ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l10n.close),
-            )
-          ],
         );
       },
     );

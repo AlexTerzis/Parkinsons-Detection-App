@@ -151,6 +151,13 @@ class MovementCycleAnalyzer {
   /// jitter rather than counted as very small taps.
   static const double _minRelativeAmplitude = 0.2;
 
+  /// Peak-to-peak signal range below which a task counts as no movement.
+  ///
+  /// In palm-widths for the distance tasks and half-turns for rotation, so a
+  /// fiftieth is about 2% of a palm span or roughly 3.6 degrees of roll — far
+  /// below even a severely reduced movement, and above landmark jitter.
+  static const double _minimumSignalRange = 0.02;
+
   /// A gap this many times the patient's own median inter-cycle interval
   /// counts as a hesitation. Relative to their own rhythm, not an absolute
   /// time, so a uniformly slow patient is not charged for pauses they did not
@@ -240,11 +247,19 @@ class MovementCycleAnalyzer {
     );
   }
 
-  /// The 1-D movement signal for a task, in palm-widths.
+  /// The 1-D movement signal for a task.
+  ///
+  /// In palm-widths for the two distance-based tasks, and in half-turns for
+  /// palm rotation — chosen so the three stay of comparable magnitude, since
+  /// the scorer averages speed across them.
   ///
   /// Exposed rather than private so the scale-invariance and cycle shape can be
   /// tested directly.
   List<double> cycleSignalFor(RecordedTask task) {
+    if (task.type == CameraTaskType.pronationSupination) {
+      return _rotationSignal(task);
+    }
+
     final out = <double>[];
     for (final frame in task.frames) {
       final lm = frame.landmarks;
@@ -269,11 +284,161 @@ class MovementCycleAnalyzer {
               4;
           out.add(aperture / palm);
         case CameraTaskType.pronationSupination:
-          // Signed, so a full turn reads as one oscillation rather than two.
-          out.add((lm[_Landmark.indexMcp].x - lm[_Landmark.pinkyMcp].x) / palm);
         case CameraTaskType.rest:
           break;
       }
+    }
+    return out;
+  }
+
+  /// Forearm roll for MDS-UPDRS item 3.6, in half-turns.
+  ///
+  /// The palm is a plane, so its orientation is estimated from three of its
+  /// landmarks — wrist, index MCP and pinky MCP — rather than from a single
+  /// horizontal difference.
+  ///
+  /// The previous signal was `(indexMcp.x - pinkyMcp.x) / palm`, which has two
+  /// faults. It cannot separate the forearm rolling from the whole hand being
+  /// rotated in the image plane: tilting the wrist without turning the palm
+  /// changes that difference just as much as a real pronation. And because it
+  /// is a cosine of the roll angle, it flattens near the extremes of the
+  /// movement — exactly where amplitude is read — so the same physical turn
+  /// measures differently depending on where the hand started.
+  ///
+  /// Here the across-palm vector has the forearm direction projected out of it,
+  /// which removes the in-plane rotation, and the roll is recovered as an angle
+  /// with `atan2`, which is linear in the quantity of interest. The angle is
+  /// unwrapped so a turn through the ±pi boundary stays continuous rather than
+  /// registering as a huge jump.
+  ///
+  /// **Known limitation.** MediaPipe's `z` is relative depth, roughly in the
+  /// same scale as `x` but not metrically calibrated, and it is the least
+  /// reliable of the three coordinates. This is therefore a better-conditioned
+  /// estimate of roll, not a true 3-D angle, and the amplitude it reports
+  /// should not be read as a physical measurement of degrees turned.
+  List<double> _rotationSignal(RecordedTask task) {
+    final raw = <double>[];
+
+    for (final frame in task.frames) {
+      final lm = frame.landmarks;
+      if (lm.length < 21) continue;
+
+      final wrist = lm[_Landmark.wrist];
+      final indexMcp = lm[_Landmark.indexMcp];
+      final pinkyMcp = lm[_Landmark.pinkyMcp];
+      final middleMcp = lm[_Landmark.middleMcp];
+
+      // Forearm direction, from the wrist up through the palm.
+      final ax = middleMcp.x - wrist.x;
+      final ay = middleMcp.y - wrist.y;
+      final az = middleMcp.z - wrist.z;
+      final double aLen = math.sqrt(ax * ax + ay * ay + az * az);
+      if (aLen <= 0) continue;
+
+      // Across the palm, index knuckle to pinky knuckle.
+      final wx = pinkyMcp.x - indexMcp.x;
+      final wy = pinkyMcp.y - indexMcp.y;
+      final wz = pinkyMcp.z - indexMcp.z;
+
+      // Measure the roll in the plane perpendicular to the forearm, using an
+      // orthonormal frame built there.
+      //
+      // Taking the raw x and z components instead is not enough: an in-plane
+      // tilt of the wrist swings part of the across-palm vector into y, and an
+      // angle read from x alone then moves even though the palm never turned —
+      // which is the very confusion this signal exists to remove.
+      //
+      // `u` is the camera axis with the forearm direction taken out of it, and
+      // `v = a x u` completes the frame.
+      final double ux = -az * ax / (aLen * aLen);
+      final double uy = -az * ay / (aLen * aLen);
+      final double uz = 1 - az * az / (aLen * aLen);
+      final double uLen = math.sqrt(ux * ux + uy * uy + uz * uz);
+
+      // Degenerate when the forearm points straight at the lens: there is no
+      // well-defined roll to measure, so the frame is skipped rather than
+      // assigned an arbitrary angle.
+      if (uLen < 1e-9) continue;
+
+      final double nx = ux / uLen;
+      final double ny = uy / uLen;
+      final double nz = uz / uLen;
+
+      // v = a_hat x u_hat
+      final double vx = (ay * nz - az * ny) / aLen;
+      final double vy = (az * nx - ax * nz) / aLen;
+      final double vz = (ax * ny - ay * nx) / aLen;
+
+      final double along = wx * nx + wy * ny + wz * nz;
+      final double across = wx * vx + wy * vy + wz * vz;
+
+      if (along == 0 && across == 0) continue;
+      raw.add(math.atan2(along, across));
+    }
+
+    if (raw.length < 2) return const <double>[];
+
+    // Depth is what makes the angle meaningful. If the detector reported none —
+    // some builds populate z as a constant — every angle collapses onto 0 or
+    // pi, and the "rotation" measured would be an artefact of that collapse.
+    // Fall back to the older horizontal signal and let it be honestly weaker
+    // rather than confidently wrong.
+    if (_isDegenerate(raw)) return _horizontalRotationFallback(task);
+
+    // Handedness needs no correction here. A left hand is the mirror of a right
+    // one, so the same physical movement yields an angle reflected and offset
+    // by pi — and every metric taken from this signal (cycle count, rate,
+    // amplitude, rhythm variability, decrement) is invariant to both a constant
+    // offset and a reflection. Applying a sign flip would change no number
+    // while adding a rule that has to be justified and kept correct, so it is
+    // deliberately not applied. This is asserted by a test that measures a
+    // mirrored hand and expects identical metrics.
+
+    // Half-turns rather than radians, so rotation amplitude lands in the same
+    // range as the palm-width signals the other two tasks produce.
+    return _unwrap(raw)
+        .map((a) => a / math.pi)
+        .toList(growable: false);
+  }
+
+  /// True when the angles take essentially only two values, which is what a
+  /// missing depth coordinate produces.
+  bool _isDegenerate(List<double> angles) {
+    for (final angle in angles) {
+      final double distanceToAxis =
+          math.min((angle.abs() - math.pi).abs(), angle.abs());
+      if (distanceToAxis > 1e-6) return false;
+    }
+    return true;
+  }
+
+  /// The pre-existing signal, kept as a fallback for depth-less input.
+  List<double> _horizontalRotationFallback(RecordedTask task) {
+    final out = <double>[];
+    for (final frame in task.frames) {
+      final lm = frame.landmarks;
+      if (lm.length < 21) continue;
+      final double palm =
+          _distance(lm[_Landmark.wrist], lm[_Landmark.middleMcp]);
+      if (palm <= 0) continue;
+      out.add((lm[_Landmark.indexMcp].x - lm[_Landmark.pinkyMcp].x) / palm);
+    }
+    return out;
+  }
+
+  /// Removes the 2*pi jumps `atan2` introduces at the ±pi boundary.
+  List<double> _unwrap(List<double> angles) {
+    final out = List<double>.filled(angles.length, 0);
+    out[0] = angles.first;
+    double offset = 0;
+    for (int i = 1; i < angles.length; i++) {
+      final double delta = angles[i] - angles[i - 1];
+      if (delta > math.pi) {
+        offset -= 2 * math.pi;
+      } else if (delta < -math.pi) {
+        offset += 2 * math.pi;
+      }
+      out[i] = angles[i] + offset;
     }
     return out;
   }
@@ -323,7 +488,14 @@ class MovementCycleAnalyzer {
     final double low = _percentile(signal, 0.05);
     final double high = _percentile(signal, 0.95);
     final double range = high - low;
-    if (range <= 0) return const <_Cycle>[];
+
+    // A hand that is not moving still produces a signal, from landmark jitter
+    // and from floating-point residue in the geometry. Crossings of a midline
+    // drawn through that noise are counted as cycles just as readily as real
+    // ones, so a still hand can come back with dozens of "movements" at a
+    // plausible-looking rate. Anything below a fiftieth of a palm-width — or of
+    // a half-turn, for rotation — is treated as no movement at all.
+    if (range <= _minimumSignalRange) return const <_Cycle>[];
 
     final double centre = (high + low) / 2;
     final double hysteresis = range * _hysteresisFraction;

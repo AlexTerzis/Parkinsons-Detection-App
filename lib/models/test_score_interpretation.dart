@@ -71,10 +71,18 @@ abstract final class TestScoreInterpretation {
   static const double fabConcernReassuringAtOrBelow = 0.2;
   static const double fabConcernNotableAbove = 0.4;
 
+  /// Posture imitation, against its /20. Copying 17 or more is reassuring;
+  /// fewer than 12 is the notable end. PROVISIONAL — see [bandOfConcern].
+  static const double postureConcernReassuringAtOrBelow = 3 / 20;
+  static const double postureConcernNotableAbove = 8 / 20;
+
   static ScoreDirection directionOf(TestType type) {
     switch (type) {
       case TestType.neuro:
       case TestType.fab:
+      // Twenty out of twenty is a perfect performance, so this runs the same
+      // way as the batteries rather than the sensor tests.
+      case TestType.posture:
         return ScoreDirection.higherIsBetter;
       case TestType.cameraDetection:
       case TestType.drawing:
@@ -103,6 +111,16 @@ abstract final class TestScoreInterpretation {
       case TestType.fab:
         if (c <= fabConcernReassuringAtOrBelow) return ScoreBand.reassuring;
         if (c > fabConcernNotableAbove) return ScoreBand.notable;
+        return ScoreBand.borderline;
+
+      // No published cut-offs exist for this. The bands below are the app's
+      // own reading of "copied nearly all of them" against "missed most", and
+      // deliberately generous at the reassuring end: the instrument it is
+      // modelled on is scored by a trained examiner, and an automated version
+      // has no norms to appeal to.
+      case TestType.posture:
+        if (c <= postureConcernReassuringAtOrBelow) return ScoreBand.reassuring;
+        if (c > postureConcernNotableAbove) return ScoreBand.notable;
         return ScoreBand.borderline;
 
       case TestType.cameraDetection:

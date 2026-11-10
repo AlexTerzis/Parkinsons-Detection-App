@@ -36,22 +36,31 @@ class FeatureRange {
 /// items and their typical performance ranges. **None of them are fitted to
 /// recordings from this app**, because no labelled recordings exist yet.
 ///
-/// Until they are calibrated, the enhanced likelihood is a research output, not
-/// a clinical one, and [useEnhancedScoring] should stay `false`. Phase 3 stores
-/// both scorers' results on every recording precisely so that calibration
-/// becomes possible.
+/// The enhanced likelihood is therefore a research output, not a clinical one.
+/// It is nonetheless the *selected* score, because the alternative was worse:
+/// the legacy formula merges every movement task into one trajectory, treats
+/// frame-to-frame displacement as speed without dividing by elapsed time, and
+/// reports a confidence of 1.0 it never computed. Being uncalibrated is a
+/// weaker fault than being wrong by construction.
+///
+/// What follows from that: the value is stored as an experimental heuristic,
+/// it is not charted as a trend, and it is not presented to the patient as a
+/// probability of anything.
 abstract final class EnhancedScoringConfig {
   /// Selects which scorer's likelihood populates `TestResult.score`.
   ///
   /// Both scorers always run and both results are always stored; this only
-  /// decides which one the rest of the app sees. Defaults to the original
-  /// scorer, so behaviour is unchanged until this is deliberately flipped.
+  /// decides which one the rest of the app sees.
   ///
-  /// Before flipping it in production, note that `results_tab.dart` and
-  /// `patience_viewmodel.dart` average `score` across time — historical legacy
-  /// scores and new enhanced scores are not on the same scale, and mixing them
-  /// in one trend line would be misleading.
-  static const bool useEnhancedScoring = false;
+  /// Flipping this changed the scale of `score` for camera results. Old
+  /// documents are not rewritten and cannot be — the landmarks they were
+  /// derived from live in Storage, not Firestore — so historical legacy scores
+  /// and new enhanced scores genuinely are not comparable. Rather than draw
+  /// both on one axis, camera results were removed from the score charts
+  /// entirely; see `PatienceViewModel._excludedFromCharts`. That is the right
+  /// outcome independently: an uncalibrated heuristic should not be shown to a
+  /// patient as a trend line.
+  static const bool useEnhancedScoring = true;
 
   // --- Weights (must sum to 1.0; asserted by test) ---
 

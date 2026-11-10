@@ -6,5 +6,8 @@ enum TestType {
   tap,
   voice,
   neuro,
-  fab
+  fab,
+
+  /// Copying static hand and finger postures shown on screen.
+  posture,
 }

@@ -37,7 +37,7 @@ any results.
 lib/
   models/       protocol + result models (pure Dart, no Flutter imports)
   services/     auth, storage, tests, localization, text scale
-    scoring/    the camera scoring stack (see below)
+    scoring/    the camera scoring stack
   ui/
     common/     app_tokens, app_theme, app_semantic_colors
       widgets/  the shared component layer, exported via widgets.dart
@@ -46,27 +46,13 @@ lib/
 ```
 
 State management is [Stacked](https://pub.dev/packages/stacked) (view + view
-model + a service locator). Firebase provides auth, Firestore and Storage.
+model + a service locator). Firebase provides auth, Firestore and Storage. Hand
+tracking is a Kotlin PlatformView running CameraX and MediaPipe, which pushes
+landmarks to Dart over a method channel.
 
-### Camera scoring
-
-Two scorers run on every recording behind one `CameraScorer` interface, and
-both verdicts are stored under the result's `scoring` key:
-
-- `LegacyWeightedScorer` — the original weighted variance formula,
-  byte-identical to 1.0, still the one that populates `TestResult.score`.
-- `HeuristicScorer` — ten features derived by `MovementCycleAnalyzer` from the
-  1-D signal for each task, aimed at the signs items 3.4–3.6 actually look for:
-  decrementing amplitude and speed, irregular rhythm, hesitations, delayed
-  initiation. Every range and its reasoning lives in `EnhancedScoringConfig`.
-
-`useEnhancedScoring` defaults to `false`. Storing both is what will make the
-provisional ranges calibratable; a trained model can later implement the same
-interface with no other change.
-
-`TremorAnalysisService` measures tremor as the residual after a zero-phase
-Butterworth low-pass removes voluntary movement, and refuses to report a
-dominant frequency below 15 fps rather than reporting an aliased one.
+📐 **See [ARCHITECTURE.md](ARCHITECTURE.md)** for the full model: layer map, the
+test pipeline end to end, the camera scoring stack, the Firestore schema and
+security rules, and a checklist for adding a new test type.
 
 ## Design system
 

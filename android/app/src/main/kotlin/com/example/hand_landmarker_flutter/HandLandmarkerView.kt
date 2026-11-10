@@ -60,7 +60,9 @@ class HandLandmarkerView(
             )
 
             // Send landmarks and handedness back to Flutter
-            val resultsList = mutableListOf<Map<String, Any>>()
+            // Nullable values: handednessScore is absent when the detector did
+            // not classify the hand. StandardMessageCodec encodes that as null.
+            val resultsList = mutableListOf<Map<String, Any?>>()
             result.landmarks().forEachIndexed { index, handLandmarks ->
                 val landmarksMap = handLandmarks.map { landmark ->
                     mapOf(
@@ -71,15 +73,42 @@ class HandLandmarkerView(
                 }
                 // Get handedness (Left/Right). Defaults to Unknown if not available.
                 // Use handednesses() (plural) which returns List<List<Category>>
-                val handedness = result.handednesses().getOrNull(index)?.firstOrNull()?.categoryName() ?: "Unknown"
-                
+                val handednessCategory = result.handednesses().getOrNull(index)?.firstOrNull()
+                val detected = handednessCategory?.categoryName() ?: "Unknown"
+
+                // Undo the preview mirroring before naming the hand.
+                //
+                // The front camera's frames are mirrored before MediaPipe sees
+                // them, so the user's *right* hand arrives looking exactly like
+                // a left hand and is reported as "Left". Passing that through
+                // meant every task of the guided protocol was told the wrong
+                // hand was on screen, and every task failed its check.
+                val handedness = if (helper.isMirrored) flipHandedness(detected) else detected
+
+                // The classifier's own confidence in that Left/Right call.
+                // Flutter uses it to separate a solid detection from a marginal
+                // one; a frame whose handedness is a coin flip must not be
+                // counted as clean evidence for the hand under examination.
+                // Sent as a nullable extra so an older Flutter layer, or one
+                // running against a build without it, simply sees no score
+                // rather than a fabricated zero.
+                val handednessScore = handednessCategory?.score()
+
                 resultsList.add(mapOf(
                     "landmarks" to landmarksMap,
-                    "handedness" to handedness
+                    "handedness" to handedness,
+                    "handednessScore" to handednessScore
                 ))
             }
             channel.invokeMethod("onLandmarks", resultsList)
         }
+    }
+
+    /** "Left" <-> "Right"; anything else is passed through untouched. */
+    private fun flipHandedness(name: String): String = when (name) {
+        "Left" -> "Right"
+        "Right" -> "Left"
+        else -> name
     }
 
     override fun getView() = frameLayout

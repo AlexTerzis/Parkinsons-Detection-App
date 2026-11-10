@@ -24,7 +24,15 @@ class AppScaffold extends StatelessWidget {
     this.showBackButton = true,
     this.floatingActionButton,
     this.backgroundColor,
-  });
+  }) : assert(
+          !scrollable || body is! ScrollView,
+          'AppScaffold(scrollable: true) wraps body in an IntrinsicHeight, and '
+          'a ListView/GridView/CustomScrollView is a RenderViewport, which '
+          'cannot answer an intrinsic-height query. The body then fails to lay '
+          'out entirely — the app bar still draws, so the screen looks blank '
+          'below the title while the console fills with "RenderBox was not laid '
+          'out". Pass scrollable: false for a body that scrolls itself.',
+        );
 
   final Widget body;
   final String? title;

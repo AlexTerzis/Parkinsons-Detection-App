@@ -9,13 +9,13 @@ void main() {
       final tasks = CameraTaskProtocol.build(CameraTestMode.full);
 
       expect(tasks.length, 8);
-      expect(tasks.take(4).every((t) => t.hand == 'Right'), isTrue);
-      expect(tasks.skip(4).every((t) => t.hand == 'Left'), isTrue);
+      expect(tasks.take(4).every((t) => t.hands.single == 'Right'), isTrue);
+      expect(tasks.skip(4).every((t) => t.hands.single == 'Left'), isTrue);
     });
 
     test('each hand opens with rest, then the three MDS-UPDRS items', () {
       final right = CameraTaskProtocol.build(CameraTestMode.full)
-          .where((t) => t.hand == 'Right')
+          .where((t) => t.hands.single == 'Right')
           .toList();
 
       expect(right.map((t) => t.type), [
@@ -27,27 +27,26 @@ void main() {
       expect(right.map((t) => t.mdsUpdrsItem), [null, '3.5', '3.4', '3.6']);
     });
 
-    test('full mode uses 3s rest and 10s movements', () {
+    test('full mode records 6s of rest and 12s of each movement', () {
       for (final task in CameraTaskProtocol.build(CameraTestMode.full)) {
         expect(
           task.duration,
           task.type == CameraTaskType.rest
-              ? const Duration(seconds: 3)
-              : const Duration(seconds: 10),
+              ? CameraTaskProtocol.restDuration
+              : CameraTaskProtocol.movementDuration,
         );
+        expect(task.leadIn, greaterThan(Duration.zero),
+            reason: 'every step gets a pause to read and settle first');
       }
     });
 
-    test('short mode roughly halves durations without going below the floor',
-        () {
-      for (final task in CameraTaskProtocol.build(CameraTestMode.short)) {
-        expect(
-          task.duration,
-          task.type == CameraTaskType.rest
-              // 3s halves to 1s, which the minimum lifts back to 2s.
-              ? CameraTaskProtocol.minimumDuration
-              : const Duration(seconds: 5),
-        );
+    test('short mode records both hands together in half the steps', () {
+      final short = CameraTaskProtocol.build(CameraTestMode.short);
+
+      expect(short.length, 4);
+      for (final task in short) {
+        expect(task.isBothHands, isTrue);
+        expect(task.hands, <String>['Right', 'Left']);
       }
 
       expect(
@@ -56,17 +55,31 @@ void main() {
       );
     });
 
-    test('task ids are stable and shared between modes', () {
-      final full = CameraTaskProtocol.build(CameraTestMode.full)
-          .map((t) => t.id)
-          .toList();
-      final short = CameraTaskProtocol.build(CameraTestMode.short)
-          .map((t) => t.id)
-          .toList();
+    test('both modes produce the same per-hand storage keys', () {
+      // A short run examines two hands per step, but each hand is still stored
+      // under its own key, so nothing downstream has to know which mode ran.
+      Set<String> keysOf(CameraTestMode mode) => <String>{
+            for (final task in CameraTaskProtocol.build(mode))
+              for (final hand in task.hands) task.segmentId(hand),
+          };
 
-      expect(full, short);
-      expect(full.toSet().length, full.length, reason: 'ids must be unique');
-      expect(full.first, 'right_rest');
+      expect(keysOf(CameraTestMode.short), keysOf(CameraTestMode.full));
+      expect(keysOf(CameraTestMode.full), contains('right_rest'));
+      expect(keysOf(CameraTestMode.full), hasLength(8));
+    });
+
+    test('step ids are unique within a mode', () {
+      for (final mode in CameraTestMode.values) {
+        final ids = CameraTaskProtocol.build(mode).map((t) => t.id).toList();
+        expect(ids.toSet().length, ids.length, reason: 'ids must be unique');
+      }
+    });
+
+    test('total duration counts the pauses, recorded duration does not', () {
+      expect(
+        CameraTaskProtocol.totalDuration(CameraTestMode.full),
+        greaterThan(CameraTaskProtocol.recordedDuration(CameraTestMode.full)),
+      );
     });
 
     test('rest is excluded from scoring, movements are not', () {
@@ -85,6 +98,7 @@ void main() {
     CameraTaskSegment segmentWith(List<int> timestamps) {
       final segment = CameraTaskSegment(
         task: CameraTaskProtocol.build(CameraTestMode.full).first,
+        hand: 'Right',
       );
       for (final t in timestamps) {
         segment.frames.add(TaggedFrame(

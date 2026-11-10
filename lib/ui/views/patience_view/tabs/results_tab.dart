@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../models/test_result.dart';
 import '../../../../models/test_score_interpretation.dart';
 import '../../../../models/test_type.dart';
 import '../../../common/test_type_labels.dart';
@@ -20,8 +21,9 @@ class ResultsTab extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final grouped = viewModel.groupedResults;
     final averages = viewModel.averageConcernByType;
+    final experimentalVoice = viewModel.experimentalVoiceResults;
 
-    if (grouped.isEmpty) {
+    if (grouped.isEmpty && experimentalVoice.isEmpty) {
       return AppEmptyState(
         icon: Icons.insights_outlined,
         title: l10n.testResults,
@@ -51,32 +53,151 @@ class ResultsTab extends StatelessWidget {
                   .toList(),
             ),
           ),
-        const AppGap.lg(),
-        SectionHeader(
-          l10n.summary,
-          action: AppInfoButton(
-            title: l10n.summaryInfoTitle,
-            body: l10n.summaryInfoBody,
+        if (experimentalVoice.isNotEmpty) ...[
+          const AppGap.md(),
+          SectionHeader(
+            _t(context, 'Experimental voice history',
+                'Πειραματικό ιστορικό φωνής'),
+            action: AppInfoButton(
+              title:
+                  _t(context, 'Prototype results', 'Αποτελέσματα πρωτοτύπου'),
+              body: _t(
+                context,
+                'These entries demonstrate the voice ML feature. They are excluded from health bands, summaries, overall trends, and doctor reports.',
+                'Αυτές οι εγγραφές παρουσιάζουν τη λειτουργία ML φωνής. Εξαιρούνται από κατηγορίες υγείας, συνόψεις, συνολικές τάσεις και αναφορές προς γιατρούς.',
+              ),
+            ),
           ),
-        ),
-        if (averages.length >= 3)
-          ScoreRadarChart(
-            scores: {
-              for (final e in averages.entries)
-                testTypeLabel(l10n, e.key): e.value,
-            },
-          )
-        else
-          Text(
-            l10n.needThreeTests,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
+          _experimentalVoiceCard(context, experimentalVoice),
+        ],
+        if (grouped.isNotEmpty) ...[
+          const AppGap.lg(),
+          SectionHeader(
+            l10n.summary,
+            action: AppInfoButton(
+              title: l10n.summaryInfoTitle,
+              body: l10n.summaryInfoBody,
+            ),
           ),
-        const AppGap.lg(),
-        _trendSection(context, l10n),
+          if (averages.length >= 3)
+            ScoreRadarChart(
+              scores: {
+                for (final e in averages.entries)
+                  testTypeLabel(l10n, e.key): e.value,
+              },
+            )
+          else
+            Text(
+              l10n.needThreeTests,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          const AppGap.lg(),
+          _trendSection(context, l10n),
+        ],
       ],
+    );
+  }
+
+  String _t(BuildContext context, String en, String el) =>
+      Localizations.localeOf(context).languageCode == 'el' ? el : en;
+
+  Widget _experimentalVoiceCard(
+      BuildContext context, List<TestResult> results) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final latest = results.first;
+    final latestScore =
+        (latest.data['experimentalModelScore'] as num?)?.toDouble() ??
+            latest.score;
+    final acousticScore =
+        (latest.data['acousticStabilityScore'] as num?)?.toDouble();
+
+    return AppCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.science_outlined, color: primary),
+          const AppGap.wide(AppSpacing.sm),
+          Expanded(
+            child: Text(_t(context, 'Voice ML prototype', 'Πρωτότυπο ML φωνής'),
+                style: theme.textTheme.titleMedium),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Text(
+              _t(context, 'EXPERIMENTAL', 'ΠΕΙΡΑΜΑΤΙΚΟ'),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSecondaryContainer),
+            ),
+          ),
+        ]),
+        const AppGap.sm(),
+        ScoreBar(
+          label: _t(context, 'Latest ML pattern score',
+              'Τελευταία βαθμολογία μοτίβου ML'),
+          value: latestScore,
+          color: primary,
+        ),
+        if (acousticScore != null) ...[
+          const AppGap.sm(),
+          Text(_t(
+            context,
+            'Acoustic stability: ${(acousticScore * 100).round()} / 100',
+            'Ακουστική σταθερότητα: ${(acousticScore * 100).round()} / 100',
+          )),
+        ],
+        const AppGap.xs(),
+        Text(
+          _t(
+            context,
+            'Demonstration only—not a Parkinson’s probability or health classification.',
+            'Μόνο για επίδειξη—δεν αποτελεί πιθανότητα νόσου Πάρκινσον ή ταξινόμηση υγείας.',
+          ),
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const AppGap.sm(),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: EdgeInsets.zero,
+          title: Text(_t(context, 'Previous prototype analyses',
+              'Προηγούμενες πειραματικές αναλύσεις')),
+          children: [
+            for (final result in results)
+              _experimentalHistoryRow(context, result),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _experimentalHistoryRow(BuildContext context, TestResult result) {
+    final score = (result.data['experimentalModelScore'] as num?)?.toDouble() ??
+        result.score;
+    final acoustic =
+        (result.data['acousticStabilityScore'] as num?)?.toDouble();
+    final date = result.performedAt;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text('${date.day}/${date.month}/${date.year}'),
+      subtitle: acoustic == null
+          ? null
+          : Text(_t(
+              context,
+              'Acoustic stability ${(acoustic * 100).round()} / 100',
+              'Ακουστική σταθερότητα ${(acoustic * 100).round()} / 100',
+            )),
+      trailing: Text(
+        '${(score * 100).toStringAsFixed(1)}%',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
     );
   }
 

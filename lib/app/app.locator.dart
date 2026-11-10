@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 // **************************************************************************
 // StackedLocatorGenerator
@@ -11,7 +12,9 @@ import 'package:stacked_services/src/dialog/dialog_service.dart';
 import 'package:stacked_services/src/navigation/navigation_service.dart';
 import 'package:stacked_shared/stacked_shared.dart';
 
+import '../services/appointment_service.dart';
 import '../services/authentication_service.dart';
+import '../services/availability_service.dart';
 import '../services/hand_metrics.dart';
 import '../services/localization_service.dart';
 import '../services/raison_api_service.dart';
@@ -25,10 +28,8 @@ import '../services/voice_api_service.dart';
 
 final locator = StackedLocator.instance;
 
-Future<void> setupLocator({
-  String? environment,
-  EnvironmentFilter? environmentFilter,
-}) async {
+Future<void> setupLocator(
+    {String? environment, EnvironmentFilter? environmentFilter}) async {
 // Register environments
   locator.registerEnvironment(
       environment: environment, environmentFilter: environmentFilter);
@@ -40,11 +41,13 @@ Future<void> setupLocator({
   locator.registerLazySingleton(() => AuthenticationService());
   locator.registerLazySingleton(() => TestService());
   locator.registerLazySingleton(() => ReportsService());
+  locator.registerLazySingleton(() => AppointmentService());
+  locator.registerLazySingleton(() => AvailabilityService());
   locator.registerLazySingleton(() => VoiceApiService());
   locator.registerLazySingleton(() => RaisonApiService());
-  locator.registerLazySingleton(() => const HandMetrics());
-  locator.registerLazySingleton(() => const TremorAnalysisService());
-  locator.registerLazySingleton(() => const CameraScoringService());
+  locator.registerLazySingleton(() => HandMetrics());
+  locator.registerLazySingleton(() => TremorAnalysisService());
+  locator.registerLazySingleton(() => CameraScoringService());
   locator.registerLazySingleton(() => StorageService());
   locator.registerLazySingleton(() => LocalizationService());
   locator.registerLazySingleton(() => TextScaleService());

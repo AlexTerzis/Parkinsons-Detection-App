@@ -6,6 +6,8 @@ import 'package:parkinsondetetion/services/authentication_service.dart';
 import 'package:parkinsondetetion/services/test_service.dart';
 import 'package:parkinsondetetion/services/reports_service.dart';
 import 'package:parkinsondetetion/services/storage_service.dart';
+import 'package:parkinsondetetion/services/hand_metrics.dart';
+import 'package:parkinsondetetion/services/scoring/camera_scoring_service.dart';
 import 'test_helpers.mocks.dart';
 // @stacked-import
 
@@ -30,7 +32,21 @@ void registerServices() {
   getAndRegisterTestService();
   getAndRegisterReportsService();
   getAndRegisterStorageService();
+  registerAnalysisServices();
 // @stacked-mock-register
+}
+
+/// Registers the pure analysis collaborators as their real implementations.
+///
+/// Mocking them would be worse than useless here: they hold no state, do no
+/// I/O, and their arithmetic is exactly what a ViewModel test wants exercised.
+/// A stub would let a scoring regression pass.
+void registerAnalysisServices() {
+  _removeRegistrationIfExists<HandMetrics>();
+  locator.registerSingleton<HandMetrics>(const HandMetrics());
+
+  _removeRegistrationIfExists<CameraScoringService>();
+  locator.registerSingleton<CameraScoringService>(const CameraScoringService());
 }
 
 MockNavigationService getAndRegisterNavigationService() {
