@@ -24,8 +24,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Your own profile: full access.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Your own profile: readable, and writable except for `role`, which is
+      // constrained by the create/update rules at the bottom of this block.
+      allow read: if request.auth != null && request.auth.uid == userId;
 
       // Doctor profiles are readable by any signed-in user, so a patient can
       // find a doctor to send results to.
@@ -47,6 +48,32 @@ service cloud.firestore {
       // `.where('role', isEqualTo: 'doctor')`, which is what makes it provable.
       allow read: if request.auth != null
                   && resource.data.role == 'doctor';
+
+      // `role` decides who reaches the doctor dashboard and whose document is
+      // published in the patient-visible directory above, so it cannot be a
+      // client-supplied value. It used to be: the single `read, write` rule
+      // this block started with let anyone set their own `role` to 'doctor',
+      // at signup or at any point afterwards.
+      //
+      // A new profile is therefore always a patient. Doctor accounts are
+      // promoted by hand in the Firebase console, which is the only place that
+      // can vouch for someone actually being a clinician. Existing doctor
+      // documents are unaffected — this applies to document creation only.
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'patient';
+
+      // The rest of the profile — name, date of birth, medication, chosen
+      // doctor, a doctor's specialty and location — stays freely editable, but
+      // `role` must come back unchanged. Writes that omit it are fine: every
+      // caller uses set(merge: true), so the stored value carries over and
+      // compares equal to itself.
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == resource.data.role;
+
+      // Unchanged from the `write` this replaced, which also permitted delete.
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow patients and doctors to manage reports.

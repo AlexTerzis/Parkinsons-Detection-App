@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:stacked/stacked.dart';
+import 'package:stacked_services/stacked_services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
+import '../../../services/tap_model_features.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
 import '../test_complete/test_complete_view.dart';
@@ -43,8 +45,14 @@ class TapTestViewModel extends BaseViewModel {
   bool _resultSaved = true;
   double _completionConcern = 0;
 
-  double _score1 = 0.0;
-  double _score2 = 0.0;
+  /// Null until the model returns a prediction for that hand, so a run the
+  /// model could not score is distinguishable from one it scored 0.
+  double? _score1;
+  double? _score2;
+
+  /// False when neither hand produced a prediction. The result screen shows a
+  /// concern band, and a band built from a missing score reads as a clean run.
+  bool _hasScore = false;
 
   int _phase = 0; // 0=hand1,1=pause,2=hand2,3=done
   Timer? _timer;
@@ -133,8 +141,9 @@ class TapTestViewModel extends BaseViewModel {
     resultHand2 = '';
     _historyHand1.clear();
     _historyHand2.clear();
-    _score1 = 0.0;
-    _score2 = 0.0;
+    _score1 = null;
+    _score2 = null;
+    _hasScore = false;
     rightMetrics = null;
     leftMetrics = null;
     isSavingResult = false;
@@ -151,6 +160,10 @@ class TapTestViewModel extends BaseViewModel {
     secondsLeft = testDuration;
     _tapTimes.clear();
     _tapPairs.clear();
+    // The model's half-counts are offsets into the run, so the run needs a
+    // zero. Captured here rather than held as a field so the second hand
+    // cannot be measured against the first hand's start.
+    final handStart = DateTime.now();
 
     _startTimer(() async {
       rightMetrics = _metricsFrom('right', List.of(_tapPairs));
@@ -158,6 +171,7 @@ class TapTestViewModel extends BaseViewModel {
         l10n.rightHandLabel,
         List.of(_tapPairs),
         l10n,
+        handStart: handStart,
         storeInHand1: true,
       );
       _historyHand1.addAll(List.of(_tapPairs));
@@ -182,6 +196,7 @@ class TapTestViewModel extends BaseViewModel {
     secondsLeft = testDuration;
     _tapTimes.clear();
     _tapPairs.clear();
+    final handStart = DateTime.now();
 
     _startTimer(() async {
       leftMetrics = _metricsFrom('left', List.of(_tapPairs));
@@ -189,15 +204,29 @@ class TapTestViewModel extends BaseViewModel {
         l10n.leftHandLabel,
         List.of(_tapPairs),
         l10n,
+        handStart: handStart,
         storeInHand1: false,
       );
       _historyHand2.addAll(List.of(_tapPairs));
       status = TapTestStatus.completed;
       isTesting = false;
-      isSavingResult = true;
       _phase = 3;
+
+      final scored = [_score1, _score2].whereType<double>();
+      if (scored.isEmpty) {
+        // Neither hand produced a prediction. This used to fall through to
+        // `max(0.0, 0.0)` and store a score of 0 — indistinguishable in the
+        // history charts from a flawless run.
+        _hasScore = false;
+        _resultSaved = false;
+        isSavingResult = false;
+        notifyListeners();
+        return;
+      }
+
+      isSavingResult = true;
       notifyListeners();
-      await _saveResult(max(_score1, _score2));
+      await _saveResult(scored.reduce(max));
     });
   }
 
@@ -251,53 +280,26 @@ class TapTestViewModel extends BaseViewModel {
     String label,
     List<Map<String, DateTime>> tapPairs,
     AppLocalizations l10n, {
+    required DateTime handStart,
     required bool storeInHand1,
   }) async {
-    if (!_modelLoaded || tapPairs.length < 2) return l10n.predictionNotAvailable;
+    if (!_modelLoaded) return l10n.predictionNotAvailable;
 
-    final intervals = <double>[];
-    final holdTimes = <double>[];
+    final offsets = <double>[
+      for (final pair in tapPairs)
+        if (pair['down'] != null)
+          pair['down']!.difference(handStart).inMicroseconds / 1000,
+    ];
+    final features = tapModelFeatures(
+      offsets,
+      testDurationMs: testDuration * 1000,
+    );
+    if (features == null) return l10n.predictionNotAvailable;
 
-    for (int i = 1; i < tapPairs.length; i++) {
-      final currentDown = tapPairs[i]['down']!;
-      final prevDown = tapPairs[i - 1]['down']!;
-      final interval = currentDown.difference(prevDown).inMilliseconds / 1000;
-      intervals.add(interval);
-    }
-
-    for (final pair in tapPairs) {
-      if (pair.containsKey('down') && pair.containsKey('up')) {
-        final hold = pair['up']!.difference(pair['down']!).inMilliseconds / 1000;
-        holdTimes.add(hold);
-      }
-    }
-
-    final durationSec = testDuration.toDouble();
-    final freq = tapPairs.length / durationSec;
-
-    final avg = intervals.reduce((a, b) => a + b) / intervals.length;
-    final variance = intervals.map((d) => (d - avg) * (d - avg)).reduce((a, b) => a + b) / intervals.length;
-    final maxVal = intervals.reduce(max);
-    final minVal = intervals.reduce(min);
-    final range = maxVal - minVal;
-    final stdDev = sqrt(variance);
-    final avgHold = holdTimes.isNotEmpty ? holdTimes.reduce((a, b) => a + b) / holdTimes.length : 0.0;
-
-    final input = Float32List.fromList([
-      avg,
-      variance,
-      freq,
-      maxVal,
-      minVal,
-      range,
-      stdDev
-    ]).reshape([1, 7]);
-
+    final input = Float32List.fromList(features).reshape([1, 7]);
     final output = Float32List(1).reshape([1, 1]);
 
-    debugPrint('Predicting with:\n'
-        'avg=$avg var=$variance freq=$freq\n'
-        'max=$maxVal min=$minVal range=$range stdDev=$stdDev hold=$avgHold');
+    debugPrint('Predicting with ${features.join(', ')}');
 
     try {
       _interpreter.run(input, output);
@@ -306,7 +308,7 @@ class TapTestViewModel extends BaseViewModel {
       return l10n.predictionFailed;
     }
 
-    final prediction = output[0][0];
+    final prediction = (output[0][0] as num).toDouble();
     if (storeInHand1) {
       _score1 = prediction;
     } else {
@@ -364,16 +366,25 @@ class TapTestViewModel extends BaseViewModel {
     }
 
     _resultSaved = saved;
+    _hasScore = true;
     _completionConcern = result.concernScore;
     isSavingResult = false;
     notifyListeners();
   }
 
-  Future<void> continueToCompletion() => showTestComplete(
-        type: TestType.tap,
-        concern: _completionConcern,
-        saved: _resultSaved,
-      );
+  Future<void> continueToCompletion() async {
+    if (!_hasScore) {
+      // Nothing was scored, so there is no concern band to show. Going back is
+      // what the voice test does with an unscored recording.
+      locator<NavigationService>().back();
+      return;
+    }
+    await showTestComplete(
+      type: TestType.tap,
+      concern: _completionConcern,
+      saved: _resultSaved,
+    );
+  }
 
   void stopTest() {
     _timer?.cancel();

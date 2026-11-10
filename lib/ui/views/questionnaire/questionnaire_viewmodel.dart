@@ -19,6 +19,17 @@ class QuestionnaireViewModel extends BaseViewModel {
   /// Submits and enriches the user responses before saving.
   Future<void> submitQuestionnaire(Map<String, dynamic> responses) async {
     setBusy(true);
+    try {
+      await _process(responses);
+    } finally {
+      // Always cleared. A throw anywhere in the scoring — an unparseable
+      // SCOPA answer, a failed write — used to leave the questionnaire stuck
+      // on its spinner with a filled-in form it could not submit.
+      if (isBusy) setBusy(false);
+    }
+  }
+
+  Future<void> _process(Map<String, dynamic> responses) async {
     // Composite symptom flags:
     // assume `responses['AA']` is one of "AA1", "AA2", or "AA3"
     responses['AA1'] = responses['AA'] == 'AA1';
@@ -32,13 +43,30 @@ class QuestionnaireViewModel extends BaseViewModel {
         || (responses['A1'] == true && responses['A3'] == true));
 
     //A6 (requires A5 and a REM sleep flag 'REM')
-      responses['A6'] = (responses['A5'] == true && (responses['RBD_study_positive'] == true || responses['RBD_q'] == 'true'));
+    // `RBD_q` is a bool from the form, not the string 'true'. Compared as text
+    // it was never equal, so A6 could only ever fire off a positive sleep
+    // study — which almost no patient has.
+    responses['A6'] = (responses['A5'] == true &&
+        (responses['RBD_study_positive'] == true ||
+            responses['RBD_q'] == true));
     //A7 = A5 && Memory_Disorder && Urgent_Urination
     responses['A7'] = (responses['A5'] == true &&
         responses['Memory_Disorder'] == true &&
         responses['Urgent_Urination'] == true);
     
-    // A8 = Memory_Disorder && Exec_Language_Disorder && A5
+    // A8 = Memory_Disorder && Execute_Disorder
+    //
+    // Deliberately two conditions, and deliberately *not* A5. The comment here
+    // used to read `Memory_Disorder && Exec_Language_Disorder && A5`, which
+    // does not match the code: it named a third condition the code never
+    // checked, and a language disorder the code never accepted. Confirmed as
+    // intended on 2026-11-10 — the comment was wrong, not the logic.
+    //
+    // Flagged because the discrepancy reads like a bug and will attract
+    // "fixes": A8 is intentionally broader than A9 and A10, which do require
+    // `(Execute_Disorder || Language_Disorder)`. Do not add A5 here without
+    // checking the clinical source first, since doing so would make A8
+    // equivalent to `A10 && A5`.
     responses['A8'] = (responses['Memory_Disorder'] == true &&
         responses['Execute_Disorder'] == true );
 
@@ -174,7 +202,7 @@ class QuestionnaireViewModel extends BaseViewModel {
     ];
     var scopaTotal = 0;
     for (final key in scopaKeys) {
-      scopaTotal += int.tryParse(responses[key] as String? ?? '0')!;
+      scopaTotal += _scopaValue(responses[key]);
     }
     responses['SCOPA_total'] = scopaTotal;
     responses['SCOPA>3'] = scopaTotal >= 3;
@@ -207,5 +235,19 @@ class QuestionnaireViewModel extends BaseViewModel {
     await _nav.navigateToView(
       PatienceView(initialTab: 3, resultsFuture: futureSolutions),
     );
+  }
+
+  /// One SCOPA-AUT answer as a number.
+  ///
+  /// The form stores these as strings, but an unanswered item is null or '',
+  /// and a resumed or migrated response can hold a number. The previous
+  /// `int.tryParse(raw as String? ?? '0')!` threw on all three — a `TypeError`
+  /// on the cast, a null assertion on anything non-numeric — which aborted
+  /// submission of an already-completed questionnaire. An unreadable answer
+  /// counts as 0, the same as an unanswered one.
+  int _scopaValue(dynamic raw) {
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw.trim()) ?? 0;
+    return 0;
   }
 }

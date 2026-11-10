@@ -72,22 +72,40 @@ the wrong control for someone with hand tremor), persisted and applied app-wide.
 ```bash
 flutter pub get
 flutter gen-l10n        # regenerates lib/l10n/app_localizations*.dart
-flutter run
+flutter run --dart-define-from-file=raison.local.json
 ```
 
 Firebase configuration is not in this repository. You will need your own
 `google-services.json` / `GoogleService-Info.plist`, and **anonymous sign-in
 must be enabled** in the Firebase console for guest mode to work.
 
-```bash
-flutter test            # 107 tests
-flutter analyze
+### The rAIson API key
+
+The reasoning API key is supplied at build time and is not in this repository.
+Create `raison.local.json` in the project root — `*.local.json` is gitignored —
+and pass it to every `flutter run` / `flutter build`:
+
+```json
+{ "RAISON_API_KEY": "your-key" }
 ```
 
-One test — `hand_metrics_test.dart` → "tremor detects oscillation" — fails. It
-predates 2.0 and asserts on the raw-position tremor metric that
-`TremorAnalysisService` supersedes; it is left failing rather than silently
-adjusted.
+Without it `RaisonApiService` throws on its first request naming this flag,
+rather than failing as an opaque 403. Note that this keeps the key out of the
+repository, not out of a built app: a value compiled into a mobile binary can
+be extracted from it, so a deployment handling real patient data should proxy
+rAIson through its own server instead.
+
+```bash
+flutter test            # 420 tests, all passing
+flutter analyze         # no errors or warnings
+```
+
+`hand_metrics_test.dart` → "tremor dilutes a single-axis oscillation" now
+records what `tremorAll` actually returns (1/6) instead of asserting a value
+that metric cannot produce. `tremorAll` is superseded by
+`TremorAnalysisService` but is still read by `LegacyWeightedScorer` and the
+camera test's `rest_tremor_*` fields, so it is left unchanged rather than
+corrected — altering it would move scores already stored in Firestore.
 
 ## Known limitations
 

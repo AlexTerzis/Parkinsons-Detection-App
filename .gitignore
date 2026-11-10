@@ -34,3 +34,8 @@ Thumbs.db
 
 # Ignore Python venv
 Parkinsons_ML/venv/
+
+# Build-time secrets, passed with --dart-define-from-file. Never commit these:
+# a key committed here is public forever, since history survives in clones and
+# forks even after a rewrite.
+*.local.json
