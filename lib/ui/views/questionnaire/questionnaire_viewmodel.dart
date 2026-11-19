@@ -4,6 +4,7 @@ import '../../../app/app.locator.dart';
 import '../../../services/test_service.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/raison_api_service.dart';
+import '../../../services/cognitive_facts.dart';
 import '../patience/patience_view.dart';
 import 'package:stacked_services/stacked_services.dart';
 import '../../../models/test_result.dart';
@@ -16,11 +17,32 @@ class QuestionnaireViewModel extends BaseViewModel {
   final RaisonApiService _raison = locator<RaisonApiService>();
   final NavigationService _nav = locator<NavigationService>();
 
+  /// The cognitive tests the signed-in user has no result for yet.
+  ///
+  /// Used to offer them before the reasoning runs. Any failure counts as
+  /// "nothing missing", so a network problem never blocks the submission.
+  Future<List<TestType>> missingCognitiveTests() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const [];
+    try {
+      return CognitiveFacts.missing(await _tests.fetchResultsForPatient(uid));
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Submits and enriches the user responses before saving.
-  Future<void> submitQuestionnaire(Map<String, dynamic> responses) async {
+  ///
+  /// With [testsFirst] the answers are saved and the patient is taken to the
+  /// tests, and the reasoning runs later from the Insights tab, once the
+  /// cognitive tests have added their facts.
+  Future<void> submitQuestionnaire(
+    Map<String, dynamic> responses, {
+    bool testsFirst = false,
+  }) async {
     setBusy(true);
     try {
-      await _process(responses);
+      await _process(responses, testsFirst: testsFirst);
     } finally {
       // Always cleared. A throw anywhere in the scoring — an unparseable
       // SCOPA answer, a failed write — used to leave the questionnaire stuck
@@ -29,7 +51,10 @@ class QuestionnaireViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> _process(Map<String, dynamic> responses) async {
+  Future<void> _process(
+    Map<String, dynamic> responses, {
+    bool testsFirst = false,
+  }) async {
     // Composite symptom flags:
     // assume `responses['AA']` is one of "AA1", "AA2", or "AA3"
     responses['AA1'] = responses['AA'] == 'AA1';
@@ -214,6 +239,15 @@ class QuestionnaireViewModel extends BaseViewModel {
       return;
     }
 
+    // Facts from the cognitive tests already taken in the app (MoCA below 24,
+    // FAB below 12). A failure here must not stop the questionnaire from being
+    // saved, so it only means those facts are left out.
+    try {
+      responses.addAll(
+        CognitiveFacts.factsFrom(await _tests.fetchResultsForPatient(uid)),
+      );
+    } catch (_) {}
+
     // Build and save the TestResult
     final result = TestResult(
       id: '',
@@ -225,6 +259,13 @@ class QuestionnaireViewModel extends BaseViewModel {
     );
 
     await _tests.setQuestionnaireResult(result);
+
+    if (testsFirst) {
+      setBusy(false);
+      // Tests tab. The Insights tab runs the reasoning when it is opened.
+      await _nav.navigateToView(const PatienceView(initialTab: 1));
+      return;
+    }
 
     // Kick off the reasoning call now but don't wait for it so navigation is fast.
     final futureSolutions = _raison.submit(responses);

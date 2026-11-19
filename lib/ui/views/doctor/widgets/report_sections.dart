@@ -7,6 +7,7 @@ import '../../../../models/raison_result.dart';
 import '../../../../models/test_result.dart';
 import '../../../../models/test_score_interpretation.dart';
 import '../../../../models/test_type.dart';
+import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
 import '../../../../services/report_analysis.dart';
 import '../../../../services/test_series_analysis.dart';
@@ -536,7 +537,11 @@ class _ReasoningCardState extends State<ReasoningCard> {
         .where((r) => r.type == TestType.questionnaire)
         .firstOrNull;
     if (questionnaire == null || questionnaire.data.isEmpty) return;
-    _future = locator<RaisonApiService>().submit(questionnaire.data);
+    // The report carries copies of the patient's cognitive test results, so
+    // the same facts the patient's own screen uses can be derived here.
+    _future = locator<RaisonApiService>().submit(
+      CognitiveFacts.merge(questionnaire.data, widget.report.results),
+    );
   }
 
   @override
