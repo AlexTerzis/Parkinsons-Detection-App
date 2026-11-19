@@ -481,7 +481,7 @@
   "stepInstructionSayWordsTogether": "Πείτε τις λέξεις από τη λίστα (όλες μαζί, με όποια σειρά θέλετε): {words}",
   "stepInstructionSayWordsSeparately": "Πείτε τις λέξεις, μία σε κάθε πεδίο. {words}",
   "stepInstructionSayWords": "Πείτε τις λέξεις",
-  "stepInstructionDelayedRecall": "Πείτε όσες λέξεις θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).",
+  "stepInstructionDelayedRecall": "Πείτε όσες από τις 5 λέξεις που απομνημονεύσατε στην αρχή του τεστ θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).",
   "stepInstructionDelayedRecallHint": "Αν πατήσετε “Υπόδειξη” για κάποιο, παίρνετε μισό βαθμό για αυτό.",
   "stepInstructionWhichWordWasInList": "Ποια από τις παρακάτω λέξεις ήταν στη λίστα;",
   "stepInstructionVigilance": "Αυτό το τεστ μετρά την εγρήγορση και την προσοχή σας.",

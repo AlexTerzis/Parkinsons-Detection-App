@@ -11,7 +11,7 @@ import 'greek_text.dart';
 ///
 /// The words, cues and distractors are the instrument's own and stay Greek.
 class DelayedRecallStep extends StatefulWidget {
-  final void Function(int score, VerbalMemoryResult result) onFinished;
+  final void Function(double score, VerbalMemoryResult result) onFinished;
   final List<String> immediateTrials;
 
   const DelayedRecallStep({
@@ -177,11 +177,13 @@ class _DelayedRecallStepState extends State<DelayedRecallStep> {
   void _finish() {
     if (_finished) return;
     _finished = true;
-    int score = 0;
+    // A word recalled unaided is worth a point; one reached through either
+    // cue (category or multiple choice) is worth half, as the screen says.
+    double score = 0;
     final used = <int>{};
     for (final row in _rows) {
       if (row.locked && row.wordIndex != null && !used.contains(row.wordIndex!)) {
-        score++;
+        score += row.hintStep > 0 ? 0.5 : 1.0;
         used.add(row.wordIndex!);
       }
     }
@@ -343,7 +345,7 @@ class VerbalMemoryResult {
   final String delayedFreeRecall;
   final Map<String, String?> categoryCueAnswers;
   final Map<String, String?> choiceAnswers;
-  final int score;
+  final double score;
 
   Map<String, dynamic> toJson() => {
         'immediateTrials': immediateTrials,

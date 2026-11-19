@@ -1653,7 +1653,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get stepInstructionDelayedRecall =>
-      'Πείτε όσες λέξεις θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).';
+      'Πείτε όσες από τις 5 λέξεις που απομνημονεύσατε στην αρχή του τεστ θυμάστε (μόνο με φωνή, η σειρά δεν μετράει).';
 
   @override
   String get stepInstructionDelayedRecallHint =>

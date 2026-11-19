@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../common/widgets/widgets.dart';
+import 'greek_text.dart';
 
 /// MoCA naming: name the three pictured animals aloud.
 ///
@@ -34,6 +35,23 @@ class _NamingStepState extends State<NamingStep> {
   bool _done = false;
 
   final _names = ['λιοντάρι', 'ρινόκερος', 'καμήλα'];
+
+  /// Accepted forms per animal, already folded by [normalizeGreek]. Whole
+  /// words rather than stems: a "ΚΑΜΗΛ" prefix would also accept
+  /// καμηλοπάρδαλη (giraffe).
+  static const _accepted = [
+    {'ΛΙΟΝΤΑΡΙ', 'ΛΙΟΝΤΑΡΙΑ'},
+    {'ΡΙΝΟΚΕΡΟΣ', 'ΡΙΝΟΚΕΡΩΣ', 'ΡΙΝΟΚΕΡΟ', 'ΡΙΝΟΚΕΡΟΙ'},
+    {'ΚΑΜΗΛΑ', 'ΚΑΜΗΛΕΣ', 'ΔΡΟΜΑΔΑ'},
+  ];
+
+  /// True when any spoken word is an accepted name for animal [i], so
+  /// "ένα λιοντάρι", "Λιοντάρι" and "λιονταρι" all count — accents, case and
+  /// filler words like articles do not cost the point.
+  bool _isCorrect(int i) => _responses[i]
+      .split(RegExp(r'\s+'))
+      .map(normalizeGreek)
+      .any(_accepted[i].contains);
 
   @override
   void initState() {
@@ -71,8 +89,7 @@ class _NamingStepState extends State<NamingStep> {
 
   void _validateField(int idx) {
     if (_responses[idx].isEmpty) return;
-    final userSaid = _responses[idx];
-    final correct = userSaid == _names[idx] || userSaid == _names[idx].replaceAll('ά', 'α');
+    final correct = _isCorrect(idx);
     // Icon carries the verdict, so the message is just the expected animal.
     final expected =
         '${_names[idx][0].toUpperCase()}${_names[idx].substring(1)}';
@@ -104,8 +121,7 @@ class _NamingStepState extends State<NamingStep> {
     _timeoutTimer?.cancel();
     double score = 0;
     for (int i = 0; i < 3; i++) {
-      final userSaid = _responses[i];
-      final correct = userSaid == _names[i] || userSaid == _names[i].replaceAll('ά', 'α');
+      final correct = _isCorrect(i);
       if (correct && _hintUsed[i]) {
         score += 0.5;
       } else if (correct) {

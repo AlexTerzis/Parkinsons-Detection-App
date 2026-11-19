@@ -481,7 +481,7 @@
   "stepInstructionSayWordsTogether": "Say the words from the list (all together, in any order): {words}",
   "stepInstructionSayWordsSeparately": "Say the words, one in each field. {words}",
   "stepInstructionSayWords": "Say the words",
-  "stepInstructionDelayedRecall": "Say as many words as you remember (voice only; the order does not matter).",
+  "stepInstructionDelayedRecall": "Say as many of the 5 words you memorised at the start of the test as you can remember (voice only; the order does not matter).",
   "stepInstructionDelayedRecallHint": "If you tap “Hint” for a word, you get half a point for it.",
   "stepInstructionWhichWordWasInList": "Which of the following words was in the list?",
   "stepInstructionVigilance": "This test measures your alertness and attention.",

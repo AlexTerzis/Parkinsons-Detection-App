@@ -2975,7 +2975,7 @@ abstract class AppLocalizations {
   /// No description provided for @stepInstructionDelayedRecall.
   ///
   /// In en, this message translates to:
-  /// **'Say as many words as you remember (voice only; the order does not matter).'**
+  /// **'Say as many of the 5 words you memorised at the start of the test as you can remember (voice only; the order does not matter).'**
   String get stepInstructionDelayedRecall;
 
   /// No description provided for @stepInstructionDelayedRecallHint.
