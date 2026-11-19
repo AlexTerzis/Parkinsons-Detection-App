@@ -7,7 +7,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// locator, initialised from `main()` before `runApp`, and driving a
 /// root-level rebuild.
 class TextScaleService extends ChangeNotifier {
-  static const _textScaleKey = 'textScale';
+  /// The size this device starts at, used by anyone with no size of their own.
+  ///
+  /// Set from the sign-in screen, where there is no account to attach it to. A
+  /// tablet stood in a waiting room can be left on a comfortable size once and
+  /// have every patient inherit it.
+  static const _deviceKey = 'textScale';
+
+  /// One account's chosen size.
+  ///
+  /// Scoped per uid because the app runs on shared tablets: with a single
+  /// device-wide key, a doctor who set the largest size handed that size to
+  /// whoever signed in next, and nothing in the UI explained why.
+  static String _userKey(String uid) => 'textScale_$uid';
 
   /// The sizes offered in the UI.
   ///
@@ -48,21 +60,48 @@ class TextScaleService extends ChangeNotifier {
     return index == -1 ? 0 : index;
   }
 
-  Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getDouble(_textScaleKey);
-    if (saved != null) {
-      _scale = saved.clamp(minScale, maxScale);
-      return;
-    }
+  /// Whose size is currently loaded, or null while signed out.
+  String? _uid;
 
-    // First run only: adopt whatever font size the OS is already set to, so
-    // someone who has asked their device for larger type does not get it
-    // taken away. The MediaQuery override replaces the platform scaler rather
-    // than composing with it, so without this the app would start smaller
-    // than the rest of their phone.
-    _scale = WidgetsBinding.instance.platformDispatcher.textScaleFactor
-        .clamp(minScale, maxScale);
+  /// Loads the size for [uid] before the first frame.
+  ///
+  /// Takes the uid rather than reading it from the auth service so `main()`
+  /// can resolve it once and hand it over, keeping this a plain preference
+  /// store with no dependency on how sign-in works.
+  Future<void> init({String? uid}) async {
+    _uid = uid;
+    await _load();
+  }
+
+  /// Switches to [uid]'s size, or back to the device size when signed out.
+  ///
+  /// Driven by the auth state stream, so it covers signing out, signing in and
+  /// switching accounts without each of those call sites having to remember.
+  /// Upgrading a guest to a real account keeps the same uid, so that case is a
+  /// no-op and the size they picked as a guest survives.
+  Future<void> loadForUser(String? uid) async {
+    if (uid == _uid) return;
+
+    _uid = uid;
+    final previous = _scale;
+    await _load();
+    if (_scale != previous) notifyListeners();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = _uid;
+
+    // Their own size, else this device's, else the size the OS is already set
+    // to: someone who has asked their phone for larger type should not have it
+    // taken away here. The MediaQuery override replaces the platform scaler
+    // rather than composing with it, so without that last fallback the app
+    // would start smaller than the rest of their phone.
+    final resolved = (uid == null ? null : prefs.getDouble(_userKey(uid))) ??
+        prefs.getDouble(_deviceKey) ??
+        WidgetsBinding.instance.platformDispatcher.textScaleFactor;
+
+    _scale = resolved.clamp(minScale, maxScale);
   }
 
   Future<void> setScale(double scale) async {
@@ -70,8 +109,9 @@ class TextScaleService extends ChangeNotifier {
     if (next == _scale) return;
 
     _scale = next;
+    final uid = _uid;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_textScaleKey, next);
+    await prefs.setDouble(uid == null ? _deviceKey : _userKey(uid), next);
     notifyListeners();
   }
 

@@ -57,11 +57,25 @@ class CameraScoringService {
     final legacy = _legacy.score(recording);
     final enhanced = _enhanced.score(recording);
 
+    // The enhanced scorer is preferred, but only when it measured something.
+    //
+    // Its features are all nullable by design — the honest answer to "how much
+    // did the amplitude decay" is often "not enough movements to say". But when
+    // *every* feature comes back unmeasured it returns a likelihood of 0, and 0
+    // is the best possible value on this scale. Selecting that would file a
+    // recording nothing could be read from as a perfect result.
+    //
+    // The legacy formula is cruder and its confidence is a placeholder, but it
+    // is arithmetic over raw positions and therefore always produces a number.
+    // When the better analysis has nothing to say, a rough answer beats a
+    // reassuring lie.
+    final bool preferEnhanced = EnhancedScoringConfig.useEnhancedScoring &&
+        enhanced.hasMeasuredFeatures;
+
     return ScoringComparison(
       legacy: legacy,
       enhanced: enhanced,
-      selected:
-          EnhancedScoringConfig.useEnhancedScoring ? enhanced : legacy,
+      selected: preferEnhanced ? enhanced : legacy,
     );
   }
 }

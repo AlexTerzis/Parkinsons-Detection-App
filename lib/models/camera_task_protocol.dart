@@ -58,53 +58,122 @@ extension CameraTaskTypeInfo on CameraTaskType {
   bool get isScored => this != CameraTaskType.rest;
 }
 
-/// How long the whole protocol runs.
+/// How the protocol is run.
 enum CameraTestMode {
-  /// The full protocol: 3s rest plus three 10s movements, per hand.
+  /// One hand at a time, unhurried, with a countdown before each movement.
+  ///
+  /// The clinically faithful form: MDS-UPDRS examines each hand separately, and
+  /// separating them is also what makes the left-versus-right comparison mean
+  /// anything. It takes a couple of minutes, deliberately — a patient who feels
+  /// rushed performs worse in ways that look like the signs being measured.
   full,
 
-  /// Roughly half the durations, for patients who cannot sustain the full run.
+  /// Both hands in view together, for a quicker run.
+  ///
+  /// Halves the number of steps by recording both hands at once. The trade-off
+  /// is real and worth stating: each hand is smaller in the frame, so landmark
+  /// precision drops; the hands can occlude one another; and performing a
+  /// movement with both hands simultaneously is not the same task as performing
+  /// it with one, so results are not directly comparable with a full run.
   short,
 }
 
-/// One timed step of the protocol: a single movement, on a single hand.
+/// Who decides when a step starts.
+enum CameraPacing {
+  /// The patient reads the instruction and taps when ready.
+  ///
+  /// The default, because the slowest part of this assessment is understanding
+  /// what to do, and that is not something to put a stopwatch on. Someone
+  /// reading every instruction carefully takes several minutes over the full
+  /// protocol; someone who has done it before goes as fast as they like. Only
+  /// the recording itself is timed, because comparing one run with another —
+  /// and one hand with the other — depends on them being the same length.
+  selfPaced,
+
+  /// Each step starts on its own after a countdown.
+  ///
+  /// For a phone propped out of arm's reach, where tapping between every step
+  /// would mean leaning in and disturbing the setup.
+  timed,
+}
+
+/// One timed step of the protocol.
 class CameraTask {
   const CameraTask({
     required this.id,
     required this.type,
-    required this.hand,
+    required this.hands,
     required this.duration,
+    this.leadIn = Duration.zero,
   });
 
-  /// Stable identifier used as the Firestore/Storage key for this task's
-  /// segment, e.g. `right_openClose`. Deliberately independent of the task's
-  /// position in the sequence so short and full runs share the same keys.
+  /// Stable identifier for the step, e.g. `right_openClose` or `both_openClose`.
+  /// Deliberately independent of position in the sequence.
   final String id;
 
   final CameraTaskType type;
 
-  /// `'Left'` or `'Right'`, matching `LandmarkData.handedness` so frames can be
-  /// filtered to the hand under examination.
-  final String hand;
+  /// The hands examined in this step: one of them in [CameraTestMode.full],
+  /// both in [CameraTestMode.short]. Values match `LandmarkData.handedness`.
+  final List<String> hands;
 
+  /// How long frames are recorded for.
   final Duration duration;
+
+  /// The pause before recording starts, during which nothing is kept.
+  ///
+  /// Serves both pacings: in [CameraPacing.timed] it is the countdown that
+  /// auto-starts the step, and in [CameraPacing.selfPaced] it is the short
+  /// "get ready" between the patient tapping and the first recorded frame.
+  ///
+  /// Either way it exists so the patient can get into position and settle
+  /// before anything counts. Without it the first second or two of every step
+  /// is the patient still arranging their hand, which is recorded as a hesitant
+  /// start and measured as delayed initiation.
+  final Duration leadIn;
+
+  bool get isBothHands => hands.length > 1;
 
   String? get mdsUpdrsItem => type.mdsUpdrsItem;
 
   bool get isScored => type.isScored;
+
+  /// The storage key for one hand's recording of this step.
+  ///
+  /// Always per hand, even when both were recorded together, so a short run and
+  /// a full run produce the same keys and anything reading them stays simple.
+  String segmentId(String hand) => '${hand.toLowerCase()}_${type.name}';
 }
 
 /// Builds the ordered task list for a run.
 class CameraTaskProtocol {
   const CameraTaskProtocol._();
 
-  /// Full-length durations. Short mode halves these, with a floor (see [build]).
-  static const Duration restDuration = Duration(seconds: 3);
-  static const Duration movementDuration = Duration(seconds: 10);
+  // --- Full mode: one hand at a time, unhurried ---
 
-  /// Shortening never goes below this, because a window of a couple of seconds
-  /// yields too few frames for the variance metrics to mean anything.
-  static const Duration minimumDuration = Duration(seconds: 2);
+  /// Long enough to settle and for a rest tremor to show itself. Rest tremor is
+  /// intermittent, and three seconds could easily fall between episodes.
+  static const Duration restDuration = Duration(seconds: 6);
+
+  /// Twelve seconds of movement.
+  ///
+  /// Decrement is the most specific thing measured here, and it is a *trend*
+  /// across the task — the more cycles it is fitted over, the less it is
+  /// dominated by the first few. Long enough to show fatigue, short enough not
+  /// to cause it.
+  static const Duration movementDuration = Duration(seconds: 12);
+
+  /// Countdown before each movement starts recording.
+  static const Duration movementLeadIn = Duration(seconds: 4);
+
+  /// Countdown before a rest period, which needs less preparation.
+  static const Duration restLeadIn = Duration(seconds: 3);
+
+  // --- Short mode: both hands together ---
+
+  static const Duration shortRestDuration = Duration(seconds: 4);
+  static const Duration shortMovementDuration = Duration(seconds: 8);
+  static const Duration shortLeadIn = Duration(seconds: 3);
 
   /// Hands are examined right first, then left, and the whole block for one
   /// hand completes before the other starts — switching hands mid-item makes
@@ -118,38 +187,51 @@ class CameraTaskProtocol {
     CameraTaskType.pronationSupination,
   ];
 
-  static Duration _durationFor(CameraTaskType type, CameraTestMode mode) {
-    final Duration full = type == CameraTaskType.rest
-        ? restDuration
-        : movementDuration;
-    if (mode == CameraTestMode.full) return full;
-
-    final int halved = full.inSeconds ~/ 2;
-    return Duration(
-      seconds: halved < minimumDuration.inSeconds
-          ? minimumDuration.inSeconds
-          : halved,
-    );
-  }
-
   /// The ordered protocol for [mode].
   static List<CameraTask> build(CameraTestMode mode) {
+    if (mode == CameraTestMode.short) return _buildShort();
+
     final tasks = <CameraTask>[];
     for (final hand in hands) {
       for (final type in _perHandOrder) {
+        final bool isRest = type == CameraTaskType.rest;
         tasks.add(CameraTask(
           id: '${hand.toLowerCase()}_${type.name}',
           type: type,
-          hand: hand,
-          duration: _durationFor(type, mode),
+          hands: <String>[hand],
+          duration: isRest ? restDuration : movementDuration,
+          leadIn: isRest ? restLeadIn : movementLeadIn,
         ));
       }
     }
     return tasks;
   }
 
-  /// Total wall-clock length of [mode], excluding any time spent paused.
+  /// Four steps instead of eight, each recording both hands at once.
+  static List<CameraTask> _buildShort() {
+    return <CameraTask>[
+      for (final type in _perHandOrder)
+        CameraTask(
+          id: 'both_${type.name}',
+          type: type,
+          hands: hands,
+          duration: type == CameraTaskType.rest
+              ? shortRestDuration
+              : shortMovementDuration,
+          leadIn: shortLeadIn,
+        ),
+    ];
+  }
+
+  /// Total wall-clock length of [mode], counting the countdowns and excluding
+  /// any time spent paused.
   static Duration totalDuration(CameraTestMode mode) => build(mode).fold(
+        Duration.zero,
+        (sum, task) => sum + task.duration + task.leadIn,
+      );
+
+  /// Time spent actually recording in [mode].
+  static Duration recordedDuration(CameraTestMode mode) => build(mode).fold(
         Duration.zero,
         (sum, task) => sum + task.duration,
       );

@@ -17,14 +17,63 @@ service cloud.firestore {
                          // Must match TestService._typeToPath(TestType.fab)
                          // exactly, including the capitals. Without it every
                          // FAB score is denied and silently discarded.
-                         'FAB'
+                         'FAB',
+                         // TestService._typeToPath(TestType.posture).
+                         'posture'
                        ];
     }
 
-    // Allow users to read their own profile document and update it when authenticated.
     match /users/{userId} {
-      // Only allow reading or updating your own profile document
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Your own profile: readable, and writable except for `role`, which is
+      // constrained by the create/update rules at the bottom of this block.
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Doctor profiles are readable by any signed-in user, so a patient can
+      // find a doctor to send results to.
+      //
+      // This is what the doctor picker needs. Security rules are filters on
+      // whether a query is *allowed*, not on what it returns: a query for
+      // `role == 'doctor'` spans other people's documents, so with only the
+      // own-profile rule above it was rejected outright rather than returning
+      // fewer rows. The picker then showed "no doctors found" no matter how
+      // many existed.
+      //
+      // Scoped to `role == 'doctor'` deliberately. Patient documents are not
+      // covered by it and stay private. A doctor document holds their name,
+      // email, specialty and location — which is exactly the directory entry a
+      // patient is choosing from.
+      //
+      // For this to permit a *query*, the query itself must carry the matching
+      // constraint. `ReportsService.fetchAllDoctors` uses
+      // `.where('role', isEqualTo: 'doctor')`, which is what makes it provable.
+      allow read: if request.auth != null
+                  && resource.data.role == 'doctor';
+
+      // `role` decides who reaches the doctor dashboard and whose document is
+      // published in the patient-visible directory above, so it cannot be a
+      // client-supplied value. It used to be: the single `read, write` rule
+      // this block started with let anyone set their own `role` to 'doctor',
+      // at signup or at any point afterwards.
+      //
+      // A new profile is therefore always a patient. Doctor accounts are
+      // promoted by hand in the Firebase console, which is the only place that
+      // can vouch for someone actually being a clinician. Existing doctor
+      // documents are unaffected — this applies to document creation only.
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'patient';
+
+      // The rest of the profile — name, date of birth, medication, chosen
+      // doctor, a doctor's specialty and location — stays freely editable, but
+      // `role` must come back unchanged. Writes that omit it are fine: every
+      // caller uses set(merge: true), so the stored value carries over and
+      // compares equal to itself.
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.role == resource.data.role;
+
+      // Unchanged from the `write` this replaced, which also permitted delete.
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow patients and doctors to manage reports.
@@ -35,6 +84,85 @@ service cloud.firestore {
                           && (request.auth.uid == resource.data.patientId
                               || request.auth.uid == resource.data.doctorId);
       allow delete: if false;
+    }
+
+    // Appointments between a patient and a doctor.
+    //
+    // Same shape as reports: the patient creates, and both parties may read and
+    // update the ones they are part of.
+    //
+    // Which status transitions each side may make is enforced in
+    // AppointmentService, not here. A state machine in rules is a lot of
+    // complexity for a single trusted client, and it would still need
+    // duplicating in Dart to produce a usable error. If a second client is ever
+    // written against this collection, that trade-off has to be revisited.
+    match /appointments/{appointmentId} {
+      allow create: if request.auth != null
+                    && request.resource.data.patientId == request.auth.uid;
+      allow read, update: if request.auth != null
+                          && (request.auth.uid == resource.data.patientId
+                              || request.auth.uid == resource.data.doctorId);
+      allow delete: if false;
+    }
+
+    // The doctor's published calendar.
+    //
+    // A slot is an offer, not a booking, and it must be readable by any signed-
+    // in user or nobody could browse a calendar to book from. So an open slot
+    // holds nothing about a patient — only whose calendar it is and when. The
+    // moment one is taken, `bookedBy` is set and the read rule narrows to the
+    // two parties, which is what stops the collection from leaking who is
+    // seeing which doctor.
+    //
+    // Rules are not filters: a query is rejected outright unless every document
+    // it could return is provably readable. `AvailabilityService.watchOpenFor`
+    // therefore carries `bookedBy == null` in the query itself, which is what
+    // makes the first clause provable for a patient browsing someone else's
+    // calendar.
+    match /availability/{slotId} {
+      // A booking: an open slot claimed by the caller, with the offer itself
+      // left alone. Without pinning doctorId, start and duration, a patient
+      // could take a slot and rewrite it into a different appointment.
+      function isBooking() {
+        return resource.data.bookedBy == null
+               && request.resource.data.bookedBy == request.auth.uid
+               && request.resource.data.doctorId == resource.data.doctorId
+               && request.resource.data.start == resource.data.start
+               && request.resource.data.durationMinutes
+                  == resource.data.durationMinutes;
+      }
+
+      // Giving back a slot the caller holds, so it can be offered again.
+      function isRelease() {
+        return resource.data.bookedBy == request.auth.uid
+               && request.resource.data.bookedBy == null
+               && request.resource.data.doctorId == resource.data.doctorId
+               && request.resource.data.start == resource.data.start;
+      }
+
+      allow read: if request.auth != null
+                  && (resource.data.bookedBy == null
+                      || request.auth.uid == resource.data.bookedBy
+                      || request.auth.uid == resource.data.doctorId);
+
+      // Only a doctor publishes times, and only for themselves. A slot cannot
+      // be created already booked, which would let anyone write a patient onto
+      // someone else's calendar.
+      allow create: if request.auth != null
+                    && request.resource.data.doctorId == request.auth.uid
+                    && request.resource.data.bookedBy == null;
+
+      allow update: if request.auth != null
+                    && (request.auth.uid == resource.data.doctorId
+                        || isBooking()
+                        || isRelease());
+
+      // A booked slot cannot be deleted, only cancelled — a patient is
+      // expecting that appointment, and cancelling it tells them so where
+      // deleting the slot would take it away in silence.
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.doctorId
+                    && resource.data.bookedBy == null;
     }
 
     // Deny everything else

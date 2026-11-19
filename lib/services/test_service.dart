@@ -39,10 +39,7 @@ class TestService {
   /// `/users/{uid}/<category>`.
   CollectionReference<Map<String, dynamic>> _categoryCol(
           String uid, TestType type) =>
-      _firestore
-          .collection('users')
-          .doc(uid)
-          .collection(_typeToPath(type));
+      _firestore.collection('users').doc(uid).collection(_typeToPath(type));
 
   /// Loads all results for the given patient ordered by date. Each document is
   /// converted to a [TestResult] model.
@@ -53,8 +50,9 @@ class TestService {
         final snap = await _categoryCol(patientId, type)
             .orderBy('performedAt', descending: true)
             .get();
-        results.addAll(
-            snap.docs.map((d) => TestResult.fromJson(d.data(), d.id)).toList());
+        results.addAll(snap.docs
+            .map((d) => TestResult.fromJson(d.data(), d.id))
+            .where((result) => result.isValidatedForPatientUse));
       } catch (_) {
         // Ignore permission errors or missing collections
       }
@@ -217,9 +215,13 @@ class TestService {
       case TestType.questionnaire:
       case TestType.neuro:
       case TestType.fab:
+      // Posture results are a handful of matched/not flags; there is no raw
+      // asset worth uploading, so the document is the whole record.
+      case TestType.posture:
         break;
     }
   }
+
   /// Creates or updates the questionnaire result for a patient.
   ///
   /// Each user only keeps a single questionnaire document identified by the
@@ -232,6 +234,7 @@ class TestService {
         .doc('questionnaire')
         .set(_toJsonWithGuestFlag(result));
   }
+
   Map<String, double> computeSummary(List<TestResult> results) {
     if (results.isEmpty) return {};
 
@@ -243,8 +246,7 @@ class TestService {
     final Map<String, double> summary = {};
     grouped.forEach((type, list) {
       final double avg =
-          list.map((e) => e.concernScore).reduce((a, b) => a + b) /
-              list.length;
+          list.map((e) => e.concernScore).reduce((a, b) => a + b) / list.length;
       summary[_typeToLabel(type)] = avg;
     });
     return summary;
@@ -265,9 +267,11 @@ class TestService {
       case TestType.cameraDetection:
         return 'Camera';
       case TestType.neuro:
-        return 'neuropsychological'; 
+        return 'neuropsychological';
       case TestType.fab:
-        return 'FAB';   
+        return 'FAB';
+      case TestType.posture:
+        return 'Posture';
     }
   }
 
@@ -286,9 +290,11 @@ class TestService {
       case TestType.cameraDetection:
         return 'camera';
       case TestType.neuro:
-        return 'neuropsychological'; 
+        return 'neuropsychological';
       case TestType.fab:
-        return 'FAB';    
+        return 'FAB';
+      case TestType.posture:
+        return 'posture';
     }
   }
 }

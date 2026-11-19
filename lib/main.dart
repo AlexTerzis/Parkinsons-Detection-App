@@ -31,8 +31,17 @@ Future<void> main() async {
   // renders immediately. The service notifies listeners on changes.
   await locator<LocalizationService>().init();
   // Load the saved text size before the first frame, otherwise the whole app
-  // visibly reflows a frame after launch.
-  await locator<TextScaleService>().init();
+  // visibly reflows a frame after launch. Seeded with whoever is already
+  // signed in, since the size is theirs rather than the device's.
+  await locator<TextScaleService>().init(
+    uid: FirebaseAuth.instance.currentUser?.uid,
+  );
+  // Follow the account from here on. Signing out drops back to the device
+  // size, and the next person to sign in gets their own — on a shared clinic
+  // tablet the alternative is inheriting the last user's.
+  FirebaseAuth.instance.authStateChanges().listen(
+    (user) => locator<TextScaleService>().loadForUser(user?.uid),
+  );
   setupDialogUi();
   setupBottomSheetUi();
 

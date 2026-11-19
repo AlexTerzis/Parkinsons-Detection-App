@@ -89,6 +89,14 @@ class CameraScore {
   /// Anything a reviewer should know about how this score was arrived at.
   final List<String> notes;
 
+  /// Whether this score rests on anything that was actually measured.
+  ///
+  /// A scorer that could measure nothing still returns a likelihood — zero —
+  /// and zero is the *best* value on this scale. Callers need to be able to
+  /// tell "nothing looked wrong" from "nothing could be read", because storing
+  /// the second as the first files an empty recording as a perfect result.
+  bool get hasMeasuredFeatures => features.any((f) => f.measured);
+
   /// Features that contributed most, strongest first.
   List<FeatureContribution> get topContributors {
     final sorted = List<FeatureContribution>.of(features)

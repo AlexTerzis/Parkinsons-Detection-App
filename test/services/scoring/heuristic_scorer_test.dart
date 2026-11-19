@@ -37,10 +37,12 @@ void main() {
       expect(EnhancedScoringConfig.tapRate.normalize(-5), 1.0);
     });
 
-    test('defaults to the existing scorer', () {
-      // The whole point of the flag: nothing changes until it is deliberately
-      // flipped, after the ranges have been calibrated.
-      expect(EnhancedScoringConfig.useEnhancedScoring, isFalse);
+    test('the enhanced scorer is the selected one', () {
+      // Selected despite the ranges being uncalibrated, because the legacy
+      // alternative merges tasks and derives speed without elapsed time. What
+      // follows from "uncalibrated" is handled elsewhere: the value is stored
+      // as an experimental heuristic and kept out of the score charts.
+      expect(EnhancedScoringConfig.useEnhancedScoring, isTrue);
     });
   });
 

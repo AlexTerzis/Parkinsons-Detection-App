@@ -33,8 +33,26 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   int _step = 0; // 0: instructions, 1: memorize, 2: recording
   int _phraseIndex = 0;
   bool _listening = false;
+  /// Live text of the current mic session. The recogniser re-sends the whole
+  /// utterance so far on every partial result, so this is replaced, never
+  /// appended to.
   String _recognized = '';
-  String _recognizedHistory = '';
+
+  /// Text from mic sessions that have already finished.
+  String _committed = '';
+
+  /// Bumped on every mic start so late results from an old session are ignored.
+  int _session = 0;
+
+  String get _transcript => '$_committed $_recognized'.trim();
+
+  /// Moves the current session's text into [_committed]. Call inside setState.
+  void _commitRecognized() {
+    if (_recognized.trim().isNotEmpty) {
+      _committed = '$_committed ${_recognized.trim()}'.trim();
+    }
+    _recognized = '';
+  }
   bool _hintUsed = false;
   bool _showHintPhrase = false;
   bool _micUnexpectedlyClosed = false;
@@ -70,7 +88,8 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
       _recordingSecondsLeft = 60;
       _timerStarted = false;
       _recognized = '';
-      _recognizedHistory = '';
+      _committed = '';
+      _session++;
     });
     _memorizeTimer?.cancel();
     _memorizeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -96,7 +115,6 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
       _showHintPhrase = false;
       _recordingSecondsLeft = 60;
       _timerStarted = false;
-      // Do NOT clear _recognized or _recognizedHistory here!
     });
     _recordingTimer?.cancel();
     // Timer will be started by the mic, NOT here.
@@ -127,8 +145,11 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
     setState(() {
       _micUnexpectedlyClosed = false; // Hide message as soon as mic is started
       _listening = true;
-      // DO NOT CLEAR _recognized or _recognizedHistory HERE!
+      // Keep what earlier sessions heard; start this session's text fresh.
+      _commitRecognized();
+      _session++;
     });
+    final session = _session;
     if (!_timerStarted) {
       setState(() {
         _timerStarted = true;
@@ -147,20 +168,13 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
     await _speech.listen(
       localeId: 'el_GR',
       onResult: (r) {
-        if (!mounted) return;
+        if (!mounted || session != _session) return;
         setState(() {
           if (r.recognizedWords.isNotEmpty) {
             _recognized = r.recognizedWords;
-            // Only append if new recognition doesn't already exist at the end
-            if (!_recognizedHistory.endsWith(_recognized)) {
-              _recognizedHistory = '$_recognizedHistory $_recognized'.trim();
-            }
           }
           if (r.finalResult) {
-            // Always save the final recognizedWords to history
-            if (!_recognizedHistory.endsWith(_recognized)) {
-              _recognizedHistory = '$_recognizedHistory $_recognized'.trim();
-            }
+            _commitRecognized();
             _listening = false;
           }
         });
@@ -191,7 +205,8 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   void _clear() {
     setState(() {
       _recognized = '';
-      _recognizedHistory = '';
+      _committed = '';
+      _session++; // drop any result still in flight
     });
   }
 
@@ -205,7 +220,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
         .toLowerCase()
         .replaceAll(RegExp('[.,«»]'), '')
         .split(RegExp(r'\s+'));
-    final actual = _recognizedHistory
+    final actual = _transcript
         .toLowerCase()
         .replaceAll(RegExp('[.,«»]'), '')
         .split(RegExp(r'\s+'));
@@ -220,7 +235,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
       if (phrase.contains(w)) correctCount++;
     }
     double score = 0;
-    if (_recognizedHistory.trim().isEmpty) {
+    if (_transcript.trim().isEmpty) {
       score = 0;
     } else if (errors <= 1) {
       score = 1;
@@ -319,12 +334,12 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
           ),
           const AppGap.md(),
           Text(
-            _recognizedHistory.isEmpty
+            _transcript.isEmpty
                 ? l10n.stepInstructionRepeatSentence
-                : _recognizedHistory,
+                : _transcript,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: _recognizedHistory.isEmpty
+              color: _transcript.isEmpty
                   ? theme.colorScheme.onSurfaceVariant
                   : null,
             ),
@@ -366,7 +381,7 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
               const AppGap.wide(AppSpacing.xs),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _recognizedHistory.isEmpty ? null : _clear,
+                  onPressed: _transcript.isEmpty ? null : _clear,
                   icon: const Icon(Icons.undo),
                   label: Text(l10n.stepDelete),
                 ),

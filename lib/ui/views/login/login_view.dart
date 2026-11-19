@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../../services/authentication_service.dart';
 import '../../common/widgets/widgets.dart';
 import 'login_viewmodel.dart';
 
@@ -150,19 +149,34 @@ class LoginView extends StackedView<LoginViewModel> {
           ),
         ),
         const AppGap.md(),
-        Text(l10n.iAmA, style: theme.textTheme.bodyLarge),
-        const AppGap.xs(),
-        Wrap(
-          spacing: AppSpacing.sm,
-          children: UserRole.values.map((role) {
-            return ChoiceChip(
-              label: Text(
-                role == UserRole.patient ? l10n.patient : l10n.doctor,
+
+        // No role picker. This used to offer "I am a: Patient / Doctor", which
+        // was the only way `role` was ever set — so anyone could register as a
+        // doctor and reach the doctor dashboard and the patient directory.
+        // Firestore now refuses any new profile that is not a patient, so an
+        // account's role is no longer the client's to choose.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                _t(
+                  context,
+                  'Signing up creates a patient account. Clinician accounts are issued by the clinic.',
+                  'Η εγγραφή δημιουργεί λογαριασμό ασθενούς. Οι λογαριασμοί κλινικών ιατρών εκδίδονται από την κλινική.',
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              selected: viewModel.selectedRole == role,
-              onSelected: (_) => viewModel.selectRole(role),
-            );
-          }).toList(),
+            ),
+          ],
         ),
         const AppGap.md(),
       ],
@@ -236,6 +250,9 @@ class LoginView extends StackedView<LoginViewModel> {
           _ForgotPasswordDialog(viewModel: viewModel),
     );
   }
+
+  String _t(BuildContext context, String en, String el) =>
+      Localizations.localeOf(context).languageCode == 'el' ? el : en;
 
   void _onAuthenticatePressed(BuildContext context, LoginViewModel viewModel) {
     if (_formKey.currentState?.validate() ?? false) {

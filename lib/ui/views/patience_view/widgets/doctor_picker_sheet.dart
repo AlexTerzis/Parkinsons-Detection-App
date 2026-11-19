@@ -16,11 +16,15 @@ import '../../patience/patience_viewmodel.dart';
 /// they showed as a subtitle and which confirmation they raised.
 ///
 /// [onSelect] receives the chosen doctor. When [confirmationMessage] is given,
-/// it is shown as a success snack bar afterwards.
+/// it is shown as a success snack bar — but only once [onSelect] has actually
+/// finished, which is why it is awaited rather than fired off. Announcing the
+/// send before the write returned meant a rejected write still said "Results
+/// sent", and the permission error behind it went to the console and nowhere
+/// else.
 Future<void> showDoctorPicker(
   BuildContext context,
   PatienceViewModel viewModel, {
-  required void Function(AppUser doctor) onSelect,
+  required Future<void> Function(AppUser doctor) onSelect,
   bool excludePrimary = false,
   String Function(AppUser doctor)? confirmationMessage,
 }) {
@@ -45,7 +49,7 @@ class _DoctorPickerSheet extends StatefulWidget {
   });
 
   final PatienceViewModel viewModel;
-  final void Function(AppUser doctor) onSelect;
+  final Future<void> Function(AppUser doctor) onSelect;
   final bool excludePrimary;
   final String Function(AppUser doctor)? confirmationMessage;
 
@@ -113,7 +117,17 @@ class _DoctorPickerSheetState extends State<_DoctorPickerSheet> {
                 ),
                 const AppGap.md(),
                 Expanded(
-                  child: filtered.isEmpty
+                  // A failed lookup is reported as a failure, with a retry.
+                  // Falling through to "no doctors found" made a permissions
+                  // or network error look like an empty directory, which sends
+                  // the user off to register a doctor that already exists.
+                  child: widget.viewModel.doctorsLoadFailed
+                      ? AppErrorState(
+                          message: l10n.doctorsLoadFailed,
+                          onRetry: widget.viewModel.reloadDoctors,
+                          retryLabel: l10n.retryAction,
+                        )
+                      : filtered.isEmpty
                       ? AppEmptyState(
                           icon: Icons.person_search,
                           title: l10n.noDoctorsFound,
@@ -140,14 +154,22 @@ class _DoctorPickerSheetState extends State<_DoctorPickerSheet> {
     );
   }
 
-  void _choose(AppUser doctor) {
-    // The sheet's own context dies with the pop, so any confirmation is raised
+  Future<void> _choose(AppUser doctor) async {
+    // The sheet's own context dies with the pop, so any feedback is raised
     // against the messenger that outlives it.
     final messengerContext = Navigator.of(context).context;
     final message = widget.confirmationMessage?.call(doctor);
 
     Navigator.of(context).pop();
-    widget.onSelect(doctor);
+
+    try {
+      await widget.onSelect(doctor);
+    } catch (e) {
+      if (messengerContext.mounted) {
+        AppFeedback.error(messengerContext, '$e');
+      }
+      return;
+    }
 
     if (message != null && messengerContext.mounted) {
       AppFeedback.success(messengerContext, message);

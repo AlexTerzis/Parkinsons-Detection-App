@@ -43,6 +43,25 @@ class TestResult {
   /// directions were unified.
   final int scoreSchema;
 
+  /// Whether this result may be loaded into a patient-facing screen.
+  ///
+  /// Historical voice scores were produced before the research model's
+  /// validation flag was enforced. Keeping the documents preserves an audit
+  /// trail, but only new records explicitly tagged as prototype demonstrations
+  /// may reappear, and those remain separate from clinical summaries.
+  bool get isValidatedForPatientUse =>
+      type != TestType.voice ||
+      data['validatedForClinicalUse'] == true ||
+      data['displayAsExperimentalPrototype'] == true;
+
+  bool get isEligibleForClinicalSummary =>
+      type != TestType.voice || data['validatedForClinicalUse'] == true;
+
+  bool get isExperimentalVoicePrototype =>
+      type == TestType.voice &&
+      data['displayAsExperimentalPrototype'] == true &&
+      data['validatedForClinicalUse'] != true;
+
   /// 0-1 where higher always means more concerning, whatever the vintage.
   ///
   /// This is the number to chart, average, compare and colour. Using [score]
@@ -62,7 +81,7 @@ class TestResult {
     return TestResult(
       id: documentId,
       patientId: json['patientId'] as String? ?? '',
-      type: _typeFromString(json['type'] as String? ?? 'cameraDetection'),
+      type: typeFromString(json['type'] as String? ?? 'cameraDetection'),
       performedAt:
           (json['performedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
@@ -83,7 +102,12 @@ class TestResult {
     };
   }
 
-  static TestType _typeFromString(String value) {
+  /// Maps a stored `type` string back to its [TestType].
+  ///
+  /// Public because it is the single place that decision is made, and a second
+  /// copy elsewhere would be a second place to forget a case. See the default
+  /// branch for why forgetting one is worse than it looks.
+  static TestType typeFromString(String value) {
     switch (value) {
       case 'drawing':
         return TestType.drawing;
@@ -103,7 +127,14 @@ class TestResult {
         return TestType.neuro;
       case 'fab':
         return TestType.fab;
+      case 'posture':
+        return TestType.posture;
       default:
+        // Anything unrecognised. Kept as the camera test because that is what
+        // the oldest documents are, but note that a *known* type missing from
+        // this switch reads back as the wrong test entirely rather than
+        // failing — which is how posture results came to be labelled as camera
+        // ones on both the patient's list and the doctor's report.
         return TestType.cameraDetection;
     }
   }

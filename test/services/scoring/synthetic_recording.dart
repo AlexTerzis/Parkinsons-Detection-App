@@ -129,9 +129,26 @@ abstract final class Synthetic {
           points[tip] = at(0.5, 0.5 - value * palm);
         }
       case CameraTaskType.pronationSupination:
-        // Signed horizontal offset between the knuckles.
-        points[5] = at(0.5 + value * palm, 0.5 - palm);
-        points[17] = at(0.5, 0.5 - palm);
+        // A genuine roll of the palm about the forearm axis, rather than the
+        // horizontal knuckle offset this used to model. The knuckles sit either
+        // side of the axis and swing through depth as the palm turns over,
+        // which is what the palm-plane signal reads; a purely horizontal slide
+        // has no depth component at all and would exercise nothing.
+        //
+        // `value` maps to a half-turn, so amplitude 1.0 is one full
+        // pronation-supination.
+        final double theta = value * math.pi;
+        const double r = palm / 2;
+        points[5] = LandmarkPoint(
+          x: (0.5 + r * math.cos(theta)) * scale,
+          y: (0.5 - palm) * scale,
+          z: r * math.sin(theta) * scale,
+        );
+        points[17] = LandmarkPoint(
+          x: (0.5 - r * math.cos(theta)) * scale,
+          y: (0.5 - palm) * scale,
+          z: -r * math.sin(theta) * scale,
+        );
       case CameraTaskType.rest:
         // Whole-hand translation, so palm size is unchanged and the tremor
         // shows up as position residual on every landmark — which is what

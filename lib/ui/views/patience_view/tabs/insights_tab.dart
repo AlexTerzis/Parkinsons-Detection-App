@@ -1,14 +1,79 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/app.locator.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../models/raison_result.dart';
+import '../../../../models/test_result.dart';
+import '../../../../models/test_type.dart';
+import '../../../../services/authentication_service.dart';
+import '../../../../services/cognitive_facts.dart';
+import '../../../../services/raison_api_service.dart';
+import '../../../../services/test_service.dart';
 import '../../../common/widgets/widgets.dart';
 
 /// Reasoning output and analytics summaries.
-class InsightsTab extends StatelessWidget {
+///
+/// When [resultsFuture] is given (straight after the questionnaire is
+/// submitted) it is shown as it is. Otherwise the tab runs the reasoning
+/// itself, from the stored questionnaire and the latest cognitive tests, so
+/// that a MoCA or FAB taken after the questionnaire is reflected the next
+/// time the tab is opened.
+class InsightsTab extends StatefulWidget {
   const InsightsTab({super.key, required this.resultsFuture});
 
   final Future<List<RaisonResult>>? resultsFuture;
+
+  @override
+  State<InsightsTab> createState() => _InsightsTabState();
+}
+
+/// What the reasoning on this screen rests on.
+class _ReasoningInputs {
+  const _ReasoningInputs({this.answers, this.moca, this.fab});
+
+  /// Questionnaire answers with the cognitive facts merged in; null when no
+  /// questionnaire has been submitted.
+  final Map<String, dynamic>? answers;
+  final TestResult? moca;
+  final TestResult? fab;
+}
+
+class _InsightsTabState extends State<InsightsTab> {
+  /// Started once and held, so a rebuild does not fire another network call.
+  late final Future<_ReasoningInputs> _inputs;
+  late final Future<List<RaisonResult>> _results;
+
+  @override
+  void initState() {
+    super.initState();
+    _inputs = _loadInputs();
+    _results = widget.resultsFuture ??
+        _inputs.then<List<RaisonResult>>((inputs) {
+          final answers = inputs.answers;
+          if (answers == null) return const <RaisonResult>[];
+          return locator<RaisonApiService>().submit(answers);
+        });
+  }
+
+  Future<_ReasoningInputs> _loadInputs() async {
+    try {
+      final uid = locator<AuthenticationService>().currentUser?.uid;
+      if (uid == null) return const _ReasoningInputs();
+      final results = await locator<TestService>().fetchResultsForPatient(uid);
+      final questionnaire =
+          CognitiveFacts.latest(results, TestType.questionnaire);
+      return _ReasoningInputs(
+        answers: questionnaire == null || questionnaire.data.isEmpty
+            ? null
+            : CognitiveFacts.merge(questionnaire.data, results),
+        moca: CognitiveFacts.latest(results, TestType.neuro),
+        fab: CognitiveFacts.latest(results, TestType.fab),
+      );
+    } catch (_) {
+      // Without the inputs the tab falls back to "no questionnaire yet".
+      return const _ReasoningInputs();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +102,7 @@ class InsightsTab extends StatelessWidget {
         ),
         const AppGap.sm(),
         _argumentation(context),
+        _inputsNote(context),
         const AppGap.sm(),
         _summaryCard(
           context,
@@ -83,13 +149,58 @@ class InsightsTab extends StatelessWidget {
     );
   }
 
+  /// States which inputs the advice above rests on.
+  Widget _inputsNote(BuildContext context) {
+    final theme = Theme.of(context);
+    final greek = Localizations.localeOf(context).languageCode == 'el';
+    String t(String english, String greekText) => greek ? greekText : english;
+    String date(DateTime d) => '${d.day}/${d.month}/${d.year}';
+
+    return FutureBuilder<_ReasoningInputs>(
+      future: _inputs,
+      builder: (context, snapshot) {
+        final inputs = snapshot.data;
+        if (inputs == null || inputs.answers == null) {
+          return const SizedBox.shrink();
+        }
+        final moca = CognitiveFacts.mocaScore(inputs.moca);
+        final fab = CognitiveFacts.fabScore(inputs.fab);
+        final parts = [
+          t('questionnaire', 'ερωτηματολόγιο'),
+          moca == null
+              ? t('cognitive test (MoCA-based) not taken',
+                  'νευροψυχολογικό τεστ (MoCA): δεν έχει γίνει')
+              : t('cognitive test (MoCA-based) $moca/30 on ${date(inputs.moca!.performedAt)}',
+                  'νευροψυχολογικό τεστ (MoCA) $moca/30 στις ${date(inputs.moca!.performedAt)}'),
+          fab == null
+              ? t('FAB not taken', 'FAB: δεν έχει γίνει')
+              : t('FAB $fab/15 on ${date(inputs.fab!.performedAt)}',
+                  'FAB $fab/15 στις ${date(inputs.fab!.performedAt)}'),
+        ];
+        return Padding(
+          padding: const EdgeInsets.only(
+            top: AppSpacing.xs,
+            left: AppSpacing.xs,
+            right: AppSpacing.xs,
+          ),
+          child: Text(
+            '${t('Based on', 'Βασίζεται σε')}: ${parts.join('; ')}.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// The reasoning engine's conclusions, once they resolve.
   Widget _argumentation(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     return FutureBuilder<List<RaisonResult>>(
-      future: resultsFuture,
+      future: _results,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _summaryCard(

@@ -19,7 +19,6 @@ class LoginViewModel extends BaseViewModel {
 
   // --- UI State ---
   bool _isLoginMode = true;
-  UserRole _selectedRole = UserRole.patient;
   String? _errorMessage;
   bool _keepMeLoggedIn = false;
 
@@ -35,7 +34,6 @@ class LoginViewModel extends BaseViewModel {
 
   // --- Getters ---
   bool get isLoginMode => _isLoginMode;
-  UserRole get selectedRole => _selectedRole;
   String? get errorMessage => _errorMessage;
   bool get passwordVisible => _passwordVisible;
   bool get confirmPasswordVisible => _confirmPasswordVisible;
@@ -45,11 +43,6 @@ class LoginViewModel extends BaseViewModel {
   void toggleMode() {
     _isLoginMode = !_isLoginMode;
     _errorMessage = null;
-    notifyListeners();
-  }
-
-  void selectRole(UserRole role) {
-    _selectedRole = role;
     notifyListeners();
   }
 
@@ -91,7 +84,12 @@ class LoginViewModel extends BaseViewModel {
         await _authService.signUp(
           email: email,
           password: password,
-          userRole: _selectedRole,
+          // Always a patient. `role` decides who reaches the doctor dashboard
+          // and whose profile is published in the patient-visible directory,
+          // so it is not the client's to choose; the Firestore rules reject
+          // any other value on a new profile. Clinician accounts are issued
+          // by promoting the user document in the Firebase console.
+          userRole: UserRole.patient,
           name: nameController.text.trim(),
         );
         if (kDebugMode) print('Sign-up successful');
@@ -213,11 +211,12 @@ class LoginViewModel extends BaseViewModel {
       }
     } catch (e) {
       if (kDebugMode) print('Error determining role: $e');
-      if (_selectedRole == UserRole.doctor) {
-        await _navigationService.navigateToDoctorView();
-      } else {
-        await _navigationService.navigateToPatienceView();
-      }
+      // The patient view, always. This used to fall back to the role selected
+      // on the sign-up form — the client's own claim — so anyone who could
+      // make this lookup fail, by going offline at the right moment, was shown
+      // the doctor dashboard. Firestore would still have denied them the data,
+      // but the screen is not theirs to see.
+      await _navigationService.navigateToPatienceView();
     }
   }
 

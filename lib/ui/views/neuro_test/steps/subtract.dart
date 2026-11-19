@@ -25,8 +25,6 @@ class _SubtractStepState extends State<SubtractStep> {
   Timer? _timeout;
   bool _submitted = false;
 
-  static const _answers = [93, 86, 79, 72, 65];
-
   @override
   void initState() {
     super.initState();
@@ -71,10 +69,15 @@ class _SubtractStepState extends State<SubtractStep> {
     if (_submitted) return;
     _timeout?.cancel();
 
+    // MoCA scores each subtraction on its own: an answer counts when it is
+    // the patient's previous answer minus 7, so one slip (100, 92, 85, 78…)
+    // costs only that one item instead of every item after it.
     int correct = 0;
+    int? previous = 100;
     for (int i = 0; i < 5; i++) {
       final val = int.tryParse(_controllers[i].text.trim());
-      if (val == _answers[i]) correct++;
+      if (val != null && previous != null && val == previous - 7) correct++;
+      previous = val;
     }
     // MoCA serial 7s: 4-5 correct = 3 pts, 2-3 = 2, 1 = 1, none = 0.
     final int score;

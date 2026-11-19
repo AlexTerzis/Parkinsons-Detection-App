@@ -24,6 +24,7 @@ class TestCompleteView extends StatelessWidget {
     required this.concern,
     this.detail,
     this.saved = true,
+    this.researchOnly = false,
   });
 
   final TestType type;
@@ -39,6 +40,10 @@ class TestCompleteView extends StatelessWidget {
   /// than left to assume it was kept.
   final bool saved;
 
+  /// Keeps an experimental model score out of the reassuring/notable health
+  /// bands used by validated questionnaire and motor-test scales.
+  final bool researchOnly;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -48,11 +53,13 @@ class TestCompleteView extends StatelessWidget {
     final band = TestScoreInterpretation.bandOfConcern(type, concern);
     final direction = TestScoreInterpretation.directionOf(type);
 
-    final Color bandColor = switch (band) {
-      ScoreBand.reassuring => semantic.success,
-      ScoreBand.borderline => semantic.warning,
-      ScoreBand.notable => theme.colorScheme.error,
-    };
+    final Color bandColor = researchOnly
+        ? theme.colorScheme.primary
+        : switch (band) {
+            ScoreBand.reassuring => semantic.success,
+            ScoreBand.borderline => semantic.warning,
+            ScoreBand.notable => theme.colorScheme.error,
+          };
 
     final bool isGuest = locator<AuthenticationService>().isGuest;
 
@@ -78,11 +85,13 @@ class TestCompleteView extends StatelessWidget {
             Icon(
               // Icon as well as colour: red/green deficiency is common, and
               // this is the screen's main signal.
-              switch (band) {
-                ScoreBand.reassuring => Icons.check_circle_outline,
-                ScoreBand.borderline => Icons.info_outline,
-                ScoreBand.notable => Icons.flag_outlined,
-              },
+              researchOnly
+                  ? Icons.science_outlined
+                  : switch (band) {
+                      ScoreBand.reassuring => Icons.check_circle_outline,
+                      ScoreBand.borderline => Icons.info_outline,
+                      ScoreBand.notable => Icons.flag_outlined,
+                    },
               size: 56,
               color: bandColor,
             ),
@@ -94,7 +103,15 @@ class TestCompleteView extends StatelessWidget {
             ),
             const AppGap.xs(),
             Text(
-              saved ? l10n.testCompleteSaved : l10n.testCompleteNotSaved,
+              researchOnly
+                  ? saved
+                      ? _t(context, 'Saved to Experimental voice history',
+                          'Αποθηκεύτηκε στο πειραματικό ιστορικό φωνής')
+                      : _t(context, 'Acoustic analysis completed—not saved',
+                          'Η ακουστική ανάλυση ολοκληρώθηκε—δεν αποθηκεύτηκε')
+                  : saved
+                      ? l10n.testCompleteSaved
+                      : l10n.testCompleteNotSaved,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: saved
@@ -108,7 +125,10 @@ class TestCompleteView extends StatelessWidget {
             // underlying score runs, so a full bar never means two things.
             ScoreBar(
               label: detail == null
-                  ? l10n.testCompleteScore
+                  ? researchOnly
+                      ? _t(context, 'Acoustic stability index',
+                          'Δείκτης ακουστικής σταθερότητας')
+                      : l10n.testCompleteScore
                   : '${l10n.testCompleteScore}  ·  $detail',
               value: concern,
               color: bandColor,
@@ -117,20 +137,26 @@ class TestCompleteView extends StatelessWidget {
 
             AppCard(
               child: Text(
-                switch ((direction, band)) {
-                  (ScoreDirection.higherIsWorse, ScoreBand.reassuring) =>
-                    l10n.bandReassuringWorse,
-                  (ScoreDirection.higherIsWorse, ScoreBand.borderline) =>
-                    l10n.bandBorderlineWorse,
-                  (ScoreDirection.higherIsWorse, ScoreBand.notable) =>
-                    l10n.bandNotableWorse,
-                  (ScoreDirection.higherIsBetter, ScoreBand.reassuring) =>
-                    l10n.bandReassuringBetter,
-                  (ScoreDirection.higherIsBetter, ScoreBand.borderline) =>
-                    l10n.bandBorderlineBetter,
-                  (ScoreDirection.higherIsBetter, ScoreBand.notable) =>
-                    l10n.bandNotableBetter,
-                },
+                researchOnly
+                    ? _t(
+                        context,
+                        'This descriptive index summarizes the steadiness and clarity of this recording. It is not placed in a reassuring or concerning health band.',
+                        'Αυτός ο περιγραφικός δείκτης συνοψίζει τη σταθερότητα και την καθαρότητα αυτής της εγγραφής. Δεν κατατάσσεται σε καθησυχαστική ή ανησυχητική κατηγορία υγείας.',
+                      )
+                    : switch ((direction, band)) {
+                        (ScoreDirection.higherIsWorse, ScoreBand.reassuring) =>
+                          l10n.bandReassuringWorse,
+                        (ScoreDirection.higherIsWorse, ScoreBand.borderline) =>
+                          l10n.bandBorderlineWorse,
+                        (ScoreDirection.higherIsWorse, ScoreBand.notable) =>
+                          l10n.bandNotableWorse,
+                        (ScoreDirection.higherIsBetter, ScoreBand.reassuring) =>
+                          l10n.bandReassuringBetter,
+                        (ScoreDirection.higherIsBetter, ScoreBand.borderline) =>
+                          l10n.bandBorderlineBetter,
+                        (ScoreDirection.higherIsBetter, ScoreBand.notable) =>
+                          l10n.bandNotableBetter,
+                      },
                 style: theme.textTheme.bodyLarge,
               ),
             ),
@@ -155,6 +181,9 @@ class TestCompleteView extends StatelessWidget {
   }
 
   void _close() => locator<NavigationService>().back();
+
+  String _t(BuildContext context, String en, String el) =>
+      Localizations.localeOf(context).languageCode == 'el' ? el : en;
 }
 
 /// Guest-only prompt, shown at the moment the patient has just produced
@@ -212,6 +241,7 @@ Future<void> showTestComplete({
   required double concern,
   String? detail,
   bool saved = true,
+  bool researchOnly = false,
 }) async {
   final navigatorState = StackedService.navigatorKey?.currentState;
 
@@ -227,6 +257,7 @@ Future<void> showTestComplete({
         concern: concern,
         detail: detail,
         saved: saved,
+        researchOnly: researchOnly,
       ),
     ),
   );

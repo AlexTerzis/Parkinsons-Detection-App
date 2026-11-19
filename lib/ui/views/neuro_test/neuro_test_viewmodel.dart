@@ -7,7 +7,7 @@ import '../../../services/authentication_service.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
 
-import 'steps/draw_cube.dart';
+// import 'steps/draw_cube.dart'; // re-enable with DrawCubeStep below
 import 'steps/connect_cube.dart';
 import 'steps/clock.dart';
 import 'steps/naming.dart';
@@ -96,14 +96,17 @@ class NeuroTestViewModel extends BaseViewModel {
       ),
       DelayedRecallStep(
         onFinished: (score, result) {
-          totalMocaScore += score.toDouble();
+          totalMocaScore += score;
           nextStep();
         },
         immediateTrials: _immediateAnswers,
       ),
-      DrawCubeStep(onNext: nextStep,onScored: (score) {
-          totalMocaScore += score;
-        },),
+      // Freehand cube copy is disabled until there is a model that can score
+      // the drawing; it used to award the point for any mark on the canvas.
+      // The cube point now comes only from ConnectCubeStep below.
+      // DrawCubeStep(onNext: nextStep,onScored: (score) {
+      //     totalMocaScore += score;
+      //   },),
       ConnectCubeStep(onNext: nextStep,onScored: (score) {
           totalMocaScore += score;
         },),

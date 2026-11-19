@@ -17,7 +17,10 @@ import 'package:parkinsondetetion/ui/views/doctor/doctor_view.dart';
 import 'package:parkinsondetetion/ui/views/patience/patience_view.dart';
 import 'package:parkinsondetetion/services/test_service.dart';
 import 'package:parkinsondetetion/services/reports_service.dart';
+import '../services/appointment_service.dart';
+import '../services/availability_service.dart';
 import 'package:parkinsondetetion/ui/views/camera_test/camera_test_view.dart';
+import 'package:parkinsondetetion/ui/views/posture_test/posture_test_view.dart';
 import 'package:parkinsondetetion/services/voice_api_service.dart';
 import 'package:parkinsondetetion/ui/views/tap_test/tap_test_view.dart';
 import 'package:parkinsondetetion/ui/views/questionnaire/questionnaire_view.dart';
@@ -37,6 +40,7 @@ import '../services/tremor_analysis_service.dart';
     MaterialRoute(page: DoctorView),
     MaterialRoute(page: PatienceView),
     MaterialRoute(page: CameraTestView),
+    MaterialRoute(page: PostureTestView),
     MaterialRoute(page: TremorTestView),
     MaterialRoute(page: TapTestView),
     MaterialRoute(page: QuestionnaireView),
@@ -57,6 +61,8 @@ import '../services/tremor_analysis_service.dart';
     LazySingleton(classType: AuthenticationService),
     LazySingleton(classType: TestService),
     LazySingleton(classType: ReportsService),
+    LazySingleton(classType: AppointmentService),
+    LazySingleton(classType: AvailabilityService),
     LazySingleton(classType: VoiceApiService),
     LazySingleton(classType: RaisonApiService),
     LazySingleton(classType: HandMetrics),

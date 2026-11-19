@@ -5,6 +5,7 @@ import '../../../app/app.locator.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/test_type.dart';
 import '../camera_test/camera_test_view.dart';
+import '../posture_test/posture_test_view.dart';
 import '../fab_test/fab_test_view.dart';
 import '../neuro_test/neuro_test_view.dart';
 import '../patience/patience_viewmodel.dart';
@@ -39,6 +40,8 @@ extension TestPresentation on TestType {
         return Icons.psychology;
       case TestType.fab:
         return Icons.psychology_alt_outlined;
+      case TestType.posture:
+        return Icons.back_hand_outlined;
     }
   }
 
@@ -60,6 +63,8 @@ extension TestPresentation on TestType {
         return l10n.neuropsychologicalTest;
       case TestType.fab:
         return l10n.fabTest;
+      case TestType.posture:
+        return l10n.postureTest;
     }
   }
 
@@ -85,6 +90,8 @@ extension TestPresentation on TestType {
         return navigator.navigateToView(const NeuroTestView());
       case TestType.fab:
         return navigator.navigateToView(const FABTestView());
+      case TestType.posture:
+        return navigator.navigateToView(const PostureTestView());
       case TestType.drawing:
         // A sheet rather than a route: the drawing test has three entry points
         // (canvas, camera, gallery) to choose between first.
@@ -97,6 +104,7 @@ extension TestPresentation on TestType {
 /// The tests offered on the Tests tab, in the order they are listed.
 const List<TestType> orderedTestTypes = [
   TestType.cameraDetection,
+  TestType.posture,
   TestType.tremor,
   TestType.tap,
   TestType.drawing,

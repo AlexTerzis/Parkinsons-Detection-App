@@ -9,12 +9,14 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:stacked/stacked.dart';
+import 'package:stacked_services/stacked_services.dart';
 
 import '../../../app/app.locator.dart';
 import '../../../models/test_result.dart';
 import '../../../models/test_type.dart';
 import '../../../services/authentication_service.dart';
 import '../../../services/test_service.dart';
+import '../../../services/tremor_severity.dart';
 import '../test_complete/test_complete_view.dart';
 
 class TremorHandResult {
@@ -128,6 +130,17 @@ class TremorTestViewModel extends BaseViewModel {
   double _completionConcern = 0;
   int phase = 0; // 0 first hand, 1 switch, 2 second hand, 3 complete
 
+  /// False when neither hand produced a usable recording, so the result screen
+  /// is not shown a concern band built from a score that does not exist.
+  bool _hasScore = false;
+
+  /// Identifies the current run. The start sequence awaits a spoken cue and a
+  /// settling delay before capture begins, so Stop pressed during those awaits
+  /// cancelled a timer that had not started yet and the rest of the sequence
+  /// went on to start recording anyway. Every continuation now checks that the
+  /// run it belongs to is still the current one.
+  int _runId = 0;
+
   double get progress {
     final total = phase == 1 ? pauseDuration : testDuration;
     return total == 0
@@ -156,12 +169,17 @@ class TremorTestViewModel extends BaseViewModel {
 
   Future<void> startTest(AppLocalizations l10n) async {
     _reset(l10n);
+    final runId = _runId;
     await _cue(l10n.startingTest);
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    await _startHand1(l10n);
+    if (runId != _runId) return;
+    await _startHand1(l10n, runId);
   }
 
   void _reset(AppLocalizations l10n) {
+    _runId++;
+    _hasScore = false;
+    _resultSaved = true;
     _currentAcc.clear();
     _currentGyro.clear();
     _accByHand.clear();
@@ -175,47 +193,61 @@ class TremorTestViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  Future<void> _startHand1(AppLocalizations l10n) async {
+  Future<void> _startHand1(AppLocalizations l10n, int runId) async {
     phase = 0;
     tremorStatus = l10n.testingHand1;
     secondsLeft = testDuration;
     await _cue(tremorStatus);
     await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (runId != _runId) return;
     _beginCapture(firstHandKey);
     _startTimer(() {
       _stopSensors();
       firstResult = _analyze(firstHandKey);
-      _startPause(l10n);
+      _startPause(l10n, runId);
     });
   }
 
-  void _startPause(AppLocalizations l10n) {
+  void _startPause(AppLocalizations l10n, int runId) {
     phase = 1;
     tremorStatus = l10n.switchHands;
     secondsLeft = pauseDuration;
     _zeroReadouts();
     _cue(tremorStatus);
     notifyListeners();
-    _startTimer(() => _startHand2(l10n));
+    _startTimer(() => _startHand2(l10n, runId));
   }
 
-  Future<void> _startHand2(AppLocalizations l10n) async {
+  Future<void> _startHand2(AppLocalizations l10n, int runId) async {
     phase = 2;
     tremorStatus = l10n.testingHand2;
     secondsLeft = testDuration;
     await _cue(tremorStatus);
     await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (runId != _runId) return;
     _beginCapture(secondHandKey);
     _startTimer(() async {
       _stopSensors();
       secondResult = _analyze(secondHandKey);
       tremorStatus = l10n.testCompleted;
       isTesting = false;
-      isSavingResult = true;
       phase = 3;
       await _cue(tremorStatus);
+
+      final score = _overallScore();
+      if (score == null) {
+        // No usable recording from either hand. This used to save a score of
+        // 0, which the history charts render as a flawless run.
+        _hasScore = false;
+        _resultSaved = false;
+        isSavingResult = false;
+        notifyListeners();
+        return;
+      }
+
+      isSavingResult = true;
       notifyListeners();
-      await _saveResult(_overallScore());
+      await _saveResult(score);
     });
   }
 
@@ -373,14 +405,24 @@ class TremorTestViewModel extends BaseViewModel {
     return power;
   }
 
-  double _overallScore() {
+  /// The worse of the two hands, or null when neither recording was usable so
+  /// the caller can decline to save rather than store a 0.
+  double? _overallScore() {
     final values = [firstResult, secondResult]
         .whereType<TremorHandResult>()
-        .map((r) => (r.dominantFrequencyHz / 20).clamp(0, 1).toDouble());
-    return values.isEmpty ? 0 : values.reduce((a, b) => math.max(a, b));
+        .where((r) => r.quality != TremorRecordingQuality.insufficientData)
+        .map((r) => tremorSeverityScore(
+              // `confidence` is the peak's prominence over the band baseline,
+              // as computed by [_dominantPeak].
+              prominence: r.confidence,
+              dominantFrequencyHz: r.dominantFrequencyHz,
+            ));
+    return values.isEmpty ? null : values.reduce(math.max);
   }
 
   void stopTest(AppLocalizations l10n) {
+    // Abandons any start sequence still waiting on a cue or settling delay.
+    _runId++;
     _countdownTimer?.cancel();
     _stopSensors();
     isTesting = false;
@@ -430,6 +472,7 @@ class TremorTestViewModel extends BaseViewModel {
       }
     }
     _resultSaved = saved;
+    _hasScore = true;
     _completionConcern = result.concernScore;
     isSavingResult = false;
     notifyListeners();
@@ -437,11 +480,19 @@ class TremorTestViewModel extends BaseViewModel {
 
   /// Called explicitly from the results screen so the FFT charts remain
   /// visible until the patient chooses to continue.
-  Future<void> continueToCompletion() => showTestComplete(
-        type: TestType.tremor,
-        concern: _completionConcern,
-        saved: _resultSaved,
-      );
+  Future<void> continueToCompletion() async {
+    if (!_hasScore) {
+      // Neither hand was usable, so there is no concern band to show. Going
+      // back is what the voice test does with an unscored recording.
+      locator<NavigationService>().back();
+      return;
+    }
+    await showTestComplete(
+      type: TestType.tremor,
+      concern: _completionConcern,
+      saved: _resultSaved,
+    );
+  }
 
   TremorHandResult? _resultFor(String hand) {
     if (firstResult?.hand == hand) return firstResult;
