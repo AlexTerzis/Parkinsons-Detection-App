@@ -122,9 +122,8 @@ class TestsTab extends StatelessWidget {
     return again ?? false;
   }
 
-  /// The date a test was last completed, or a chevron if it never has been.
+  /// A tick if the test has been completed, or a chevron if it never has been.
   Widget _completionMarker(BuildContext context, TestType type) {
-    final theme = Theme.of(context);
     final semantic = AppSemanticColors.of(context);
 
     final matched = viewModel.results.firstWhere(
@@ -142,19 +141,9 @@ class TestsTab extends StatelessWidget {
       return const Icon(Icons.chevron_right);
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Icon plus colour, never colour alone: red/green deficiency is
-        // common enough that hue cannot be the only signal.
-        Icon(Icons.check_circle, color: semantic.success),
-        Text(
-          '${matched.performedAt.month}/${matched.performedAt.day}',
-          style: theme.textTheme.labelMedium,
-        ),
-      ],
-    );
+    // Icon plus colour, never colour alone: red/green deficiency is common
+    // enough that hue cannot be the only signal.
+    return Icon(Icons.check_circle, color: semantic.success);
   }
 
   void _onSendResultsPressed(BuildContext context) {
