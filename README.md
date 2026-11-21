@@ -79,9 +79,14 @@ Firebase configuration is not in this repository. You will need your own
 `google-services.json` / `GoogleService-Info.plist`, and **anonymous sign-in
 must be enabled** in the Firebase console for guest mode to work.
 
-### The rAIson API key
+### The rAIson+ API key
 
-The reasoning API key is supplied at build time and is not in this repository.
+The app reasons with the rAIson+ agent `1cf91fc368ae`
+(`AI_diagnosis_of_PD_visit_rules_rAIson_no_dilemma`) through
+`https://api-agents.raison-ai.com/v1/agents/1cf91fc368ae/reason`.
+`RaisonPlusInputs` maps the questionnaire answers to the agent's inputs.
+
+The API key is supplied at build time and is not in this repository.
 Create `raison.local.json` in the project root — `*.local.json` is gitignored —
 and pass it to every `flutter run` / `flutter build`:
 
@@ -96,7 +101,7 @@ be extracted from it, so a deployment handling real patient data should proxy
 rAIson through its own server instead.
 
 ```bash
-flutter test            # 420 tests, all passing
+flutter test
 flutter analyze         # no errors or warnings
 ```
 
