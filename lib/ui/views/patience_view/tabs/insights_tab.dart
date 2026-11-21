@@ -197,11 +197,30 @@ class _InsightsTabState extends State<InsightsTab> {
       future: _results,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _summaryCard(
-            context,
-            title: l10n.argumentation,
-            body: l10n.noArgumentationYet,
-          );
+          // Say what went wrong: a missing key, a used-up quota and an outage
+          // need different fixes, and all used to read "no clear result".
+          final greek = Localizations.localeOf(context).languageCode == 'el';
+          final error = snapshot.error;
+          final String body;
+          if (error is RaisonQuotaExhausted) {
+            body = greek
+                ? 'Οι ερωτήσεις του rAIson+ για τη σύσταση επίσκεψης '
+                    'εξαντλήθηκαν.'
+                : 'The rAIson+ queries for the visit recommendation are used '
+                    'up.';
+          } else if (error is StateError) {
+            body = greek
+                ? 'Η σύνδεση με το rAIson+ δεν έχει ρυθμιστεί σε αυτή την '
+                    'έκδοση της εφαρμογής.'
+                : 'The connection to rAIson+ is not set up in this build of '
+                    'the app.';
+          } else {
+            body = greek
+                ? 'Η υπηρεσία rAIson+ δεν απάντησε. Δοκιμάστε ξανά αργότερα.'
+                : 'The rAIson+ service did not answer. Try again later.';
+          }
+          debugPrint('🔍 [rAIson+] visit recommendation failed: $error');
+          return _summaryCard(context, title: l10n.argumentation, body: body);
         }
         if (!snapshot.hasData) {
           return _summaryCard(

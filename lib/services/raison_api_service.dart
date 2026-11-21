@@ -89,8 +89,29 @@ class RaisonApiService {
       RaisonPlusInputs.dataFrom(responses),
       RaisonPlusInputs.visitInputs,
     );
-    return RaisonResult.listFromReason(await _reason(agentId, _key, data));
+    final results =
+        RaisonResult.listFromReason(await _reasonOnce(agentId, _key, data));
+    // The visit theory's default is "Do not visit": when none of its visit
+    // patterns fits the answers, the agent answers "No matching rule" and
+    // decides nothing. Show that default instead of "no clear result".
+    final nothingDecided = results.length == 1 &&
+        !results.single.isSolution &&
+        results.single.explanation.isEmpty;
+    if (nothingDecided) {
+      return const [
+        RaisonResult(
+          label: 'Do not visit',
+          explanation: [visitDefaultLine],
+          isSolution: true,
+        ),
+      ];
+    }
+    return results;
   }
+
+  /// The explanation of the visit agent's default (see [submit]).
+  static const String visitDefaultLine =
+      "No visit pattern fits these answers, so the agent's default holds.";
 
   /// Sends the questionnaire [responses] to the diagnosis agent and returns
   /// the diagnoses it indicates, for the doctor's report and the patient's
@@ -105,27 +126,40 @@ class RaisonApiService {
       RaisonPlusInputs.dataFrom(responses),
       RaisonPlusInputs.diagnosisInputs,
     );
-    // The answer depends only on the agent and the inputs, and each query is
-    // one of a limited number, so the same inputs are sent once: within a run
-    // the answer comes from memory, across runs from the device.
-    final cacheKey = '$_diagnosisAgent '
-        '${jsonEncode(SplayTreeMap<String, String>.from(data))}';
-    final cached = _diagnosisCache[cacheKey] ?? await _readCache(cacheKey);
-    if (cached != null) {
-      debugPrint('🔍 [rAIson+ $_diagnosisAgent] same inputs as before, '
-          'answer reused (no query used)');
-      _diagnosisCache[cacheKey] = cached;
-      return RaisonReasoning.fromJson(cached);
-    }
-    final json = await _reason(_diagnosisAgent, _diagnosisKey, data);
-    _diagnosisCache[cacheKey] = json;
-    await _writeCache(cacheKey, json);
-    return RaisonReasoning.fromJson(json);
+    return RaisonReasoning.fromJson(
+      await _reasonOnce(_diagnosisAgent, _diagnosisKey, data),
+    );
   }
 
-  /// Diagnosis answers received in this run, by agent and inputs.
-  final Map<String, Map<String, dynamic>> _diagnosisCache = {};
+  /// Asks [agent] about [data] once. The answer depends only on the agent and
+  /// the inputs, and every query counts against the key's quota, so the same
+  /// inputs are sent once: within a run the answer comes from memory, across
+  /// runs from the device. Errors are not kept.
+  Future<Map<String, dynamic>> _reasonOnce(
+    String agent,
+    String key,
+    Map<String, String> data,
+  ) async {
+    final cacheKey =
+        '$agent ${jsonEncode(SplayTreeMap<String, String>.from(data))}';
+    final cached = _answers[cacheKey] ?? await _readCache(cacheKey);
+    if (cached != null) {
+      debugPrint('🔍 [rAIson+ $agent] same inputs as before, '
+          'answer reused (no query used)');
+      _answers[cacheKey] = cached;
+      return cached;
+    }
+    final json = await _reason(agent, key, data);
+    _answers[cacheKey] = json;
+    await _writeCache(cacheKey, json);
+    return json;
+  }
 
+  /// Answers received in this run, by agent and inputs.
+  final Map<String, Map<String, dynamic>> _answers = {};
+
+  /// Prefix of the stored answers of both agents (the name predates the
+  /// visit agent's use of it; the agent id is part of every key).
   static const String _cachePrefix = 'raison_diagnosis_v1 ';
 
   /// A stored answer, or null. The cache is an optimisation: when the

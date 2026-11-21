@@ -68,6 +68,53 @@ void main() {
       await expectLater(service.submit({}), throwsException);
     });
 
+    test('no matching rule shows the agent\'s default, "Do not visit"',
+        () async {
+      final service = RaisonApiService(
+        apiKey: 'test-key',
+        client: MockClient((_) async => http.Response(
+              jsonEncode({
+                'verdict': {'kind': 'empty', 'title': 'No matching rule'},
+                'decision': [],
+                'possible': [],
+                'explanation': 'No matching rule\n',
+              }),
+              200,
+            )),
+      );
+      final results = await service.submit({'A16': true});
+      expect(results, hasLength(1));
+      expect(results.single.isSolution, isTrue);
+      expect(results.single.label, 'Do not visit');
+      expect(results.single.explanation,
+          [RaisonApiService.visitDefaultLine]);
+    });
+
+    test('the same answers ask the visit agent once', () async {
+      var requests = 0;
+      final service = RaisonApiService(
+        apiKey: 'test-key',
+        client: MockClient((_) async {
+          requests++;
+          return http.Response(
+            jsonEncode({
+              'verdict': {'kind': 'decided', 'title': 'Conclusion'},
+              'decision': ['Visit'],
+              'possible': ['Visit'],
+              'explanation': '',
+            }),
+            200,
+          );
+        }),
+      );
+      await service.submit({'A1': true});
+      final again = await service.submit({'A1': true});
+      expect(requests, 1);
+      expect(again.first.label, 'Visit');
+      await service.submit({'A2': true});
+      expect(requests, 2);
+    });
+
     test('a missing key fails before any request', () async {
       var called = false;
       final service = RaisonApiService(

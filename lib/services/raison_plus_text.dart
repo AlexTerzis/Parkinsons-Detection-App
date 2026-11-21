@@ -341,6 +341,9 @@ class RaisonPlusText {
         'Τα συμπεράσματα αυτά δεν αντικρούονται μεταξύ τους.',
     'All fired arguments can hold simultaneously.':
         'Όλα τα επιχειρήματα που ισχύουν συμφωνούν μεταξύ τους.',
+    "No visit pattern fits these answers, so the agent's default holds.":
+        'Κανένα μοτίβο επίσκεψης δεν ταιριάζει με τις απαντήσεις, οπότε '
+            'ισχύει η προεπιλογή του πράκτορα.',
   };
 
   static const _sentencesEn = <String, String>{
