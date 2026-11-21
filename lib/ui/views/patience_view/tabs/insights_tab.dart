@@ -11,6 +11,7 @@ import '../../../../services/raison_api_service.dart';
 import '../../../../services/raison_plus_text.dart';
 import '../../../../services/test_service.dart';
 import '../../../common/widgets/diagnosis_indications_card.dart';
+import '../../../common/widgets/reasoning_details.dart';
 import '../../../common/widgets/widgets.dart';
 
 /// Reasoning output and analytics summaries.
@@ -258,32 +259,54 @@ class _InsightsTabState extends State<InsightsTab> {
           );
         }
 
-        final greek = Localizations.localeOf(context).languageCode == 'el';
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.argumentation, style: theme.textTheme.titleMedium),
               const AppGap.xs(),
-              for (final r in solutions) ...[
-                Text(RaisonPlusText.label(r.label, greek: greek),
-                    style: theme.textTheme.titleSmall),
-                const AppGap.xxs(),
-                for (final e in r.explanation)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: AppSpacing.md,
-                      bottom: AppSpacing.xxs,
-                    ),
-                    child: Text('• ${RaisonPlusText.line(e, greek: greek)}',
-                        style: theme.textTheme.bodyMedium),
-                  ),
-                const AppGap.sm(),
-              ],
+              for (final r in solutions) _recommendation(context, r),
             ],
           ),
         );
       },
+    );
+  }
+
+  /// One recommendation for the patient: the decision, a sentence they can
+  /// act on and the main reasons, with every rule folded under "How this
+  /// was reached".
+  Widget _recommendation(BuildContext context, RaisonResult r) {
+    final theme = Theme.of(context);
+    final greek = Localizations.localeOf(context).languageCode == 'el';
+    final reasons =
+        RaisonPlusText.mainReasons(r.label, r.explanation, greek: greek);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(RaisonPlusText.label(r.label, greek: greek),
+            style: theme.textTheme.titleSmall),
+        const AppGap.xxs(),
+        Text(RaisonPlusText.advice(r.label, greek: greek),
+            style: theme.textTheme.bodyMedium),
+        if (reasons.isNotEmpty) ...[
+          const AppGap.xxs(),
+          Text(
+            '${greek ? 'Κυρίως λόγω' : 'Mainly because of'}: '
+            '${reasons.join(', ')}.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        ReasoningDetails(
+          lines: [
+            for (final e in r.explanation)
+              RaisonPlusText.line(e, greek: greek),
+          ],
+        ),
+      ],
     );
   }
 }

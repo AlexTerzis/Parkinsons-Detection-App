@@ -115,6 +115,59 @@ class RaisonPlusText {
     return t;
   }
 
+  /// One sentence a patient can act on, for a visit decision.
+  static String advice(String conclusion, {required bool greek}) {
+    switch (conclusion.trim()) {
+      case 'Visit':
+        return greek
+            ? 'Με βάση τις απαντήσεις σας, καλό είναι να επισκεφθείτε γιατρό.'
+            : 'Based on your answers, it would be good to see a doctor.';
+      case 'Do not visit':
+        return greek
+            ? 'Με βάση τις απαντήσεις σας, δεν χρειάζεται επίσκεψη αυτή τη '
+                'στιγμή. Αν κάτι αλλάξει, κάντε ξανά το ερωτηματολόγιο.'
+            : 'Based on your answers, no visit is needed right now. If '
+                'something changes, take the questionnaire again.';
+      default:
+        return greek
+            ? 'Οι απαντήσεις σας δεν οδηγούν σε σαφή σύσταση. Συζητήστε τες '
+                'με τον γιατρό σας.'
+            : 'Your answers do not lead to a clear recommendation. Talk them '
+                'over with your doctor.';
+    }
+  }
+
+  /// The short "why" for a patient: the conditions behind the rules that
+  /// support [conclusion], in plain words, most frequent first, at most
+  /// [max]. Many rules share a symptom, so a symptom behind several of them
+  /// comes before one behind a single rule. Conditions without a plain
+  /// wording are left out here; they still appear in the full explanation.
+  static List<String> mainReasons(
+    String conclusion,
+    Iterable<String> lines, {
+    required bool greek,
+    int max = 4,
+  }) {
+    final counts = <String, int>{};
+    for (final l in lines) {
+      final arg = _argument.firstMatch(l.trim());
+      if (arg == null || arg.group(1)!.trim() != conclusion.trim()) continue;
+      for (final c in arg.group(2)!.split(' and ')) {
+        final words = _plainCondition(c.trim(), greek: greek);
+        if (words == null) continue;
+        counts[words] = (counts[words] ?? 0) + 1;
+      }
+    }
+    final order = counts.keys.toList();
+    final ranked = [...order]..sort((a, b) {
+        final byCount = counts[b]!.compareTo(counts[a]!);
+        return byCount != 0
+            ? byCount
+            : order.indexOf(a).compareTo(order.indexOf(b));
+      });
+    return ranked.take(max).toList();
+  }
+
   /// "A is x and B is y" → "a, b" in plain words, the last joined with "and".
   static String conditions(String text, {required bool greek}) {
     final parts = [
@@ -127,12 +180,19 @@ class RaisonPlusText {
   }
 
   static String _condition(String c, {required bool greek}) {
-    final m = RegExp(r'^(.+) is (\S+)$').firstMatch(c);
+    final m = _conditionShape.firstMatch(c);
     if (m == null) return c;
-    final key = '${m.group(1)}|${m.group(2)}';
-    return (greek ? _conditionsEl : _conditionsEn)[key] ??
-        '${m.group(1)} = ${m.group(2)}';
+    return _plainCondition(c, greek: greek) ?? '${m.group(1)} = ${m.group(2)}';
   }
+
+  /// A condition in plain words, or null when it has none.
+  static String? _plainCondition(String c, {required bool greek}) {
+    final m = _conditionShape.firstMatch(c);
+    if (m == null) return null;
+    return (greek ? _conditionsEl : _conditionsEn)['${m.group(1)}|${m.group(2)}'];
+  }
+
+  static final _conditionShape = RegExp(r'^(.+) is (\S+)$');
 
   static final _argument =
       RegExp(r'^(.+?) is supported because (.+) \[rule (\S+)\]$');
@@ -279,9 +339,14 @@ class RaisonPlusText {
         'Κανένας κανόνας δεν ισχύει με τις απαντήσεις που δόθηκαν.',
     'These conclusions do not conflict with each other.':
         'Τα συμπεράσματα αυτά δεν αντικρούονται μεταξύ τους.',
+    'All fired arguments can hold simultaneously.':
+        'Όλα τα επιχειρήματα που ισχύουν συμφωνούν μεταξύ τους.',
   };
 
-  static const _sentencesEn = <String, String>{};
+  static const _sentencesEn = <String, String>{
+    'All fired arguments can hold simultaneously.':
+        'All the arguments that apply agree with each other.',
+  };
 
   static const _conditionsEl = <String, String>{
     'Tremor|yes': 'τρόμος',

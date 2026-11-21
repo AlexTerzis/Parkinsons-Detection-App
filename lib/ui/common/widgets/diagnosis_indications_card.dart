@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../models/raison_result.dart';
 import '../../../services/raison_api_service.dart';
 import '../../../services/raison_plus_text.dart';
+import 'reasoning_details.dart';
 import 'widgets.dart';
 
 /// The rAIson+ diagnosis agent's indications, in the app's language.
@@ -125,18 +126,9 @@ class DiagnosisIndicationsCard extends StatelessWidget {
       );
     }
 
-    final reasons = [
+    final lines = [
       for (final line in reasoning.explanation)
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.md,
-            bottom: AppSpacing.xxs,
-          ),
-          child: Text(
-            RaisonPlusText.line(line, greek: greek),
-            style: theme.textTheme.bodySmall,
-          ),
-        ),
+        RaisonPlusText.line(line, greek: greek),
     ];
 
     return Column(
@@ -147,23 +139,19 @@ class DiagnosisIndicationsCard extends StatelessWidget {
             '• ${RaisonPlusText.label(d, greek: greek)}',
             style: theme.textTheme.titleSmall,
           ),
-        if (reasons.isNotEmpty) ...[
+        if (lines.isNotEmpty) ...[
           const AppGap.xs(),
           if (forPatient)
-            ExpansionTile(
-              title: Text(
-                greek ? 'Πώς προέκυψε' : 'How this was reached',
-                style: theme.textTheme.bodyMedium,
-              ),
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: EdgeInsets.zero,
-              expandedCrossAxisAlignment: CrossAxisAlignment.start,
-              shape: const Border(),
-              collapsedShape: const Border(),
-              children: reasons,
-            )
+            ReasoningDetails(lines: lines)
           else
-            ...reasons,
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.md,
+                  bottom: AppSpacing.xxs,
+                ),
+                child: Text(line, style: theme.textTheme.bodySmall),
+              ),
         ],
       ],
     );

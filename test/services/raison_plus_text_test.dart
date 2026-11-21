@@ -80,6 +80,50 @@ void main() {
     });
   });
 
+  group('RaisonPlusText, for the patient', () {
+    test('main reasons: most frequent first, only for that conclusion', () {
+      final lines = [
+        'A single conclusion is supported.',
+        'Visit is supported because Tremor is yes and Writing coffee is '
+            'with_difficulty [rule r_v02]',
+        'Visit is supported because Age is below_50 and Tremor is yes and '
+            'Rigidity is yes [rule r_v16]',
+        'Visit is supported because Age is below_50 and Rigidity with tremor '
+            'or bradykinesia is yes [rule r_v18]',
+        'Do not visit is supported because Takes antipsychotics is yes '
+            '[rule r_v01]',
+        'Visit is supported because Something new is maybe [rule r_v99]',
+      ];
+      expect(
+        RaisonPlusText.mainReasons('Visit', lines, greek: true, max: 3),
+        ['τρόμος', 'ηλικία κάτω των 50', 'γράφει και πίνει καφέ με δυσκολία'],
+      );
+      expect(
+        RaisonPlusText.mainReasons('Do not visit', lines, greek: false),
+        ['takes antipsychotics'],
+      );
+    });
+
+    test('one sentence of advice per decision', () {
+      expect(RaisonPlusText.advice('Visit', greek: true),
+          'Με βάση τις απαντήσεις σας, καλό είναι να επισκεφθείτε γιατρό.');
+      expect(RaisonPlusText.advice('Do not visit', greek: false),
+          startsWith('Based on your answers, no visit is needed'));
+      expect(
+          RaisonPlusText.advice('Multiple equally defensible conclusions',
+              greek: true),
+          startsWith('Οι απαντήσεις σας δεν οδηγούν σε σαφή σύσταση'));
+    });
+
+    test('the "all arguments hold" sentence', () {
+      expect(
+        RaisonPlusText.line('All fired arguments can hold simultaneously.',
+            greek: true),
+        'Όλα τα επιχειρήματα που ισχύουν συμφωνούν μεταξύ τους.',
+      );
+    });
+  });
+
   group('RaisonPlusText, diagnosis agent', () {
     test('diagnoses by name or by id', () {
       expect(RaisonPlusText.label("Parkinson's disease", greek: true),
