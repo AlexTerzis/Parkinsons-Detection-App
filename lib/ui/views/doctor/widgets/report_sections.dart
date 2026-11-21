@@ -9,6 +9,7 @@ import '../../../../models/test_score_interpretation.dart';
 import '../../../../models/test_type.dart';
 import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
+import '../../../../services/raison_plus_text.dart';
 import '../../../../services/report_analysis.dart';
 import '../../../../services/test_series_analysis.dart';
 import '../../../common/questionnaire_display.dart';
@@ -592,11 +593,14 @@ class _ReasoningCardState extends State<ReasoningCard> {
                 );
               }
 
+              final greek =
+                  Localizations.localeOf(context).languageCode == 'el';
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (final solution in solutions) ...[
-                    Text(solution.label, style: theme.textTheme.titleSmall),
+                    Text(RaisonPlusText.label(solution.label, greek: greek),
+                        style: theme.textTheme.titleSmall),
                     const AppGap.xxs(),
                     for (final line in solution.explanation)
                       Padding(
@@ -604,8 +608,10 @@ class _ReasoningCardState extends State<ReasoningCard> {
                           left: AppSpacing.md,
                           bottom: AppSpacing.xxs,
                         ),
-                        child:
-                            Text('• $line', style: theme.textTheme.bodyMedium),
+                        child: Text(
+                          '• ${RaisonPlusText.line(line, greek: greek)}',
+                          style: theme.textTheme.bodyMedium,
+                        ),
                       ),
                     const AppGap.sm(),
                   ],

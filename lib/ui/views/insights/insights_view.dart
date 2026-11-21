@@ -3,6 +3,7 @@ import 'package:stacked/stacked.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../models/raison_result.dart';
+import '../../../services/raison_plus_text.dart';
 import 'insights_viewmodel.dart';
 
 /// Displays solutions returned by the Raison API.
@@ -29,6 +30,7 @@ class InsightsView extends StackedView<InsightsViewModel> {
         itemCount: viewModel.results.length,
         itemBuilder: (_, index) {
           final item = viewModel.results[index];
+          final greek = Localizations.localeOf(context).languageCode == 'el';
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: Padding(
@@ -36,7 +38,7 @@ class InsightsView extends StackedView<InsightsViewModel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.label,
+                  Text(RaisonPlusText.label(item.label, greek: greek),
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   ...item.explanation.map(
@@ -44,7 +46,9 @@ class InsightsView extends StackedView<InsightsViewModel> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('• '),
-                        Expanded(child: Text(e)),
+                        Expanded(
+                          child: Text(
+                              RaisonPlusText.line(e, greek: greek))),
                       ],
                     ),
                   ),

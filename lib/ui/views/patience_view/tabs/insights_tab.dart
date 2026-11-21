@@ -8,6 +8,7 @@ import '../../../../models/test_type.dart';
 import '../../../../services/authentication_service.dart';
 import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
+import '../../../../services/raison_plus_text.dart';
 import '../../../../services/test_service.dart';
 import '../../../common/widgets/widgets.dart';
 
@@ -236,6 +237,7 @@ class _InsightsTabState extends State<InsightsTab> {
           );
         }
 
+        final greek = Localizations.localeOf(context).languageCode == 'el';
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +245,8 @@ class _InsightsTabState extends State<InsightsTab> {
               Text(l10n.argumentation, style: theme.textTheme.titleMedium),
               const AppGap.xs(),
               for (final r in solutions) ...[
-                Text(r.label, style: theme.textTheme.titleSmall),
+                Text(RaisonPlusText.label(r.label, greek: greek),
+                    style: theme.textTheme.titleSmall),
                 const AppGap.xxs(),
                 for (final e in r.explanation)
                   Padding(
@@ -251,7 +254,8 @@ class _InsightsTabState extends State<InsightsTab> {
                       left: AppSpacing.md,
                       bottom: AppSpacing.xxs,
                     ),
-                    child: Text('• $e', style: theme.textTheme.bodyMedium),
+                    child: Text('• ${RaisonPlusText.line(e, greek: greek)}',
+                        style: theme.textTheme.bodyMedium),
                   ),
                 const AppGap.sm(),
               ],
