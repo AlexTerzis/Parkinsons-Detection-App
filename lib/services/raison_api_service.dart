@@ -41,11 +41,14 @@ class RaisonApiService {
   static const String _buildKey = String.fromEnvironment('RAISON_API_KEY');
 
   /// The diagnosis agent, built from the sheet «Διαγνώσεις» on a separate
-  /// rAIson+ account with its own key. Both come from raison.local.json too;
-  /// without them [diagnosisConfigured] is false and the report leaves the
-  /// section out.
-  static const String _buildDiagnosisAgent =
-      String.fromEnvironment('RAISON_DIAGNOSIS_AGENT_ID');
+  /// rAIson+ account with its own key. The key comes from raison.local.json
+  /// too; without it [diagnosisConfigured] is false and the report leaves the
+  /// section out. RAISON_DIAGNOSIS_AGENT_ID may point to another agent.
+  static const String defaultDiagnosisAgentId = '43141074d002';
+  static const String _buildDiagnosisAgent = String.fromEnvironment(
+    'RAISON_DIAGNOSIS_AGENT_ID',
+    defaultValue: defaultDiagnosisAgentId,
+  );
   static const String _buildDiagnosisKey =
       String.fromEnvironment('RAISON_DIAGNOSIS_API_KEY');
 
@@ -64,7 +67,7 @@ class RaisonApiService {
         _diagnosisAgent = diagnosisAgentId ?? _buildDiagnosisAgent,
         _diagnosisKey = diagnosisApiKey ?? _buildDiagnosisKey;
 
-  /// Whether the diagnosis agent's id and key were supplied at build time.
+  /// Whether the diagnosis agent's key was supplied at build time.
   bool get diagnosisConfigured =>
       _diagnosisAgent.isNotEmpty && _diagnosisKey.isNotEmpty;
 
@@ -91,8 +94,7 @@ class RaisonApiService {
   Future<RaisonReasoning> diagnose(Map<String, dynamic> responses) async {
     if (!diagnosisConfigured) {
       throw StateError(
-        'RAISON_DIAGNOSIS_AGENT_ID / RAISON_DIAGNOSIS_API_KEY were not set at '
-        'build time (see README).',
+        'RAISON_DIAGNOSIS_API_KEY was not set at build time (see README).',
       );
     }
     final data = RaisonPlusInputs.forAgent(

@@ -13,15 +13,44 @@ class RaisonPlusText {
   RaisonPlusText._();
 
   /// A decision or verdict title, e.g. `Visit` → `Επίσκεψη σε γιατρό`.
+  ///
+  /// The diagnosis agent names its conclusions "Indicate nph",
+  /// "Indicate parkinsons disease" and so on; those become the diagnosis,
+  /// e.g. `Indicate nph` → `Υδροκέφαλος φυσιολογικής πίεσης`.
   static String label(String text, {required bool greek}) {
     final t = text.trim();
-    return (greek ? _labelsEl : _labelsEn)[t] ?? t;
+    final known = (greek ? _labelsEl : _labelsEn)[t];
+    if (known != null) return known;
+    final indicate = _indicate.firstMatch(t);
+    if (indicate != null) return _diagnosis(indicate.group(1)!, greek: greek);
+    return t;
   }
+
+  /// A diagnosis named by the agent ("nph", "ftd mnd", "parkinsons_disease")
+  /// in the app's language. An unknown name is kept, in words.
+  static String _diagnosis(String name, {required bool greek}) {
+    final id = _diagnosisIds[_normal(name)];
+    final known = id == null ? null : (greek ? _labelsEl : _labelsEn)[id];
+    if (known != null) return known;
+    final words = name.replaceAll('_', ' ').trim();
+    if (words.isEmpty) return name;
+    return words[0].toUpperCase() + words.substring(1);
+  }
+
+  /// Lower case, apostrophes dropped, anything else that is not a letter or
+  /// digit turned into a single space: "Parkinson's_disease" → "parkinsons
+  /// disease".
+  static String _normal(String text) => text
+      .toLowerCase()
+      .replaceAll(RegExp("['’]"), '')
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim();
 
   /// One explanation line in plain words.
   static String line(String text, {required bool greek}) {
     final t = text.trim();
-    final fixed = (greek ? _sentencesEl : _sentencesEn)[t];
+    final sentences = greek ? _sentencesEl : _sentencesEn;
+    final fixed = sentences[t] ?? sentences['$t.'];
     if (fixed != null) return fixed;
 
     final arg = _argument.firstMatch(t);
@@ -113,6 +142,63 @@ class RaisonPlusText {
   static final _under = RegExp(r'^Under: (.+) → (.+?)\.?$');
   static final _alsoPossible = RegExp(r'^Also possible: (.+)$');
   static final _inShort = RegExp(r'^In short: (.+?) — nothing else');
+  static final _indicate = RegExp(r'^indicate[ _]+(.+)$', caseSensitive: false);
+
+  /// Every way the diagnosis agent may name a diagnosis, normalised by
+  /// [_normal], to the diagnosis id: the id itself, its English name and the
+  /// usual abbreviations.
+  static final Map<String, String> _diagnosisIds = {
+    for (final id in _diagnosisSynonyms.values.toSet()) _normal(id): id,
+    for (final id in _diagnosisSynonyms.values.toSet())
+      if (_labelsEn[id] != null) _normal(_labelsEn[id]!): id,
+    for (final e in _diagnosisSynonyms.entries) _normal(e.key): e.value,
+  };
+
+  static const _diagnosisSynonyms = <String, String>{
+    'essential tremor': 'essential_tremor',
+    'et': 'essential_tremor',
+    'parkinsons disease': 'parkinsons_disease',
+    'parkinson disease': 'parkinsons_disease',
+    'parkinsons': 'parkinsons_disease',
+    'pd': 'parkinsons_disease',
+    'pd dementia': 'pd_dementia',
+    'pdd': 'pd_dementia',
+    'parkinsons dementia': 'pd_dementia',
+    'dlb': 'lewy_body_dementia',
+    'lewy': 'lewy_body_dementia',
+    'lewy body dementia': 'lewy_body_dementia',
+    'lewy bodies': 'lewy_body_dementia',
+    'msa': 'multiple_system_atrophy',
+    'psp': 'progressive_supranuclear_palsy',
+    'cbs': 'corticobasal_syndrome',
+    'cbd': 'corticobasal_syndrome',
+    'corticobasal': 'corticobasal_syndrome',
+    'corticobasal degeneration': 'corticobasal_syndrome',
+    'vascular parkinsonism': 'vascular_parkinsonism',
+    'vp': 'vascular_parkinsonism',
+    'drug induced parkinsonism': 'drug_induced_parkinsonism',
+    'dip': 'drug_induced_parkinsonism',
+    'nph': 'normal_pressure_hydrocephalus',
+    'hydrocephalus': 'normal_pressure_hydrocephalus',
+    'cerebellar ataxia': 'cerebellar_ataxia',
+    'ataxia': 'cerebellar_ataxia',
+    'ftd mnd': 'ftd_mnd',
+    'ftd': 'ftd_mnd',
+    'ftd als': 'ftd_mnd',
+    'frontotemporal dementia': 'ftd_mnd',
+    'psychogenic': 'psychogenic_disorder',
+    'psychogenic disorder': 'psychogenic_disorder',
+    'functional disorder': 'psychogenic_disorder',
+    'prodromal pd': 'prodromal_parkinsons',
+    'prodromal parkinsons disease': 'prodromal_parkinsons',
+    'dystonic syndrome': 'dystonic_syndrome',
+    'dystonia': 'dystonic_syndrome',
+    'paraneoplastic': 'paraneoplastic_syndrome',
+    'paraneoplastic syndrome': 'paraneoplastic_syndrome',
+    'rls': 'restless_legs_syndrome',
+    'restless legs': 'restless_legs_syndrome',
+    'restless legs syndrome': 'restless_legs_syndrome',
+  };
 
   static const _labelsEl = <String, String>{
     'Visit': 'Επίσκεψη σε γιατρό',
@@ -191,6 +277,8 @@ class RaisonPlusText {
             'Χρειάζονται περισσότερες πληροφορίες.',
     "No rule's body fires under the asserted atoms.":
         'Κανένας κανόνας δεν ισχύει με τις απαντήσεις που δόθηκαν.',
+    'These conclusions do not conflict with each other.':
+        'Τα συμπεράσματα αυτά δεν αντικρούονται μεταξύ τους.',
   };
 
   static const _sentencesEn = <String, String>{};
@@ -243,8 +331,8 @@ class RaisonPlusText {
     'Genetic test|pathological': 'παθολογικός γενετικός έλεγχος',
     'Fh other not parkinsonism|yes': 'οικογενειακό ιστορικό άνοιας και ψυχιατρικής νόσου χωρίς παρκινσονισμό',
     'Scopa score|above_3': 'βαθμολογία SCOPA-AUT πάνω από 3',
-    'Moca score|24_to_27': 'MoCA 24–27',
-    'Moca score|28_to_30': 'MoCA 28–30',
+    'Moca score|v24_to_27': 'MoCA 24–27',
+    'Moca score|v28_to_30': 'MoCA 28–30',
     'Applause sign|pathological': 'παθολογικό σημείο χειροκροτήματος',
     'Low iron ferritin|yes': 'χαμηλός σίδηρος ή φερριτίνη',
   };
@@ -297,8 +385,8 @@ class RaisonPlusText {
     'Genetic test|pathological': 'abnormal genetic test',
     'Fh other not parkinsonism|yes': 'family history of dementia and psychiatric disease without parkinsonism',
     'Scopa score|above_3': 'SCOPA-AUT score above 3',
-    'Moca score|24_to_27': 'MoCA 24 to 27',
-    'Moca score|28_to_30': 'MoCA 28 to 30',
+    'Moca score|v24_to_27': 'MoCA 24 to 27',
+    'Moca score|v28_to_30': 'MoCA 28 to 30',
     'Applause sign|pathological': 'abnormal applause sign',
     'Low iron ferritin|yes': 'low iron or ferritin',
   };

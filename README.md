@@ -93,15 +93,15 @@ and pass it to every `flutter run` / `flutter build`:
 ```json
 {
   "RAISON_API_KEY": "your-key",
-  "RAISON_DIAGNOSIS_AGENT_ID": "id-of-the-diagnosis-agent",
-  "RAISON_DIAGNOSIS_API_KEY": "its-key"
+  "RAISON_DIAGNOSIS_API_KEY": "key-of-the-diagnosis-agent"
 }
 ```
 
-The two `RAISON_DIAGNOSIS_*` entries are optional. They connect the second
-rAIson+ agent, built from the spreadsheet's «Διαγνώσεις» sheet; its
-indications appear only in the doctor's report, and without the entries that
-section is left out. Each report opening uses one of that agent's queries.
+`RAISON_DIAGNOSIS_API_KEY` is optional. It connects the second rAIson+ agent,
+`43141074d002`, built from the spreadsheet's «Διαγνώσεις» sheet (30 of its
+rules). Its indications appear only in the doctor's report, and without the
+key that section is left out. Each report opening uses one of that agent's
+queries. `RAISON_DIAGNOSIS_AGENT_ID` can point the app to another agent.
 
 Without it `RaisonApiService` throws on its first request naming this flag,
 rather than failing as an opaque 403. Note that this keeps the key out of the

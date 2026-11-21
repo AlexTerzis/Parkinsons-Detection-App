@@ -215,9 +215,9 @@ void main() {
             RaisonPlusInputs.cognitiveMetaKey: {'mocaScore': total},
           };
       expect(RaisonPlusInputs.dataFrom(moca(23))['moca_score'], 'below_24');
-      expect(RaisonPlusInputs.dataFrom(moca(24))['moca_score'], '24_to_27');
-      expect(RaisonPlusInputs.dataFrom(moca(27))['moca_score'], '24_to_27');
-      expect(RaisonPlusInputs.dataFrom(moca(28))['moca_score'], '28_to_30');
+      expect(RaisonPlusInputs.dataFrom(moca(24))['moca_score'], 'v24_to_27');
+      expect(RaisonPlusInputs.dataFrom(moca(27))['moca_score'], 'v24_to_27');
+      expect(RaisonPlusInputs.dataFrom(moca(28))['moca_score'], 'v28_to_30');
       expect(
         RaisonPlusInputs.dataFrom({RaisonPlusInputs.mocaKey: true})['moca_score'],
         'below_24',
@@ -239,7 +239,7 @@ void main() {
       expect(diagnosis, {
         'tremor': 'yes',
         'dystonic_posture': 'yes',
-        'moca_score': '24_to_27',
+        'moca_score': 'v24_to_27',
       });
     });
   });

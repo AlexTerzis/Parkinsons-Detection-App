@@ -102,5 +102,42 @@ void main() {
         'ανήσυχων άκρων (κανόνας r_d29)',
       );
     });
+
+    test('conclusions named "Indicate …", as the deployed agent names them',
+        () {
+      expect(RaisonPlusText.label('Indicate nph', greek: true),
+          'Υδροκέφαλος φυσιολογικής πίεσης');
+      expect(RaisonPlusText.label('Indicate parkinsons disease', greek: true),
+          'Νόσος Πάρκινσον');
+      expect(RaisonPlusText.label('Indicate ftd mnd', greek: false),
+          'Frontotemporal dementia ± motor neuron disease');
+      expect(RaisonPlusText.label('indicate_corticobasal_syndrome',
+              greek: true),
+          'Φλοιοβασικό σύνδρομο');
+      expect(RaisonPlusText.label('Indicate msa', greek: false),
+          'Multiple system atrophy');
+      expect(RaisonPlusText.label('Indicate psp', greek: true),
+          'Υπερπυρηνική προϊούσα παράλυση');
+      // An unknown diagnosis is kept, in words.
+      expect(RaisonPlusText.label('Indicate something_new', greek: true),
+          'Something new');
+    });
+
+    test('an argument for an "Indicate …" conclusion with a MoCA band', () {
+      expect(
+        RaisonPlusText.line(
+          'Indicate essential tremor is supported because Tremor is yes and '
+          'Moca score is v28_to_30 [rule r_d01]',
+          greek: true,
+        ),
+        'Ιδιοπαθής τρόμος, επειδή: τρόμος και MoCA 28–30 (κανόνας r_d01)',
+      );
+      expect(
+        RaisonPlusText.line('Also possible: Indicate msa, Indicate psp',
+            greek: false),
+        'Possible conclusions: Multiple system atrophy, '
+        'Progressive supranuclear palsy',
+      );
+    });
   });
 }

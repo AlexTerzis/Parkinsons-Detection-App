@@ -73,16 +73,17 @@ class RaisonPlusInputs {
     'fh_psychiatric': {'yes'},
   };
 
-  /// Inputs and values of the diagnosis agent, as specified to the builder
-  /// (diagnosis_scenario_30_rules.txt). To be checked against the deployed
-  /// agent's `/schema`, since the builder may name them differently.
+  /// Inputs and values of the diagnosis agent (agent 43141074d002, built
+  /// from diagnosis_scenario_30_rules.txt). The builder prefixes values that
+  /// start with a digit with `v`, so the MoCA bands are `v24_to_27` and
+  /// `v28_to_30`.
   static const Map<String, Set<String>> diagnosisInputs = {
     'tremor': {'yes'},
     'writing_coffee': {'with_difficulty', 'not_at_all'},
     'rigidity': {'yes'},
     'bradykinesia': {'yes'},
     'fh_other_not_parkinsonism': {'yes'},
-    'moca_score': {'below_24', '24_to_27', '28_to_30'},
+    'moca_score': {'below_24', 'v24_to_27', 'v28_to_30'},
     'brain_mri': {'pathological', 'not_pathological'},
     'takes_antipsychotics': {'yes'},
     'scopa_score': {'above_3'},
@@ -232,15 +233,16 @@ class RaisonPlusInputs {
     return data;
   }
 
-  /// The MoCA band of the stored total: below 24, 24 to 27, or 28 to 30.
-  /// Null when no total is stored.
+  /// The MoCA band of the stored total, named as the diagnosis agent names
+  /// it: `below_24`, `v24_to_27` or `v28_to_30`. Null when no total is
+  /// stored.
   static String? mocaBand(Map<String, dynamic> answers) {
     final meta = answers[cognitiveMetaKey];
     final total = meta is Map ? meta['mocaScore'] : null;
     if (total is! num) return null;
     if (total < 24) return 'below_24';
-    if (total < 28) return '24_to_27';
-    return '28_to_30';
+    if (total < 28) return 'v24_to_27';
+    return 'v28_to_30';
   }
 
   /// GDS-15 items phrased positively ("Are you basically satisfied with your
