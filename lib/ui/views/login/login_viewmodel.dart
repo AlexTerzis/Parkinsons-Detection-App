@@ -19,6 +19,7 @@ class LoginViewModel extends BaseViewModel {
 
   // --- UI State ---
   bool _isLoginMode = true;
+  UserRole _selectedRole = UserRole.patient;
   String? _errorMessage;
   bool _keepMeLoggedIn = false;
 
@@ -34,6 +35,7 @@ class LoginViewModel extends BaseViewModel {
 
   // --- Getters ---
   bool get isLoginMode => _isLoginMode;
+  UserRole get selectedRole => _selectedRole;
   String? get errorMessage => _errorMessage;
   bool get passwordVisible => _passwordVisible;
   bool get confirmPasswordVisible => _confirmPasswordVisible;
@@ -43,6 +45,11 @@ class LoginViewModel extends BaseViewModel {
   void toggleMode() {
     _isLoginMode = !_isLoginMode;
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  void selectRole(UserRole role) {
+    _selectedRole = role;
     notifyListeners();
   }
 
@@ -84,12 +91,11 @@ class LoginViewModel extends BaseViewModel {
         await _authService.signUp(
           email: email,
           password: password,
-          // Always a patient. `role` decides who reaches the doctor dashboard
-          // and whose profile is published in the patient-visible directory,
-          // so it is not the client's to choose; the Firestore rules reject
-          // any other value on a new profile. Clinician accounts are issued
-          // by promoting the user document in the Firebase console.
-          userRole: UserRole.patient,
+          // Chosen on the sign-up form. This is deliberately unverified:
+          // anyone can register as a doctor. If the app is ever used with
+          // real patient data, doctor sign-ups need a check (an invite code
+          // or manual approval) enforced in firestore.rules.
+          userRole: _selectedRole,
           name: nameController.text.trim(),
         );
         if (kDebugMode) print('Sign-up successful');

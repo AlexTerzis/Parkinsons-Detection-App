@@ -49,19 +49,16 @@ service cloud.firestore {
       allow read: if request.auth != null
                   && resource.data.role == 'doctor';
 
-      // `role` decides who reaches the doctor dashboard and whose document is
-      // published in the patient-visible directory above, so it cannot be a
-      // client-supplied value. It used to be: the single `read, write` rule
-      // this block started with let anyone set their own `role` to 'doctor',
-      // at signup or at any point afterwards.
+      // A new profile picks its role at sign-up: patient or doctor.
       //
-      // A new profile is therefore always a patient. Doctor accounts are
-      // promoted by hand in the Firebase console, which is the only place that
-      // can vouch for someone actually being a clinician. Existing doctor
-      // documents are unaffected — this applies to document creation only.
+      // This is deliberately unverified. Anyone can register as a doctor and
+      // reach the doctor dashboard and the directory above. That is accepted
+      // for now; before real patient data is involved, doctor creation needs
+      // a check here, such as an invite code that must exist in a collection
+      // only the console can write, or a 'pending' state approved by hand.
       allow create: if request.auth != null
                     && request.auth.uid == userId
-                    && request.resource.data.role == 'patient';
+                    && request.resource.data.role in ['patient', 'doctor'];
 
       // The rest of the profile — name, date of birth, medication, chosen
       // doctor, a doctor's specialty and location — stays freely editable, but

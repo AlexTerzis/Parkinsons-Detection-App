@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 
+import '../../../app/app.locator.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../services/authentication_service.dart';
+import '../../../services/localization_service.dart';
 import '../../common/widgets/widgets.dart';
 import 'login_viewmodel.dart';
 
@@ -79,6 +82,13 @@ class LoginView extends StackedView<LoginViewModel> {
     final signingUp = !viewModel.isLoginMode;
 
     return [
+      // Available before signing in, so the whole first-run experience can be
+      // in the user's language rather than only once they reach their profile.
+      const Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: _LanguageSwitch(),
+      ),
+      const AppGap.sm(),
       Text(
         viewModel.isLoginMode ? l10n.welcome : l10n.createAccount,
         style: theme.textTheme.headlineMedium
@@ -150,33 +160,25 @@ class LoginView extends StackedView<LoginViewModel> {
         ),
         const AppGap.md(),
 
-        // No role picker. This used to offer "I am a: Patient / Doctor", which
-        // was the only way `role` was ever set — so anyone could register as a
-        // doctor and reach the doctor dashboard and the patient directory.
-        // Firestore now refuses any new profile that is not a patient, so an
-        // account's role is no longer the client's to choose.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant,
+        Text(l10n.iAmA, style: theme.textTheme.bodyLarge),
+        const AppGap.xs(),
+        SegmentedButton<UserRole>(
+          segments: [
+            ButtonSegment(
+              value: UserRole.patient,
+              icon: const Icon(Icons.person_outline),
+              label: Text(l10n.patient),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                _t(
-                  context,
-                  'Signing up creates a patient account. Clinician accounts are issued by the clinic.',
-                  'Η εγγραφή δημιουργεί λογαριασμό ασθενούς. Οι λογαριασμοί κλινικών ιατρών εκδίδονται από την κλινική.',
-                ),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+            ButtonSegment(
+              value: UserRole.doctor,
+              icon: const Icon(Icons.medical_services_outlined),
+              label: Text(l10n.doctor),
             ),
           ],
+          selected: {viewModel.selectedRole},
+          onSelectionChanged: viewModel.isBusy
+              ? null
+              : (selection) => viewModel.selectRole(selection.first),
         ),
         const AppGap.md(),
       ],
@@ -251,9 +253,6 @@ class LoginView extends StackedView<LoginViewModel> {
     );
   }
 
-  String _t(BuildContext context, String en, String el) =>
-      Localizations.localeOf(context).languageCode == 'el' ? el : en;
-
   void _onAuthenticatePressed(BuildContext context, LoginViewModel viewModel) {
     if (_formKey.currentState?.validate() ?? false) {
       viewModel.authenticate(
@@ -263,6 +262,34 @@ class LoginView extends StackedView<LoginViewModel> {
         l10n: AppLocalizations.of(context)!,
       );
     }
+  }
+}
+
+/// English / Greek toggle. The choice is persisted by [LocalizationService]
+/// and carries over to the rest of the app, the same as the profile setting.
+class _LanguageSwitch extends StatelessWidget {
+  const _LanguageSwitch();
+
+  @override
+  Widget build(BuildContext context) {
+    final localization = locator<LocalizationService>();
+    final current = Localizations.localeOf(context).languageCode;
+
+    return SegmentedButton<String>(
+      showSelectedIcon: false,
+      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+      segments: const [
+        ButtonSegment(
+          value: 'en',
+          icon: Icon(Icons.translate, size: 18),
+          label: Text('English'),
+        ),
+        ButtonSegment(value: 'el', label: Text('Ελληνικά')),
+      ],
+      selected: {current == 'el' ? 'el' : 'en'},
+      onSelectionChanged: (selection) =>
+          localization.setLocale(Locale(selection.first)),
+    );
   }
 }
 
