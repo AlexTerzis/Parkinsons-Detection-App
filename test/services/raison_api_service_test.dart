@@ -109,6 +109,56 @@ void main() {
       expect(results.single.explanation, ['Rigidity with tremor']);
     });
 
+    test('a dilemma shows the verdict, the options and the arguments', () {
+      // Shape of a real response (21 Nov 2026), shortened.
+      final results = RaisonResult.listFromReason({
+        'verdict': {
+          'kind': 'multiple',
+          'title': 'Multiple equally defensible conclusions',
+          'message': 'No preference resolves which one is preferred.',
+        },
+        'decision': [],
+        'possible': ['Do not visit', 'Visit'],
+        'explanation': 'Multiple equally defensible conclusions\n'
+            'No preference resolves which one is preferred.\n'
+            'Also possible: Do not visit, Visit\n'
+            '\n'
+            'Step 1 — 26 arguments fire under the asserted facts\n'
+            '   - Do not visit is supported because Tremor is yes and '
+            'Takes antipsychotics is yes [rule r_v01]\n'
+            '   - Visit is supported because Tremor is yes and '
+            'Writing coffee is with_difficulty [rule r_v02]\n',
+      });
+
+      final shown = results.where((r) => r.isSolution).toList();
+      expect(shown, hasLength(1));
+      expect(shown.single.label, 'Multiple equally defensible conclusions');
+      expect(shown.single.explanation, [
+        'No preference resolves which one is preferred.',
+        'Also possible: Do not visit, Visit',
+        'Do not visit is supported because Tremor is yes and '
+            'Takes antipsychotics is yes [rule r_v01]',
+        'Visit is supported because Tremor is yes and '
+            'Writing coffee is with_difficulty [rule r_v02]',
+      ]);
+      expect(
+        results.where((r) => !r.isSolution).map((r) => r.label),
+        ['Do not visit', 'Visit'],
+      );
+    });
+
+    test('no matching rule gives one non-solution titled by the verdict', () {
+      final results = RaisonResult.listFromReason({
+        'verdict': {'kind': 'empty', 'title': 'No matching rule'},
+        'decision': [],
+        'possible': [],
+        'explanation': 'No matching rule\n',
+      });
+      expect(results, hasLength(1));
+      expect(results.single.isSolution, isFalse);
+      expect(results.single.label, 'No matching rule');
+    });
+
     test('no decision gives one non-solution, never an empty list', () {
       final results = RaisonResult.listFromReason({'verdict': 'no_decision'});
       expect(results, hasLength(1));

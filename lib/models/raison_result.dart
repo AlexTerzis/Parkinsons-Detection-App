@@ -14,23 +14,46 @@ class RaisonResult {
   /// The results of one rAIson+ `/reason` response.
   ///
   /// The response carries `decision`, `explanation`, `possible`, `verdict` and
-  /// `result`. Each `decision` becomes a solution with the explanation; each
-  /// `possible` option that was not decided becomes a non-solution.
+  /// `result`. `verdict` is an object such as
+  /// `{"kind": "multiple", "title": "Multiple equally defensible conclusions",
+  /// "message": ...}`; `explanation` is text, one argument per line.
+  ///
+  ///  * A decision: each `decision` becomes a solution with the explanation,
+  ///    and each other `possible` option a non-solution.
+  ///  * No decision but several possible options (`kind: multiple`, a
+  ///    dilemma): one solution titled with the verdict, whose lines are the
+  ///    options and the arguments for each, followed by the options as
+  ///    non-solutions. The screens list only solutions, so without this a
+  ///    dilemma — which does carry reasoning — would look like no result.
+  ///  * Nothing (`kind: empty`, no rule applies): one non-solution, never an
+  ///    empty list, because the screens read an empty list as "no
+  ///    questionnaire yet".
   ///
   /// Read leniently — a field may be a string, a list or an object — so that a
-  /// change of shape degrades to fewer results rather than an exception. When
-  /// nothing can be read, one non-solution is returned instead of an empty
-  /// list, because the screens read an empty list as "no questionnaire yet".
+  /// change of shape degrades to fewer results rather than an exception.
   static List<RaisonResult> listFromReason(Map<String, dynamic> json) {
     final decided = _labels(json['decision']);
     final possible = _labels(json['possible']);
     final rawExplanation = json['explanation'];
+    final title = _verdictTitle(json['verdict']);
+
+    if (decided.isEmpty && possible.isNotEmpty) {
+      return [
+        RaisonResult(
+          label: title ?? possible.map(readable).join(' / '),
+          explanation: _clean(_lines(rawExplanation), title),
+          isSolution: true,
+        ),
+        for (final p in possible)
+          RaisonResult(label: readable(p), explanation: const [], isSolution: false),
+      ];
+    }
 
     final results = <RaisonResult>[
       for (final d in decided)
         RaisonResult(
           label: readable(d),
-          explanation: _explanationFor(rawExplanation, d),
+          explanation: _clean(_explanationFor(rawExplanation, d), title),
           isSolution: true,
         ),
       for (final p in possible)
@@ -38,10 +61,9 @@ class RaisonResult {
           RaisonResult(label: readable(p), explanation: const [], isSolution: false),
     ];
     if (results.isEmpty) {
-      final verdict = json['verdict'];
       return [
         RaisonResult(
-          label: verdict is String ? readable(verdict) : '',
+          label: title == null ? '' : readable(title),
           explanation: const [],
           isSolution: false,
         ),
@@ -49,6 +71,20 @@ class RaisonResult {
     }
     return results;
   }
+
+  /// The verdict's title, from `{"title": ...}` or a plain string.
+  static String? _verdictTitle(dynamic verdict) {
+    final t = verdict is Map ? verdict['title'] : verdict;
+    return t is String && t.trim().isNotEmpty ? t.trim() : null;
+  }
+
+  /// Explanation lines without the repeated title, the `Step N — ...`
+  /// headings and the list dashes.
+  static List<String> _clean(List<String> lines, String? title) => [
+        for (final l in lines)
+          if (l != title && !RegExp(r'^Step \d+\b').hasMatch(l))
+            l.startsWith('- ') ? l.substring(2) : l,
+      ];
 
   /// `visit_neurologist` → `Visit neurologist`; other text is left as it is.
   static String readable(String name) {
