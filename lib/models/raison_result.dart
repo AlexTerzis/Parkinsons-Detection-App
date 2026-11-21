@@ -78,13 +78,30 @@ class RaisonResult {
     return t is String && t.trim().isNotEmpty ? t.trim() : null;
   }
 
-  /// Explanation lines without the repeated title, the `Step N — ...`
-  /// headings and the list dashes.
-  static List<String> _clean(List<String> lines, String? title) => [
-        for (final l in lines)
-          if (l != title && !RegExp(r'^Step \d+\b').hasMatch(l))
-            l.startsWith('- ') ? l.substring(2) : l,
-      ];
+  /// Explanation lines that say something the card does not already show.
+  ///
+  /// rAIson+ explains in steps: the arguments that fire, every pair of them
+  /// that conflicts, the preferences, and a resolution that lists each rule
+  /// again. On a phone the conflicts alone ran to 74 lines. Kept: the verdict
+  /// message, the arguments, the preferences, what was ruled out and the
+  /// summary. Dropped: the repeated title, `Decision: ...` (the card's
+  /// heading), the `Step N` headings, the conflict pairs and the per-rule
+  /// resolution lines; list dashes are removed.
+  static List<String> _clean(List<String> lines, String? title) {
+    final dropped = [
+      RegExp(r'^Step \d+\b'),
+      RegExp(r'^Decision:'),
+      RegExp(r'are mutually exclusive$'),
+      RegExp(r'^\S+ supports (the winning|a possible) conclusion\b'),
+    ];
+    final kept = <String>[];
+    for (final raw in lines) {
+      final l = raw.startsWith('- ') ? raw.substring(2) : raw;
+      if (l == title || dropped.any((p) => p.hasMatch(l))) continue;
+      kept.add(l);
+    }
+    return kept;
+  }
 
   /// `visit_neurologist` → `Visit neurologist`; other text is left as it is.
   static String readable(String name) {

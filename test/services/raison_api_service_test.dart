@@ -147,6 +147,44 @@ void main() {
       );
     });
 
+    test('a decision keeps the arguments and drops the repetition', () {
+      // Shape of a real response (21 Nov 2026), shortened.
+      final results = RaisonResult.listFromReason({
+        'verdict': {
+          'kind': 'decided',
+          'title': 'Conclusion',
+          'message': 'A single conclusion is supported.',
+        },
+        'decision': ['Visit'],
+        'possible': ['Visit'],
+        'explanation': 'Conclusion\n'
+            'A single conclusion is supported.\n'
+            'Decision: Visit\n'
+            '\n'
+            'Step 1 — 21 arguments fire under the asserted facts\n'
+            '   - Visit is supported because Tremor is yes and '
+            'Writing coffee is with_difficulty [rule r_v02]\n'
+            '\n'
+            'Step 2 — Resolution\n'
+            '   - r_v02 supports the winning conclusion: Visit\n'
+            '   - r_v01 (Do not visit) and r_v02 (Visit) are mutually '
+            'exclusive\n'
+            'In short: Visit — nothing else contests it under the '
+            'facts given.\n',
+      });
+
+      expect(results, hasLength(1));
+      expect(results.single.label, 'Visit');
+      expect(results.single.isSolution, isTrue);
+      expect(results.single.explanation, [
+        'A single conclusion is supported.',
+        'Visit is supported because Tremor is yes and '
+            'Writing coffee is with_difficulty [rule r_v02]',
+        'In short: Visit — nothing else contests it under the facts '
+            'given.',
+      ]);
+    });
+
     test('no matching rule gives one non-solution titled by the verdict', () {
       final results = RaisonResult.listFromReason({
         'verdict': {'kind': 'empty', 'title': 'No matching rule'},
