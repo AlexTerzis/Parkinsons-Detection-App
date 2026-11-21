@@ -10,9 +10,14 @@ import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
 import '../../../../services/raison_plus_text.dart';
 import '../../../../services/test_service.dart';
+import '../../../common/widgets/diagnosis_indications_card.dart';
 import '../../../common/widgets/widgets.dart';
 
 /// Reasoning output and analytics summaries.
+///
+/// Two rAIson+ agents: the visit agent ("Argumentation") and, when its key is
+/// configured, the diagnosis agent ("Possible indications"), which always
+/// reasons from the stored questionnaire.
 ///
 /// When [resultsFuture] is given (straight after the questionnaire is
 /// submitted) it is shown as it is. Otherwise the tab runs the reasoning
@@ -44,16 +49,28 @@ class _InsightsTabState extends State<InsightsTab> {
   late final Future<_ReasoningInputs> _inputs;
   late final Future<List<RaisonResult>> _results;
 
+  /// Null when the diagnosis agent is not configured; resolves to null when
+  /// no questionnaire has been submitted.
+  Future<RaisonReasoning?>? _diagnosis;
+
   @override
   void initState() {
     super.initState();
+    final raison = locator<RaisonApiService>();
     _inputs = _loadInputs();
     _results = widget.resultsFuture ??
         _inputs.then<List<RaisonResult>>((inputs) {
           final answers = inputs.answers;
           if (answers == null) return const <RaisonResult>[];
-          return locator<RaisonApiService>().submit(answers);
+          return raison.submit(answers);
         });
+    if (raison.diagnosisConfigured) {
+      _diagnosis = _inputs.then<RaisonReasoning?>((inputs) {
+        final answers = inputs.answers;
+        if (answers == null) return null;
+        return raison.diagnose(answers);
+      });
+    }
   }
 
   Future<_ReasoningInputs> _loadInputs() async {
@@ -104,6 +121,10 @@ class _InsightsTabState extends State<InsightsTab> {
         const AppGap.sm(),
         _argumentation(context),
         _inputsNote(context),
+        if (_diagnosis != null) ...[
+          const AppGap.sm(),
+          DiagnosisIndicationsCard(future: _diagnosis!, forPatient: true),
+        ],
         const AppGap.sm(),
         _summaryCard(
           context,

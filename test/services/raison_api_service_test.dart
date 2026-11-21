@@ -248,6 +248,35 @@ void main() {
             '[rule r_d31]',
       ]);
     });
+
+    test('the same inputs use one query, different inputs another', () async {
+      var requests = 0;
+      final service = RaisonApiService(
+        apiKey: 'visit-key',
+        diagnosisAgentId: 'diag123',
+        diagnosisApiKey: 'diag-key',
+        client: MockClient((request) async {
+          requests++;
+          return http.Response(
+            jsonEncode({
+              'verdict': {'kind': 'decided', 'title': 'Conclusion'},
+              'decision': ['Indicate nph'],
+              'possible': ['Indicate nph'],
+              'explanation': '',
+            }),
+            200,
+          );
+        }),
+      );
+
+      await service.diagnose({'A17': true});
+      final again = await service.diagnose({'A17': true, 'X': 45});
+      expect(requests, 1, reason: 'age is not a diagnosis input');
+      expect(again.indications, ['Indicate nph']);
+
+      await service.diagnose({'A1': true});
+      expect(requests, 2);
+    });
   });
 
   group('RaisonReasoning', () {

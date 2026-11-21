@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:collection';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/raison_result.dart';
 import 'raison_plus_inputs.dart';
@@ -90,7 +93,8 @@ class RaisonApiService {
   }
 
   /// Sends the questionnaire [responses] to the diagnosis agent and returns
-  /// the diagnoses it indicates. Meant for the doctor's report only.
+  /// the diagnoses it indicates, for the doctor's report and the patient's
+  /// Insights tab.
   Future<RaisonReasoning> diagnose(Map<String, dynamic> responses) async {
     if (!diagnosisConfigured) {
       throw StateError(
@@ -101,9 +105,51 @@ class RaisonApiService {
       RaisonPlusInputs.dataFrom(responses),
       RaisonPlusInputs.diagnosisInputs,
     );
-    return RaisonReasoning.fromJson(
-      await _reason(_diagnosisAgent, _diagnosisKey, data),
-    );
+    // The answer depends only on the agent and the inputs, and each query is
+    // one of a limited number, so the same inputs are sent once: within a run
+    // the answer comes from memory, across runs from the device.
+    final cacheKey = '$_diagnosisAgent '
+        '${jsonEncode(SplayTreeMap<String, String>.from(data))}';
+    final cached = _diagnosisCache[cacheKey] ?? await _readCache(cacheKey);
+    if (cached != null) {
+      debugPrint('🔍 [rAIson+ $_diagnosisAgent] same inputs as before, '
+          'answer reused (no query used)');
+      _diagnosisCache[cacheKey] = cached;
+      return RaisonReasoning.fromJson(cached);
+    }
+    final json = await _reason(_diagnosisAgent, _diagnosisKey, data);
+    _diagnosisCache[cacheKey] = json;
+    await _writeCache(cacheKey, json);
+    return RaisonReasoning.fromJson(json);
+  }
+
+  /// Diagnosis answers received in this run, by agent and inputs.
+  final Map<String, Map<String, dynamic>> _diagnosisCache = {};
+
+  static const String _cachePrefix = 'raison_diagnosis_v1 ';
+
+  /// A stored answer, or null. The cache is an optimisation: when the
+  /// device's preferences cannot be read (as in unit tests), it is skipped.
+  static Future<Map<String, dynamic>?> _readCache(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_cachePrefix$key');
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _writeCache(
+    String key,
+    Map<String, dynamic> json,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_cachePrefix$key', jsonEncode(json));
+    } catch (_) {}
   }
 
   Future<Map<String, dynamic>> _reason(
