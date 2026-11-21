@@ -104,13 +104,32 @@ void main() {
       expect(data['fh_psychiatric'], 'yes');
     });
 
-    test('GDS is sent above 7 yes answers', () {
+    test('GDS is sent above 7 points', () {
+      // n answers pointing to depression: no to a positive item, yes to the
+      // others.
       Map<String, dynamic> gds(int n) => {
-            for (final k in RaisonPlusInputs.gdsKeys.take(n)) k: true,
+            for (final k in RaisonPlusInputs.gdsKeys.take(n))
+              k: !RaisonPlusInputs.gdsReversedKeys.contains(k),
           };
       expect(RaisonPlusInputs.dataFrom(gds(7)).containsKey('gds_score'),
           isFalse);
       expect(RaisonPlusInputs.dataFrom(gds(8))['gds_score'], 'above_7');
+    });
+
+    test('GDS scores the five positive items when answered no', () {
+      // Satisfied, in good spirits, happy, glad to be alive, full of energy:
+      // all yes is not depression.
+      final cheerful = {
+        for (final k in RaisonPlusInputs.gdsKeys)
+          k: RaisonPlusInputs.gdsReversedKeys.contains(k),
+      };
+      expect(RaisonPlusInputs.gdsCount(cheerful), 0);
+      expect(
+        RaisonPlusInputs.gdsCount({
+          for (final k in RaisonPlusInputs.gdsReversedKeys) k: false,
+        }),
+        5,
+      );
     });
 
     test('RBD is sent above 6, counting the condition list once', () {

@@ -120,9 +120,22 @@ class RaisonPlusInputs {
     return data;
   }
 
-  /// GDS-15 items answered yes.
-  static int gdsCount(Map<String, dynamic> answers) =>
-      gdsKeys.where((k) => answers[k] == true).length;
+  /// GDS-15 items phrased positively ("Are you basically satisfied with your
+  /// life?"), where the answer that counts towards depression is *no*.
+  static const Set<String> gdsReversedKeys = {
+    'D1p3i', 'D1p3v', 'D1p3vii', 'D1p3xi', 'D1p3xiii',
+  };
+
+  /// GDS-15 score: one point per answer pointing to depression — yes for the
+  /// ten negatively phrased items, no for the five in [gdsReversedKeys].
+  /// An unanswered item scores nothing.
+  ///
+  /// The questionnaire's own `D1p3a` flag counts yes answers only, so a
+  /// cheerful patient scores high on the five positive items; that is the
+  /// reversal noted in the cleaned visit-rules workbook (open question 12).
+  static int gdsCount(Map<String, dynamic> answers) => gdsKeys
+      .where((k) => answers[k] == !gdsReversedKeys.contains(k))
+      .length;
 
   /// RBD items answered yes, plus one if any condition other than "none" was
   /// picked in `D1p5x`. The same count the questionnaire uses for `D1p51V`.
