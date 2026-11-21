@@ -96,42 +96,18 @@ class _InsightsTabState extends State<InsightsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
+    // The AI summary, test breakdown, risk alerts and test suggestion cards
+    // were fixed placeholder text that did not follow the results, so the tab
+    // shows only what the reasoning actually produced.
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        _summaryCard(
-          context,
-          leading: const Text('🧠', style: TextStyle(fontSize: 28)),
-          title: l10n.aiSummaryTitle,
-          body: l10n.aiSummarySubtitle,
-        ),
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.testBreakdownTitle,
-          body: l10n.testBreakdownSubtitle,
-        ),
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.riskAlertsTitle,
-          body: l10n.noAlertsSubtitle,
-        ),
-        const AppGap.sm(),
         _argumentation(context),
         _inputsNote(context),
         if (_diagnosis != null) ...[
           const AppGap.sm(),
           DiagnosisIndicationsCard(future: _diagnosis!, forPatient: true),
         ],
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.aiSuggestionsTitle,
-          body: l10n.retakeTremorSuggestion,
-        ),
       ],
     );
   }
@@ -140,7 +116,6 @@ class _InsightsTabState extends State<InsightsTab> {
     BuildContext context, {
     required String title,
     required String body,
-    Widget? leading,
   }) {
     final theme = Theme.of(context);
 
@@ -148,10 +123,6 @@ class _InsightsTabState extends State<InsightsTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (leading != null) ...[
-            leading,
-            const AppGap.wide(AppSpacing.sm),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
