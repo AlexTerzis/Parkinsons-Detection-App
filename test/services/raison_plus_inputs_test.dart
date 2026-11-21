@@ -172,4 +172,75 @@ void main() {
       );
     });
   });
+
+  group('RaisonPlusInputs, diagnosis inputs', () {
+    test('maps the answers only the diagnosis agent uses', () {
+      final data = RaisonPlusInputs.dataFrom({
+        'A17': true,
+        'A16': true,
+        'D1l': 'D1l6',
+        'G1aI': 'G1aI2',
+        'D1n': 'D1na',
+        'SCOPA_total': 4,
+      });
+      expect(data['dystonic_posture'], 'yes');
+      expect(data['leg_jerks_lying_down'], 'yes');
+      expect(data['sleep_study'], 'rls');
+      expect(data['agonist_response'], 'good');
+      expect(data['genetic_test'], 'pathological');
+      expect(data['scopa_score'], 'above_3');
+      expect(RaisonPlusInputs.dataFrom({'D1l': 'D1l1'})['sleep_study'], 'rbd');
+      expect(
+        RaisonPlusInputs.dataFrom({'SCOPA_total': 3}).containsKey('scopa_score'),
+        isFalse,
+      );
+    });
+
+    test('family history without parkinsonism needs a no to Β1', () {
+      expect(
+        RaisonPlusInputs.dataFrom({'B1': false, 'B2': true, 'B3': true})[
+            'fh_other_not_parkinsonism'],
+        'yes',
+      );
+      // Β1 not asked (no family history at all) is not a no.
+      expect(
+        RaisonPlusInputs.dataFrom({'B2': true, 'B3': true})
+            .containsKey('fh_other_not_parkinsonism'),
+        isFalse,
+      );
+    });
+
+    test('MoCA band from the stored total, or the fact without one', () {
+      Map<String, dynamic> moca(num total) => {
+            RaisonPlusInputs.cognitiveMetaKey: {'mocaScore': total},
+          };
+      expect(RaisonPlusInputs.dataFrom(moca(23))['moca_score'], 'below_24');
+      expect(RaisonPlusInputs.dataFrom(moca(24))['moca_score'], '24_to_27');
+      expect(RaisonPlusInputs.dataFrom(moca(27))['moca_score'], '24_to_27');
+      expect(RaisonPlusInputs.dataFrom(moca(28))['moca_score'], '28_to_30');
+      expect(
+        RaisonPlusInputs.dataFrom({RaisonPlusInputs.mocaKey: true})['moca_score'],
+        'below_24',
+      );
+    });
+
+    test('each agent gets only the inputs and values it knows', () {
+      final data = RaisonPlusInputs.dataFrom({
+        'A1': true,
+        'A17': true,
+        RaisonPlusInputs.cognitiveMetaKey: {'mocaScore': 25},
+        'X': 45,
+      });
+      final visit =
+          RaisonPlusInputs.forAgent(data, RaisonPlusInputs.visitInputs);
+      final diagnosis =
+          RaisonPlusInputs.forAgent(data, RaisonPlusInputs.diagnosisInputs);
+      expect(visit, {'tremor': 'yes', 'age': 'below_50'});
+      expect(diagnosis, {
+        'tremor': 'yes',
+        'dystonic_posture': 'yes',
+        'moca_score': '24_to_27',
+      });
+    });
+  });
 }

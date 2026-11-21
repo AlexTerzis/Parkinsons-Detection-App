@@ -79,4 +79,28 @@ void main() {
           'Unexpected text');
     });
   });
+
+  group('RaisonPlusText, diagnosis agent', () {
+    test('diagnoses by name or by id', () {
+      expect(RaisonPlusText.label("Parkinson's disease", greek: true),
+          'Νόσος Πάρκινσον');
+      expect(RaisonPlusText.label('restless_legs_syndrome', greek: true),
+          'Σύνδρομο ανήσυχων άκρων');
+      expect(RaisonPlusText.label('restless_legs_syndrome', greek: false),
+          'Restless legs syndrome');
+    });
+
+    test('an argument with the new inputs', () {
+      expect(
+        RaisonPlusText.line(
+          'Restless legs syndrome is supported because Leg jerks lying down '
+          'is yes and Sleep study is rls [rule r_d29]',
+          greek: true,
+        ),
+        'Σύνδρομο ανήσυχων άκρων, επειδή: ακούσιες κινήσεις ή τινάγματα των '
+        'ποδιών στην κατάκλιση και μελέτη ύπνου με ευρήματα συνδρόμου '
+        'ανήσυχων άκρων (κανόνας r_d29)',
+      );
+    });
+  });
 }

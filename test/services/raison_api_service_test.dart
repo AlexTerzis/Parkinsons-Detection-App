@@ -204,4 +204,72 @@ void main() {
       expect(results.single.label, 'No decision');
     });
   });
+
+  group('RaisonApiService.diagnose', () {
+    test('is off until the diagnosis agent is configured', () async {
+      final service = RaisonApiService(apiKey: 'visit-key');
+      expect(service.diagnosisConfigured, isFalse);
+      await expectLater(service.diagnose({}), throwsStateError);
+    });
+
+    test('posts to the diagnosis agent with its own key and inputs', () async {
+      late http.Request sent;
+      final service = RaisonApiService(
+        apiKey: 'visit-key',
+        diagnosisAgentId: 'diag123',
+        diagnosisApiKey: 'diag-key',
+        client: MockClient((request) async {
+          sent = request;
+          return http.Response(
+            jsonEncode({
+              'verdict': {'kind': 'decided', 'title': 'Conclusion'},
+              'decision': ["Parkinson's disease", 'Dystonic syndrome'],
+              'possible': ["Parkinson's disease", 'Dystonic syndrome'],
+              'explanation': 'Conclusion\n'
+                  "   - Parkinson's disease is supported because Dystonic "
+                  'posture is yes [rule r_d31]\n',
+            }),
+            200,
+          );
+        }),
+      );
+
+      final reasoning = await service.diagnose({'A17': true, 'X': 45});
+
+      expect(sent.url.toString(),
+          'https://api-agents.raison-ai.com/v1/agents/diag123/reason');
+      expect(sent.headers['x-api-key'], 'diag-key');
+      final body = jsonDecode(sent.body) as Map<String, dynamic>;
+      // age is a visit input only, so it is not sent here.
+      expect(body['data'], {'dystonic_posture': 'yes'});
+      expect(reasoning.indications, ["Parkinson's disease", 'Dystonic syndrome']);
+      expect(reasoning.explanation, [
+        "Parkinson's disease is supported because Dystonic posture is yes "
+            '[rule r_d31]',
+      ]);
+    });
+  });
+
+  group('RaisonReasoning', () {
+    test('undecided conclusions are still indications', () {
+      final r = RaisonReasoning.fromJson({
+        'verdict': {'kind': 'multiple', 'title': 'Multiple equally '
+            'defensible conclusions'},
+        'decision': [],
+        'possible': ['Essential tremor', "Parkinson's disease"],
+        'explanation': '',
+      });
+      expect(r.indications, ['Essential tremor', "Parkinson's disease"]);
+    });
+
+    test('nothing indicated', () {
+      final r = RaisonReasoning.fromJson({
+        'verdict': {'kind': 'empty', 'title': 'No matching rule'},
+        'decision': [],
+        'possible': [],
+        'explanation': 'No matching rule\n',
+      });
+      expect(r.indications, isEmpty);
+    });
+  });
 }

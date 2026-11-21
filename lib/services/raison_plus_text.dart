@@ -121,11 +121,66 @@ class RaisonPlusText {
     'Multiple equally defensible conclusions':
         'Εξίσου τεκμηριωμένα αντίθετα συμπεράσματα',
     'No matching rule': 'Κανένας κανόνας δεν ταιριάζει',
+
+    // Diagnoses of the diagnosis agent, by name and by id.
+    'Essential tremor': 'Ιδιοπαθής τρόμος',
+    'essential_tremor': 'Ιδιοπαθής τρόμος',
+    'Parkinson\'s disease': 'Νόσος Πάρκινσον',
+    'parkinsons_disease': 'Νόσος Πάρκινσον',
+    'Parkinson\'s disease dementia': 'Άνοια της νόσου Πάρκινσον',
+    'pd_dementia': 'Άνοια της νόσου Πάρκινσον',
+    'Dementia with Lewy bodies': 'Άνοια με σωμάτια Lewy',
+    'lewy_body_dementia': 'Άνοια με σωμάτια Lewy',
+    'Multiple system atrophy': 'Ατροφία πολλαπλών συστημάτων',
+    'multiple_system_atrophy': 'Ατροφία πολλαπλών συστημάτων',
+    'Progressive supranuclear palsy': 'Υπερπυρηνική προϊούσα παράλυση',
+    'progressive_supranuclear_palsy': 'Υπερπυρηνική προϊούσα παράλυση',
+    'Corticobasal syndrome': 'Φλοιοβασικό σύνδρομο',
+    'corticobasal_syndrome': 'Φλοιοβασικό σύνδρομο',
+    'Vascular parkinsonism': 'Αγγειακός παρκινσονισμός',
+    'vascular_parkinsonism': 'Αγγειακός παρκινσονισμός',
+    'Drug-induced parkinsonism': 'Φαρμακευτικός παρκινσονισμός',
+    'drug_induced_parkinsonism': 'Φαρμακευτικός παρκινσονισμός',
+    'Normal pressure hydrocephalus': 'Υδροκέφαλος φυσιολογικής πίεσης',
+    'normal_pressure_hydrocephalus': 'Υδροκέφαλος φυσιολογικής πίεσης',
+    'Cerebellar ataxia': 'Παρεγκεφαλιδική αταξία',
+    'cerebellar_ataxia': 'Παρεγκεφαλιδική αταξία',
+    'Frontotemporal dementia ± motor neuron disease': 'Μετωπιαία-κροταφική άνοια ± νόσος κινητικού νευρώνα',
+    'ftd_mnd': 'Μετωπιαία-κροταφική άνοια ± νόσος κινητικού νευρώνα',
+    'Psychogenic (functional) disorder': 'Ψυχογενής (λειτουργική) διαταραχή',
+    'psychogenic_disorder': 'Ψυχογενής (λειτουργική) διαταραχή',
+    'Prodromal Parkinson\'s disease': 'Πρόδρομη νόσος Πάρκινσον',
+    'prodromal_parkinsons': 'Πρόδρομη νόσος Πάρκινσον',
+    'Dystonic syndrome': 'Δυστονικό σύνδρομο',
+    'dystonic_syndrome': 'Δυστονικό σύνδρομο',
+    'Paraneoplastic syndrome': 'Παρανεοπλασματικό σύνδρομο',
+    'paraneoplastic_syndrome': 'Παρανεοπλασματικό σύνδρομο',
+    'Restless legs syndrome': 'Σύνδρομο ανήσυχων άκρων',
+    'restless_legs_syndrome': 'Σύνδρομο ανήσυχων άκρων',
   };
 
   static const _labelsEn = <String, String>{
     'Visit': 'Visit a doctor',
     'Do not visit': 'No visit needed',
+
+    // Diagnosis ids, in case the agent returns them instead of names.
+    'essential_tremor': 'Essential tremor',
+    'parkinsons_disease': 'Parkinson\'s disease',
+    'pd_dementia': 'Parkinson\'s disease dementia',
+    'lewy_body_dementia': 'Dementia with Lewy bodies',
+    'multiple_system_atrophy': 'Multiple system atrophy',
+    'progressive_supranuclear_palsy': 'Progressive supranuclear palsy',
+    'corticobasal_syndrome': 'Corticobasal syndrome',
+    'vascular_parkinsonism': 'Vascular parkinsonism',
+    'drug_induced_parkinsonism': 'Drug-induced parkinsonism',
+    'normal_pressure_hydrocephalus': 'Normal pressure hydrocephalus',
+    'cerebellar_ataxia': 'Cerebellar ataxia',
+    'ftd_mnd': 'Frontotemporal dementia ± motor neuron disease',
+    'psychogenic_disorder': 'Psychogenic (functional) disorder',
+    'prodromal_parkinsons': 'Prodromal Parkinson\'s disease',
+    'dystonic_syndrome': 'Dystonic syndrome',
+    'paraneoplastic_syndrome': 'Paraneoplastic syndrome',
+    'restless_legs_syndrome': 'Restless legs syndrome',
   };
 
   static const _sentencesEl = <String, String>{
@@ -178,6 +233,20 @@ class RaisonPlusText {
     'Gds score|above_7': 'βαθμολογία GDS πάνω από 7',
     'Moca score|below_24': 'MoCA κάτω από 24',
     'Fab score|below_12': 'FAB κάτω από 12',
+
+    // Inputs of the diagnosis agent.
+    'Dystonic posture|yes': 'ακούσια (δυστονική) θέση άκρων',
+    'Leg jerks lying down|yes': 'ακούσιες κινήσεις ή τινάγματα των ποδιών στην κατάκλιση',
+    'Sleep study|rbd': 'μελέτη ύπνου με ευρήματα RBD',
+    'Sleep study|rls': 'μελέτη ύπνου με ευρήματα συνδρόμου ανήσυχων άκρων',
+    'Agonist response|good': 'καλή ανταπόκριση στους ντοπαμινεργικούς αγωνιστές',
+    'Genetic test|pathological': 'παθολογικός γενετικός έλεγχος',
+    'Fh other not parkinsonism|yes': 'οικογενειακό ιστορικό άνοιας και ψυχιατρικής νόσου χωρίς παρκινσονισμό',
+    'Scopa score|above_3': 'βαθμολογία SCOPA-AUT πάνω από 3',
+    'Moca score|24_to_27': 'MoCA 24–27',
+    'Moca score|28_to_30': 'MoCA 28–30',
+    'Applause sign|pathological': 'παθολογικό σημείο χειροκροτήματος',
+    'Low iron ferritin|yes': 'χαμηλός σίδηρος ή φερριτίνη',
   };
 
   static const _conditionsEn = <String, String>{
@@ -218,5 +287,19 @@ class RaisonPlusText {
     'Gds score|above_7': 'GDS score above 7',
     'Moca score|below_24': 'MoCA below 24',
     'Fab score|below_12': 'FAB below 12',
+
+    // Inputs of the diagnosis agent.
+    'Dystonic posture|yes': 'involuntary (dystonic) limb posture',
+    'Leg jerks lying down|yes': 'involuntary leg movements or jerks when lying down',
+    'Sleep study|rbd': 'sleep study showing RBD',
+    'Sleep study|rls': 'sleep study showing restless legs',
+    'Agonist response|good': 'good response to dopamine agonists',
+    'Genetic test|pathological': 'abnormal genetic test',
+    'Fh other not parkinsonism|yes': 'family history of dementia and psychiatric disease without parkinsonism',
+    'Scopa score|above_3': 'SCOPA-AUT score above 3',
+    'Moca score|24_to_27': 'MoCA 24 to 27',
+    'Moca score|28_to_30': 'MoCA 28 to 30',
+    'Applause sign|pathological': 'abnormal applause sign',
+    'Low iron ferritin|yes': 'low iron or ferritin',
   };
 }

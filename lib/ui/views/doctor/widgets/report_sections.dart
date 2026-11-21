@@ -625,6 +625,128 @@ class _ReasoningCardState extends State<ReasoningCard> {
   }
 }
 
+/// Diagnostic indications from the rAIson+ diagnosis agent.
+///
+/// Only in the doctor's report, never on the patient's screen: the
+/// indications come from self-reported answers and are not clinically
+/// validated, so they are framed as things to consider. Several can hold at
+/// once, which is how the doctors' table is written. Left out entirely when
+/// the diagnosis agent is not configured.
+class DiagnosisCard extends StatefulWidget {
+  const DiagnosisCard({super.key, required this.report});
+
+  final PatientReport report;
+
+  @override
+  State<DiagnosisCard> createState() => _DiagnosisCardState();
+}
+
+class _DiagnosisCardState extends State<DiagnosisCard> {
+  /// Started once and held: each call uses one of the agent's queries.
+  Future<RaisonReasoning>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    final raison = locator<RaisonApiService>();
+    if (!raison.diagnosisConfigured) return;
+    final questionnaire = widget.report.results
+        .where((r) => r.type == TestType.questionnaire)
+        .firstOrNull;
+    if (questionnaire == null || questionnaire.data.isEmpty) return;
+    _future = raison.diagnose(
+      CognitiveFacts.merge(questionnaire.data, widget.report.results),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final future = _future;
+    if (future == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final greek = Localizations.localeOf(context).languageCode == 'el';
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            greek ? 'Διαγνωστικές ενδείξεις' : 'Diagnostic indications',
+            style: theme.textTheme.titleMedium,
+          ),
+          const AppGap.xxs(),
+          Text(
+            greek
+                ? 'Ενδείξεις προς εξέταση από τον γιατρό, όχι διάγνωση. '
+                    'Προκύπτουν από τις απαντήσεις του ασθενούς και δεν '
+                    'έχουν επικυρωθεί κλινικά.'
+                : 'Indications for the doctor to consider, not a diagnosis. '
+                    'They come from the patient\'s own answers and are not '
+                    'clinically validated.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const AppGap.xs(),
+          FutureBuilder<RaisonReasoning>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Text(
+                  greek ? 'Γίνεται η συλλογιστική…' : 'Reasoning…',
+                  style: theme.textTheme.bodyMedium,
+                );
+              }
+              if (snapshot.hasError) {
+                return Text(
+                  greek
+                      ? 'Η υπηρεσία δεν απάντησε. Δοκιμάστε ξανά αργότερα.'
+                      : 'The service did not answer. Try again later.',
+                  style: muted,
+                );
+              }
+              final reasoning = snapshot.data!;
+              final indications = reasoning.indications;
+              if (indications.isEmpty) {
+                return Text(
+                  greek
+                      ? 'Καμία ένδειξη με τις απαντήσεις που δόθηκαν.'
+                      : 'No indication from the answers given.',
+                  style: muted,
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final d in indications)
+                    Text(
+                      '• ${RaisonPlusText.label(d, greek: greek)}',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  const AppGap.xs(),
+                  for (final line in reasoning.explanation)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: AppSpacing.md,
+                        bottom: AppSpacing.xxs,
+                      ),
+                      child: Text(
+                        RaisonPlusText.line(line, greek: greek),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// What this assessment could not tell anyone.
 ///
 /// Deliberately prominent rather than a footnote. A report that shows four

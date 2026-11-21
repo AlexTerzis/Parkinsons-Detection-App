@@ -40,14 +40,35 @@ class RaisonApiService {
   /// proxying rAIson+ through a server of our own would fix that.
   static const String _buildKey = String.fromEnvironment('RAISON_API_KEY');
 
+  /// The diagnosis agent, built from the sheet «Διαγνώσεις» on a separate
+  /// rAIson+ account with its own key. Both come from raison.local.json too;
+  /// without them [diagnosisConfigured] is false and the report leaves the
+  /// section out.
+  static const String _buildDiagnosisAgent =
+      String.fromEnvironment('RAISON_DIAGNOSIS_AGENT_ID');
+  static const String _buildDiagnosisKey =
+      String.fromEnvironment('RAISON_DIAGNOSIS_API_KEY');
+
   final http.Client _client;
   final String _key;
+  final String _diagnosisAgent;
+  final String _diagnosisKey;
 
-  RaisonApiService({http.Client? client, String? apiKey})
-      : _client = client ?? http.Client(),
-        _key = apiKey ?? _buildKey;
+  RaisonApiService({
+    http.Client? client,
+    String? apiKey,
+    String? diagnosisAgentId,
+    String? diagnosisApiKey,
+  })  : _client = client ?? http.Client(),
+        _key = apiKey ?? _buildKey,
+        _diagnosisAgent = diagnosisAgentId ?? _buildDiagnosisAgent,
+        _diagnosisKey = diagnosisApiKey ?? _buildDiagnosisKey;
 
-  /// Sends the questionnaire [responses] to the agent and returns its
+  /// Whether the diagnosis agent's id and key were supplied at build time.
+  bool get diagnosisConfigured =>
+      _diagnosisAgent.isNotEmpty && _diagnosisKey.isNotEmpty;
+
+  /// Sends the questionnaire [responses] to the visit agent and returns its
   /// decisions. Throws [RaisonQuotaExhausted] when the key's quota is used up.
   Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
     // Say which build flag is missing, rather than letting the request come
@@ -58,23 +79,52 @@ class RaisonApiService {
         '--dart-define-from-file=raison.local.json (see README).',
       );
     }
+    final data = RaisonPlusInputs.forAgent(
+      RaisonPlusInputs.dataFrom(responses),
+      RaisonPlusInputs.visitInputs,
+    );
+    return RaisonResult.listFromReason(await _reason(agentId, _key, data));
+  }
 
+  /// Sends the questionnaire [responses] to the diagnosis agent and returns
+  /// the diagnoses it indicates. Meant for the doctor's report only.
+  Future<RaisonReasoning> diagnose(Map<String, dynamic> responses) async {
+    if (!diagnosisConfigured) {
+      throw StateError(
+        'RAISON_DIAGNOSIS_AGENT_ID / RAISON_DIAGNOSIS_API_KEY were not set at '
+        'build time (see README).',
+      );
+    }
+    final data = RaisonPlusInputs.forAgent(
+      RaisonPlusInputs.dataFrom(responses),
+      RaisonPlusInputs.diagnosisInputs,
+    );
+    return RaisonReasoning.fromJson(
+      await _reason(_diagnosisAgent, _diagnosisKey, data),
+    );
+  }
+
+  Future<Map<String, dynamic>> _reason(
+    String agent,
+    String key,
+    Map<String, String> data,
+  ) async {
     final requestBody = jsonEncode({
       'facts': <String>[],
       'assumptions': <String>[],
-      'data': RaisonPlusInputs.dataFrom(responses),
+      'data': data,
     });
 
     final response = await _client.post(
-      Uri.parse('$baseUrl/agents/$agentId/reason'),
+      Uri.parse('$baseUrl/agents/$agent/reason'),
       headers: {
-        'x-api-key': _key,
+        'x-api-key': key,
         'Content-Type': 'application/json',
       },
       body: requestBody,
     );
 
-    debugPrint('🔍 [rAIson+] REASON POST → ${response.statusCode}\n'
+    debugPrint('🔍 [rAIson+ $agent] REASON POST → ${response.statusCode}\n'
         'Request:  $requestBody\n'
         'Response: ${response.body}');
 
@@ -87,6 +137,6 @@ class RaisonApiService {
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('rAIson+ response is not a JSON object');
     }
-    return RaisonResult.listFromReason(decoded);
+    return decoded;
   }
 }

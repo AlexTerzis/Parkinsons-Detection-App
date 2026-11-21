@@ -11,6 +11,10 @@
 /// value the agent has no word for, leaves the input out, so the rules that
 /// need it do not apply. Sending `no` would claim something nobody answered.
 ///
+/// The same answers feed a second agent, the diagnosis agent built from the
+/// sheet «Διαγνώσεις», which shares most input names. [dataFrom] builds every
+/// input either agent knows; [forAgent] keeps the ones one agent accepts.
+///
 /// Pure functions of their arguments, so they can be tested without Firebase.
 class RaisonPlusInputs {
   RaisonPlusInputs._();
@@ -35,6 +39,88 @@ class RaisonPlusInputs {
 
   /// Key of the fact "FAB below 12", written by `CognitiveFacts`.
   static const String fabKey = 'D1p21II';
+
+  /// Key under which `CognitiveFacts` keeps the scores the facts came from.
+  static const String cognitiveMetaKey = 'cognitiveInputs';
+
+  /// Inputs and values of the visit agent (its `/schema`, 21 Nov 2026).
+  static const Map<String, Set<String>> visitInputs = {
+    'tremor': {'yes'},
+    'takes_antipsychotics': {'yes'},
+    'writing_coffee': {'with_difficulty', 'not_at_all'},
+    'brain_mri': {'pathological', 'not_pathological'},
+    'datscan': {'pathological', 'not_pathological'},
+    'age': {'below_50', 'above_80'},
+    'bradykinesia': {'yes'},
+    'fh_parkinsonism_instability': {'yes'},
+    'fh_dementia': {'yes'},
+    'rigidity': {'yes'},
+    'rigidity_with_tremor_or_bradykinesia': {'yes'},
+    'rigidity_tremor_brady_rbd': {'yes'},
+    'rbd_score': {'above_6'},
+    'moca_score': {'below_24'},
+    'fab_score': {'below_12'},
+    'rigidity_tremor_brady_memory_urinary': {'yes'},
+    'memory_rigidity_tremor_brady': {'yes'},
+    'gds_score': {'above_7'},
+    'memory_disorder': {'yes'},
+    'instability_tremor_brady_rigidity': {'yes'},
+    'instability_dysarthria': {'yes'},
+    'limb_weakness_dysarthria': {'yes'},
+    'emg_ncs': {'pathological'},
+    'genetic_test_c9orf72': {'done'},
+    'limb_weakness_dysarthria_behavioural': {'yes'},
+    'fh_psychiatric': {'yes'},
+  };
+
+  /// Inputs and values of the diagnosis agent, as specified to the builder
+  /// (diagnosis_scenario_30_rules.txt). To be checked against the deployed
+  /// agent's `/schema`, since the builder may name them differently.
+  static const Map<String, Set<String>> diagnosisInputs = {
+    'tremor': {'yes'},
+    'writing_coffee': {'with_difficulty', 'not_at_all'},
+    'rigidity': {'yes'},
+    'bradykinesia': {'yes'},
+    'fh_other_not_parkinsonism': {'yes'},
+    'moca_score': {'below_24', '24_to_27', '28_to_30'},
+    'brain_mri': {'pathological', 'not_pathological'},
+    'takes_antipsychotics': {'yes'},
+    'scopa_score': {'above_3'},
+    'rbd_score': {'above_6'},
+    'sleep_study': {'rbd', 'rls'},
+    'rigidity_with_tremor_or_bradykinesia': {'yes'},
+    'fh_parkinsonism_instability': {'yes'},
+    'datscan': {'pathological'},
+    'genetic_test': {'pathological'},
+    'rigidity_tremor_brady_rbd': {'yes'},
+    'rigidity_tremor_brady_memory_urinary': {'yes'},
+    'fab_score': {'below_12'},
+    'memory_rigidity_tremor_brady': {'yes'},
+    'instability_tremor_brady_rigidity': {'yes'},
+    'instability_dysarthria': {'yes'},
+    'applause_sign': {'pathological'},
+    'limb_weakness_dysarthria': {'yes'},
+    'limb_weakness_dysarthria_behavioural': {'yes'},
+    'fh_psychiatric': {'yes'},
+    'fh_dementia': {'yes'},
+    'emg_ncs': {'pathological'},
+    'genetic_test_c9orf72': {'done'},
+    'leg_jerks_lying_down': {'yes'},
+    'agonist_response': {'good'},
+    'low_iron_ferritin': {'yes'},
+    'dystonic_posture': {'yes'},
+  };
+
+  /// The part of [data] that an agent with [inputs] accepts: known names with
+  /// a value the agent knows. An unknown value is left out, not sent.
+  static Map<String, String> forAgent(
+    Map<String, String> data,
+    Map<String, Set<String>> inputs,
+  ) =>
+      {
+        for (final e in data.entries)
+          if (inputs[e.key]?.contains(e.value) ?? false) e.key: e.value,
+      };
 
   /// The `data` object of a `/reason` request for [answers].
   static Map<String, String> dataFrom(Map<String, dynamic> answers) {
@@ -113,11 +199,48 @@ class RaisonPlusInputs {
     put('gds_score', gdsCount(answers) > 7, 'above_7');
     put('rbd_score', rbdCount(answers) > 6, 'above_6');
 
-    // Cognitive tests taken in the app (see CognitiveFacts).
-    put('moca_score', yes(mocaKey), 'below_24');
+    // Cognitive tests taken in the app (see CognitiveFacts). The MoCA band
+    // comes from the total when it is stored, otherwise from the fact.
+    final band = mocaBand(answers);
+    if (band != null) {
+      data['moca_score'] = band;
+    } else {
+      put('moca_score', yes(mocaKey), 'below_24');
+    }
     put('fab_score', yes(fabKey), 'below_12');
 
+    // Inputs only the diagnosis agent uses.
+    put('dystonic_posture', yes('A17'));
+    put('leg_jerks_lying_down', yes('A16'));
+    switch (answers['D1l']) {
+      case 'D1l1':
+        data['sleep_study'] = 'rbd';
+      case 'D1l6':
+        data['sleep_study'] = 'rls';
+    }
+    put('agonist_response', answers['G1aI'] == 'G1aI2', 'good');
+    put('genetic_test', answers['D1n'] == 'D1na', 'pathological');
+    // Β4: no parkinsonism in the family, but dementia and psychiatric
+    // disease; the questionnaire's own B4 flag reads it the same way.
+    put('fh_other_not_parkinsonism',
+        answers['B1'] == false && yes('B2') && yes('B3'));
+    final scopa = answers['SCOPA_total'];
+    put('scopa_score', scopa is num && scopa > 3, 'above_3');
+    // Not collected by the app, so never sent: applause_sign,
+    // low_iron_ferritin (blood test results), genetic_test_c9orf72.
+
     return data;
+  }
+
+  /// The MoCA band of the stored total: below 24, 24 to 27, or 28 to 30.
+  /// Null when no total is stored.
+  static String? mocaBand(Map<String, dynamic> answers) {
+    final meta = answers[cognitiveMetaKey];
+    final total = meta is Map ? meta['mocaScore'] : null;
+    if (total is! num) return null;
+    if (total < 24) return 'below_24';
+    if (total < 28) return '24_to_27';
+    return '28_to_30';
   }
 
   /// GDS-15 items phrased positively ("Are you basically satisfied with your

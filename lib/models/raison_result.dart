@@ -153,3 +153,41 @@ class RaisonResult {
     return ['$raw'];
   }
 }
+
+/// One rAIson+ `/reason` response kept as lists, for an agent whose
+/// conclusions can hold together, such as the diagnosis agent: several
+/// diagnoses are indications to consider, not rival answers.
+class RaisonReasoning {
+  const RaisonReasoning({
+    required this.decided,
+    required this.possible,
+    required this.explanation,
+    this.verdictTitle,
+  });
+
+  /// Conclusions the agent decided on.
+  final List<String> decided;
+
+  /// Conclusions the agent found supported without deciding between them.
+  final List<String> possible;
+
+  /// Explanation lines, cleaned as for [RaisonResult].
+  final List<String> explanation;
+
+  final String? verdictTitle;
+
+  /// What to show as indications: the decided conclusions, or, when the
+  /// agent left them undecided, every supported one.
+  List<String> get indications => decided.isNotEmpty ? decided : possible;
+
+  factory RaisonReasoning.fromJson(Map<String, dynamic> json) {
+    final title = RaisonResult._verdictTitle(json['verdict']);
+    return RaisonReasoning(
+      decided: RaisonResult._labels(json['decision']),
+      possible: RaisonResult._labels(json['possible']),
+      explanation:
+          RaisonResult._clean(RaisonResult._lines(json['explanation']), title),
+      verdictTitle: title,
+    );
+  }
+}
