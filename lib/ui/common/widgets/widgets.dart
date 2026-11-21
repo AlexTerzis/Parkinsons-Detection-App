@@ -20,6 +20,7 @@ export 'app_preferences_section.dart';
 export 'app_scaffold.dart';
 export 'app_section.dart';
 export 'app_state_views.dart';
+export 'fluency_word_chips.dart';
 export 'month_calendar.dart';
 export 'score_wheel.dart';
 export 'speech_text_field.dart';

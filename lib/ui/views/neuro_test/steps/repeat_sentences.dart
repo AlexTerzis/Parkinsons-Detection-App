@@ -71,10 +71,12 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   }
 
   Future<void> _initSpeech() async {
-    _available = await _speech.initialize(
-      onStatus: _onSpeechStatus,
-      onError: _onSpeechError,
-    );
+    _available = await _speech.initialize();
+    // Assigned directly: SpeechToText is a singleton whose initialize() only
+    // runs once per app run, so callbacks passed to it stay with whichever
+    // step initialized first and never reached this one.
+    _speech.statusListener = _onSpeechStatus;
+    _speech.errorListener = _onSpeechError;
     if (mounted) setState(() {});
   }
 
@@ -267,6 +269,9 @@ class _RepeatSentencesStepState extends State<RepeatSentencesStep> {
   void dispose() {
     _memorizeTimer?.cancel();
     _recordingTimer?.cancel();
+    // Detached so the next step's mic events do not land on this dead state.
+    _speech.statusListener = null;
+    _speech.errorListener = null;
     _speech.stop();
     super.dispose();
   }
