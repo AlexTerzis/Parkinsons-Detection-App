@@ -19,7 +19,6 @@ import '../services/hand_metrics.dart';
 import '../services/localization_service.dart';
 import '../services/raison_api_service.dart';
 import '../services/reports_service.dart';
-import '../services/scoring/camera_scoring_service.dart';
 import '../services/storage_service.dart';
 import '../services/test_service.dart';
 import '../services/text_scale_service.dart';
@@ -47,7 +46,6 @@ Future<void> setupLocator(
   locator.registerLazySingleton(() => RaisonApiService());
   locator.registerLazySingleton(() => HandMetrics());
   locator.registerLazySingleton(() => TremorAnalysisService());
-  locator.registerLazySingleton(() => CameraScoringService());
   locator.registerLazySingleton(() => StorageService());
   locator.registerLazySingleton(() => LocalizationService());
   locator.registerLazySingleton(() => TextScaleService());

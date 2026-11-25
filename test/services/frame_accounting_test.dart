@@ -51,10 +51,7 @@ void main() {
       expect(segment.frames, isEmpty);
       expect(segment.missedFrames, 300);
 
-      final task = CameraRecording.fromSegments(
-        [segment],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([segment]).tasks.single;
 
       expect(task.processedFrameCount, 300);
       expect(task.coverage, 0);
@@ -70,10 +67,7 @@ void main() {
       expect(segment.frames, hasLength(60));
       expect(segment.missedFrames, 240);
 
-      final task = CameraRecording.fromSegments(
-        [segment],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([segment]).tasks.single;
 
       expect(task.coverage, closeTo(0.2, 1e-9));
     });
@@ -85,10 +79,7 @@ void main() {
         ...List.filled(25, TrackingState.lowConfidence),
       ]);
 
-      final task = CameraRecording.fromSegments(
-        [segment],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([segment]).tasks.single;
 
       expect(task.coverage, 1.0, reason: 'all three carry landmarks');
       expect(task.trackedRatio, closeTo(0.5, 1e-9));
@@ -154,14 +145,8 @@ void main() {
         ...List.filled(0, TrackingState.tracked),
       ];
 
-      final a = CameraRecording.fromSegments(
-        [_segmentOf(scattered)],
-        CameraTestMode.full,
-      ).tasks.single;
-      final b = CameraRecording.fromSegments(
-        [_segmentOf(blocked)],
-        CameraTestMode.full,
-      ).tasks.single;
+      final a = CameraRecording.fromSegments([_segmentOf(scattered)]).tasks.single;
+      final b = CameraRecording.fromSegments([_segmentOf(blocked)]).tasks.single;
 
       expect(a.coverage, closeTo(0.5, 1e-9));
       expect(b.coverage, closeTo(0.5, 1e-9));
@@ -176,20 +161,14 @@ void main() {
         ...List.filled(100, TrackingState.noHand),
         ...List.filled(50, TrackingState.tracked),
       ];
-      final c = CameraRecording.fromSegments(
-        [_segmentOf(middle)],
-        CameraTestMode.full,
-      ).tasks.single;
+      final c = CameraRecording.fromSegments([_segmentOf(middle)]).tasks.single;
 
       expect(c.coverage, closeTo(0.5, 1e-9));
       expect(c.longestGapSeconds, greaterThan(3.0));
     });
 
     test('a task with no usable frames reports no usable duration', () {
-      final task = CameraRecording.fromSegments(
-        [_segmentOf(List.filled(50, TrackingState.noHand))],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([_segmentOf(List.filled(50, TrackingState.noHand))]).tasks.single;
 
       expect(task.usableDurationSeconds, 0);
     });
@@ -202,10 +181,7 @@ void main() {
         segment.add(_event(i * 33, TrackingState.tracked, palm: 0.1));
       }
 
-      final task = CameraRecording.fromSegments(
-        [segment],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([segment]).tasks.single;
 
       expect(task.handSizeStability, closeTo(1.0, 1e-6));
     });
@@ -221,10 +197,7 @@ void main() {
         );
       }
 
-      final task = CameraRecording.fromSegments(
-        [segment],
-        CameraTestMode.full,
-      ).tasks.single;
+      final task = CameraRecording.fromSegments([segment]).tasks.single;
 
       expect(task.handSizeStability, lessThan(0.9));
     });

@@ -235,18 +235,13 @@ class RecordedTask {
 
 /// A complete camera test session, ready to be scored.
 class CameraRecording {
-  const CameraRecording({required this.tasks, required this.mode});
+  const CameraRecording({required this.tasks});
 
   final List<RecordedTask> tasks;
-  final CameraTestMode mode;
 
   /// Builds a recording from the segments captured during a session.
-  factory CameraRecording.fromSegments(
-    List<CameraTaskSegment> segments,
-    CameraTestMode mode,
-  ) {
+  factory CameraRecording.fromSegments(List<CameraTaskSegment> segments) {
     return CameraRecording(
-      mode: mode,
       tasks: segments
           .map((s) => RecordedTask(
                 taskId: s.taskId,

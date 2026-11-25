@@ -211,12 +211,25 @@ class PostureTestViewModel extends BaseViewModel {
       return _ReadHand(
         shape: shape,
         recognisedId: _postures
-            .identify(hand.landmarks, handedness: hand.handedness)
+            .identify(hand.landmarks,
+                handedness: _geometricHandedness(hand.handedness))
             ?.id,
       );
     }
     return null;
   }
+
+  /// The label this test's palm-facing geometry was built and tuned against.
+  ///
+  /// The native layer used to swap MediaPipe's Left/Right before sending it,
+  /// and the posture rules were written against that swapped label. The swap
+  /// has been removed there, because the camera test needs the real side; it
+  /// is re-applied here so this test behaves exactly as it did before.
+  static String _geometricHandedness(String label) => switch (label) {
+        'Left' => 'Right',
+        'Right' => 'Left',
+        _ => label,
+      };
 
   void _setHandVisible(bool visible) {
     if (visible == _handVisible) return;

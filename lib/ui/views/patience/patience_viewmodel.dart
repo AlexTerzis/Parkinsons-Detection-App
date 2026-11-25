@@ -64,24 +64,26 @@ class PatienceViewModel extends BaseViewModel {
   /// The questionnaire is a one-off inventory rather than a repeated
   /// measurement.
   ///
-  /// The camera test is excluded for two reasons. Its score changed scale when
-  /// the enhanced scorer was selected, and old documents cannot be rescored —
-  /// the landmarks behind them live in Storage, not Firestore — so a single
-  /// series would splice two incompatible quantities together. More
-  /// importantly, that score is an explicitly experimental heuristic with
-  /// uncalibrated normalization ranges; drawing it as a trend line presents it
-  /// with a confidence it has not earned. The camera test's own results screen
-  /// reports what was actually measured, per hand and per task, alongside how
-  /// well it was recorded.
+  /// The voice test is a prototype and is shown separately.
+  ///
+  /// The camera test is charted like the other tests. Its score is the 0-1
+  /// reading of the per-movement 0-4 ratings (see `MotorRating.score`); camera
+  /// results stored before that rating existed (protocol version 3 and
+  /// earlier) are on a different scale and are left off the chart.
   static const Set<TestType> _excludedFromCharts = {
     TestType.questionnaire,
-    TestType.cameraDetection,
     TestType.voice,
   };
 
   /// Results that the score charts are built from.
-  List<TestResult> get scoredResults =>
-      _results.where((r) => !_excludedFromCharts.contains(r.type)).toList();
+  List<TestResult> get scoredResults => _results
+      .where((r) => !_excludedFromCharts.contains(r.type))
+      .where((r) => r.type != TestType.cameraDetection || _isRatedCamera(r))
+      .toList();
+
+  /// Whether a camera result carries the current 0-4 based score.
+  static bool _isRatedCamera(TestResult r) =>
+      ((r.data['protocol_version'] as num?) ?? 0) >= 4;
 
   List<TestResult> get experimentalVoiceResults =>
       _results.where((result) => result.isExperimentalVoicePrototype).toList();

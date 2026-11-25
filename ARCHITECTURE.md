@@ -203,7 +203,7 @@ The registered singletons are: `BottomSheetService`, `DialogService`,
 `NavigationService`, `AuthenticationService`, `TestService`, `ReportsService`,
 `AppointmentService`, `AvailabilityService`, `VoiceApiService`,
 `RaisonApiService`, `HandMetrics`, `TremorAnalysisService`,
-`CameraScoringService`, `StorageService`, `LocalizationService`,
+`StorageService`, `LocalizationService`,
 `TextScaleService`.
 
 Note that not everything is in the locator — `DrawingPredictor`,
@@ -272,7 +272,7 @@ The most useful table in this document. One row per `TestType`.
 
 | `TestType` | View / ViewModel | Firestore subcollection | Storage category | Analysis engine |
 |---|---|---|---|---|
-| `cameraDetection` | [camera_test](lib/ui/views/camera_test/) | `camera` | `cameraDetection` | `CameraScoringService` — two scorers |
+| `cameraDetection` | [camera_test](lib/ui/views/camera_test/) | `camera` | `cameraDetection` | `MotorRatingScorer` — 0-4 item ratings |
 | `drawing` | [drawing_test](lib/ui/views/drawing_test/) | `drawing` | `drawing` | `DrawingPredictor` (TFLite, 256×256 grayscale) |
 | `voice` | [voice_test](lib/ui/views/voice_test/) | `voice` | `voice` | `VoicePredictor` (TFLite, 16 features) + `VoiceApiService` |
 | `tremor` | [tremor_test](lib/ui/views/tremor_test/) | `tremor` | `tremor` | `TremorAnalysisService` (FFT via `fftea`) |
@@ -316,8 +316,9 @@ Firestore rules allowlist, and the Storage rules allowlist.
 
 ## 6. Camera test deep-dive
 
-The largest subsystem: a 1,017-line view model, a Kotlin PlatformView, and a
-~3,000-line scoring stack.
+A hands-free, landscape test: the phone is propped on its side about 50-70 cm
+away, both hands in view, and after one tap on Start every step counts down,
+records and moves on by itself, with spoken cues.
 
 ### Native → Dart bridge
 
@@ -330,62 +331,47 @@ sequenceDiagram
     participant P as LandmarkParser
     participant VM as CameraTestViewModel
 
-    CX->>H: frame (LIVE_STREAM mode)
-    H->>H: MediaPipe detect
+    CX->>H: frame (LIVE_STREAM, 640x480, AE fps range pinned high)
+    H->>H: mirror + rotate, MediaPipe detect (GPU, CPU fallback)
     H->>O: setResults() — draws skeleton
-    H->>CH: invokeMethod("onLandmarks", [...])
-    Note over CH: landmarks, handedness,<br/>handednessScore (nullable)
-    CH->>P: parseHands(raw)
+    H->>CH: invokeMethod("onLandmarks", {timestampMs, hands})
+    Note over CH: timestampMs = capture time;<br/>hands: landmarks, handedness, handednessScore
+    CH->>P: parseFrame(raw)
     P->>VM: FrameData / LandmarkData
-    VM->>VM: append to current task segment
+    VM->>VM: assign hands by position, append to task segment
 ```
 
-The channel is named per view instance: `hand_landmarker_channel_$id`.
-[`HandLandmarkerView`](android/app/src/main/kotlin/com/example/hand_landmarker_flutter/HandLandmarkerView.kt)
-composes a `PreviewView` (forced to `COMPATIBLE`/TextureView so Z-order works)
-with an `OverlayView` brought to the front.
+[`HandLandmarkerHelper`](android/app/src/main/kotlin/com/example/hand_landmarker_flutter/HandLandmarkerHelper.kt)
+runs MediaPipe on the GPU delegate and falls back to the CPU if it cannot start
+or keeps failing. It asks the front camera for its highest frame-rate range
+(auto-exposure otherwise drops to 15 fps indoors), follows display rotation so
+landscape frames reach the detector upright, and handles padded camera rows.
+Each frame is sent with its capture time so the analysis is not measuring
+platform-channel jitter.
 
-**The handedness flip.** The front camera's frames are mirrored before MediaPipe
-sees them, so the user's *right* hand arrives looking like a left hand and is
-reported as `"Left"`. `flipHandedness` corrects this when `helper.isMirrored`
-([HandLandmarkerView.kt:79-86](android/app/src/main/kotlin/com/example/hand_landmarker_flutter/HandLandmarkerView.kt#L79-L86)).
-Passing the raw value through meant every task of the guided protocol was told
-the wrong hand was on screen, and every task failed its check.
-
-`handednessScore` is sent as a **nullable** extra — an older Flutter layer sees
-no score rather than a fabricated zero. `LandmarkParser` reads every field
-defensively, because this is a platform-channel boundary: a malformed payload
-must degrade to "no hand" rather than throw on the camera thread. Duplicate
-handedness within one frame means the classifier is confused, so the first is
-kept and the duplicate dropped.
+**Handedness.** MediaPipe assumes a mirrored, selfie-style input and gets one,
+so its label is passed through unchanged (it used to be flipped a second time).
+The camera test does not rely on it anyway:
+[`HandAssignment`](lib/services/tracking_classifier.dart) tells hands apart by
+position — in the mirrored picture the user's right hand is on the right. The
+posture test re-applies the old flip locally so its tuned geometry is unchanged.
+`LandmarkParser` keeps every hand, including two with the same label.
 
 ### The protocol
 
-[`CameraTaskProtocol`](lib/models/camera_task_protocol.dart) builds the ordered
-task list. Tasks mirror the hand items of MDS-UPDRS Part III, examined **one hand
-at a time** because that is how the clinical scale works — and because separating
-them is what makes the left-versus-right comparison mean anything.
+[`CameraTaskProtocol`](lib/models/camera_task_protocol.dart), 8 steps of 10 s:
 
-| Task | MDS-UPDRS item | Scored |
-|---|---|---|
-| `rest` | — | No, baseline only |
-| `openClose` | 3.5 — open and close the fist | Yes |
-| `fingerTap` | 3.4 — thumb to index finger | Yes |
-| `pronationSupination` | 3.6 — rotate palm up to palm down | Yes |
+| Step | Hands | MDS-UPDRS item | Analysed as |
+|---|---|---|---|
+| `rest` | both | 3.17 rest tremor | tremor |
+| `posture` | both | 3.15 postural tremor | tremor |
+| `fingerTap` | right, then left | 3.4 | cycles |
+| `openClose` | right, then left | 3.5 | cycles |
+| `pronationSupination` | right, then left | 3.6 | cycles |
 
-Two modes and two pacings:
-
-- **`full`** — 8 steps, right hand then left, 6 s rest / 12 s movement.
-- **`short`** — 4 steps, both hands at once, 4 s rest / 8 s movement. Faster, but
-  each hand is smaller in frame, hands can occlude one another, and a two-handed
-  movement is not the same task — results are **not** comparable with a full run.
-- **`selfPaced`** (default) — the patient taps when ready. Only the recording is
-  timed, so comparing runs stays valid however long the reading takes.
-- **`timed`** — each step auto-starts, for a phone propped out of arm's reach.
-
-Every step has a `leadIn` before recording starts. Without it, the first seconds
-of each step are the patient still arranging their hand — recorded as a hesitant
-start and measured as delayed initiation.
+Each step has a spoken countdown (8 s for the first step and each change of
+hand, 5 s otherwise) that holds while the needed hands are out of view. A step
+that fails `TaskQualityValidator` is repeated once automatically, then kept.
 
 ### View model state machine
 
@@ -393,97 +379,51 @@ start and measured as delayed initiation.
 stateDiagram-v2
     [*] --> setup
     setup --> preparing: start()
-    preparing --> running: lead-in elapsed / ready tapped
-    running --> paused: requestPause() at task boundary
+    preparing --> running: countdown elapsed (hands in view)
+    running --> preparing: next step, or one automatic repeat
+    running --> paused: requestPause() at step boundary
     paused --> preparing: resume()
-    running --> taskReview: quality check failed
-    taskReview --> preparing: repeat task
-    taskReview --> preparing: accept and continue
-    running --> finishing: last task done
-    finishing --> results: analysed and saved
+    running --> finishing: last step done
+    finishing --> results: rated and saved
     results --> [*]
 ```
 
-Defined at
-[camera_test_viewmodel.dart:26-48](lib/ui/views/camera_test/camera_test_viewmodel.dart#L26-L48).
-The test used to be a single undifferentiated 29-second capture; it is now a
-sequence of timed tasks, with frames captured into one segment per task so each
-movement can be analysed on its own as well as in aggregate.
+The setup phase shows live checks: hands in view, too far / too close (from
+palm size in the picture) and measured frames per second.
 
-### Scoring: two scorers, always both
+### Scoring: 0-4 item ratings
 
-```mermaid
-flowchart TD
-    R["CameraRecording"] --> SS["CameraScoringService.scoreAll()"]
-    SS --> L["LegacyWeightedScorer<br/>id: legacy_weighted"]
-    SS --> H["HeuristicScorer<br/>id: heuristic_v1"]
-    L --> C{"useEnhancedScoring<br/>AND<br/>enhanced.hasMeasuredFeatures?"}
-    H --> C
-    C -- yes --> SelH["selected = heuristic"]
-    C -- no --> SelL["selected = legacy"]
-    SelH --> TR["TestResult.score"]
-    SelL --> TR
-    L --> Store[("both stored under<br/>result data 'scoring' key")]
-    H --> Store
-```
+[`MotorRatingScorer`](lib/services/scoring/motor_rating.dart) rates every step
+that passed the quality check, per hand, on the MDS-UPDRS 0-4 scale
+(0 normal … 4 severe), using anchors in `MotorRatingRules`:
 
-Running both is the point, not overhead: the heuristic scorer's normalisation
-ranges are provisional, and the only way to calibrate them is to accumulate
-recordings where both verdicts are known. Both are pure local arithmetic over a
-few thousand landmarks.
+- **Movement items** — speed (cycles/s), interruptions (hesitations, and rhythm
+  between them) and amplitude decrement are each mapped to 0-4; the item rating
+  is the mean of the worst sign and the average sign. Fewer than 3 movements
+  while the hand was in view rates 4.
+- **Tremor items** — peak-to-peak amplitude converted to centimetres with the
+  palm as a ruler, against the scale's 1 / 3 / 10 cm bands, discounted when the
+  frequency is outside 3.5-7.5 Hz or unknown.
 
-**The selection rule** ([camera_scoring_service.dart:60-79](lib/services/scoring/camera_scoring_service.dart#L60-L79))
-is the subtle part. The heuristic scorer's features are all nullable by design —
-the honest answer to "how much did the amplitude decay" is often "not enough
-movements to say". But when *every* feature is unmeasured it returns a likelihood
-of `0`, and `0` is the best possible value on this scale. Selecting it would file
-a recording nothing could be read from as a perfect result. So the legacy scorer
-wins that case: cruder, but it always produces a number.
+Per hand: bradykinesia = mean of the three movement items, tremor = worse of
+rest and postural. The stored `TestResult.score` is
 
-> When the better analysis has nothing to say, a rough answer beats a reassuring
-> lie.
+`(0.60 × worse hand's bradykinesia + 0.25 × worst tremor + 0.15 × min(4, 2 × asymmetry)) / 4`
 
-**`LegacyWeightedScorer`** reproduces the original weighted-variance formula
-byte-identically, using the untouched [`ParkinsonConfig`](lib/services/parkinson_config.dart)
-weights (speed .20, tremor .20, accel .15, jerk .15, spread .10, asymmetry .20).
-The formula now exists in two places — the view model remains the source of truth
-for stored legacy values — and a test pins this scorer to reproduce
-`_analyzeFrames` exactly.
+with missing parts' weight shared out. No rated movement means no score and the
+run is not saved. Results from protocol version 3 and earlier used a different
+scorer and are left off the score charts.
 
-**`HeuristicScorer`** reads each task as the movement it actually is. Ten
-features, weights from [`EnhancedScoringConfig`](lib/services/scoring/enhanced_scoring_config.dart),
-summing to 1.0:
-
-| Feature | Weight | Feature | Weight |
-|---|---|---|---|
-| tremor | 0.15 | mean speed | 0.08 |
-| amplitude decrement | 0.15 | pause burden | 0.08 |
-| tap rate | 0.12 | asymmetry | 0.08 |
-| rhythm variability | 0.12 | initiation delay | 0.06 |
-| speed decrement | 0.10 | smoothness | 0.06 |
-
-Unmeasurable features are reported as unmeasured and **their weight is
-redistributed across the rest**, so a recording supporting only half the features
-is not silently scored as healthy on the other half.
+All anchors are **provisional** — reasoned from the scale's wording, not fitted
+to clinician-rated recordings from this app.
 
 Supporting modules:
 
-| Module | Lines | Role |
-|---|---|---|
-| [`movement_cycle_analyzer.dart`](lib/services/scoring/movement_cycle_analyzer.dart) | 675 | Reduces each task to a 1-D signal, finds cycles, measures decrement / rhythm / pauses |
-| [`task_quality.dart`](lib/services/scoring/task_quality.dart) | 433 | `TaskQualityValidator` — decides whether a task is worth scoring or should be repeated |
-| [`camera_test_report.dart`](lib/services/scoring/camera_test_report.dart) | 419 | Assembles the patient- and doctor-facing report |
-| [`camera_scorer.dart`](lib/services/scoring/camera_scorer.dart) | 131 | The `CameraScorer` interface and `FeatureContribution` |
-
-`FeatureContribution` keeps raw, normalized and weighted values together, which
-is what makes a score explainable — a reviewer can see a high likelihood came
-from amplitude decrement rather than tremor. Read `measured`, never the
-`normalized` value of `0`: the difference between "no tremor" and "could not
-measure tremor" matters. It is also the shape an ML model's feature attribution
-would take, so the breakdown survives a swap.
-
-Adding a trained model later means adding it to `_scorers` and giving it a key.
-Nothing else changes.
+| Module | Role |
+|---|---|
+| [`movement_cycle_analyzer.dart`](lib/services/scoring/movement_cycle_analyzer.dart) | Reduces each task to a 1-D signal, finds cycles, measures rate / decrement / rhythm / pauses |
+| [`task_quality.dart`](lib/services/scoring/task_quality.dart) | `TaskQualityValidator` — decides whether a step is usable or should be repeated |
+| [`camera_test_report.dart`](lib/services/scoring/camera_test_report.dart) | Assembles the stored report: per-task measurements, quality, ratings, score |
 
 ---
 

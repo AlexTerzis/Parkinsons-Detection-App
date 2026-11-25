@@ -50,7 +50,7 @@ class HandLandmarkerView(
         helper.setupCameraAndLandmarker()
         
         // Listener to receive results from HandLandmarkerHelper
-        helper.setResultListener { result, input ->
+        helper.setResultListener { result, input, capturedAtMs ->
             // Update the overlay with new results
             overlay.setResults(
                 result,
@@ -76,14 +76,18 @@ class HandLandmarkerView(
                 val handednessCategory = result.handednesses().getOrNull(index)?.firstOrNull()
                 val detected = handednessCategory?.categoryName() ?: "Unknown"
 
-                // Undo the preview mirroring before naming the hand.
+                // Passed through exactly as MediaPipe reports it.
                 //
-                // The front camera's frames are mirrored before MediaPipe sees
-                // them, so the user's *right* hand arrives looking exactly like
-                // a left hand and is reported as "Left". Passing that through
-                // meant every task of the guided protocol was told the wrong
-                // hand was on screen, and every task failed its check.
-                val handedness = if (helper.isMirrored) flipHandedness(detected) else detected
+                // The hand model assumes a mirrored, selfie-style input, and
+                // that is what it gets: the front camera's frames are mirrored
+                // in HandLandmarkerHelper.analyze before detection. Its label is
+                // therefore already the user's own side. This used to be flipped
+                // a second time here, which turned every right hand into a left
+                // one — harmless while one hand was on screen, but with both in
+                // view the test measured the resting hand instead of the moving
+                // one. Flutter no longer depends on the label for that anyway;
+                // it tells the hands apart by where they are in the picture.
+                val handedness = detected
 
                 // The classifier's own confidence in that Left/Right call.
                 // Flutter uses it to separate a solid detection from a marginal
@@ -100,15 +104,16 @@ class HandLandmarkerView(
                     "handednessScore" to handednessScore
                 ))
             }
-            channel.invokeMethod("onLandmarks", resultsList)
+            // The capture time travels with the hands, so Flutter does not have
+            // to stamp frames on arrival — see HandLandmarkerHelper.captureEpochMs.
+            channel.invokeMethod(
+                "onLandmarks",
+                mapOf(
+                    "timestampMs" to capturedAtMs,
+                    "hands" to resultsList
+                )
+            )
         }
-    }
-
-    /** "Left" <-> "Right"; anything else is passed through untouched. */
-    private fun flipHandedness(name: String): String = when (name) {
-        "Left" -> "Right"
-        "Right" -> "Left"
-        else -> name
     }
 
     override fun getView() = frameLayout

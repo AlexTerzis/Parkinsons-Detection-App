@@ -33,6 +33,7 @@ class CycleMetrics {
     required this.cycleCount,
     this.rateHz,
     this.rhythmVariability,
+    this.steadyRhythmVariability,
     this.amplitudeDecrement,
     this.speedDecrement,
     this.meanSpeed,
@@ -51,6 +52,7 @@ class CycleMetrics {
         cycleCount = 0,
         rateHz = null,
         rhythmVariability = null,
+        steadyRhythmVariability = null,
         amplitudeDecrement = null,
         speedDecrement = null,
         meanSpeed = null,
@@ -77,6 +79,13 @@ class CycleMetrics {
   /// Coefficient of variation of the intervals between cycles. 0 is
   /// metronomic; parkinsonian movement is irregular.
   final double? rhythmVariability;
+
+  /// The same, over the intervals that were not hesitations.
+  ///
+  /// A single long pause dominates [rhythmVariability] on its own, so a rating
+  /// that read both that and [pauseCount] would charge one hesitation twice.
+  /// This is the rhythm of the movement between hesitations.
+  final double? steadyRhythmVariability;
 
   /// Fraction of amplitude lost from the first third of the cycles to the last,
   /// clamped at 0. This is the MDS-UPDRS decrementing-amplitude sign, and it is
@@ -113,6 +122,7 @@ class CycleMetrics {
         'cycleCount': cycleCount,
         'rateHz': rateHz,
         'rhythmVariability': rhythmVariability,
+        'steadyRhythmVariability': steadyRhythmVariability,
         'amplitudeDecrement': amplitudeDecrement,
         'speedDecrement': speedDecrement,
         'meanSpeed': meanSpeed,
@@ -172,9 +182,10 @@ class MovementCycleAnalyzer {
   /// 6 Hz movement intact at 30 fps, long enough to kill single-frame spikes.
   static const int _smoothingWindow = 3;
 
-  /// Measures one task. Rest tasks have no cycles and return empty.
+  /// Measures one task. The still tasks (rest, arms out) have no cycles and
+  /// return empty.
   CycleMetrics analyze(RecordedTask task) {
-    if (task.type == CameraTaskType.rest || task.frames.length < 4) {
+    if (!task.isScored || task.frames.length < 4) {
       return CycleMetrics.empty(taskId: task.taskId, hand: task.hand);
     }
 
@@ -228,6 +239,8 @@ class MovementCycleAnalyzer {
       cycleCount: cycles.length,
       rateHz: cycles.length / duration,
       rhythmVariability: _coefficientOfVariation(intervals),
+      steadyRhythmVariability:
+          _coefficientOfVariation(_withoutPauses(intervals)),
       amplitudeDecrement:
           _decrement(cycles.map((c) => c.amplitude).toList(growable: false)),
       speedDecrement:
@@ -285,6 +298,7 @@ class MovementCycleAnalyzer {
           out.add(aperture / palm);
         case CameraTaskType.pronationSupination:
         case CameraTaskType.rest:
+        case CameraTaskType.posture:
           break;
       }
     }
@@ -580,6 +594,12 @@ class MovementCycleAnalyzer {
   double _medianOf(List<double> values) {
     final sorted = List<double>.of(values)..sort();
     return sorted[sorted.length ~/ 2];
+  }
+
+  List<double> _withoutPauses(List<double> intervals) {
+    if (intervals.length < 3) return intervals;
+    final double threshold = _medianOf(intervals) * _pauseFactor;
+    return intervals.where((i) => i <= threshold).toList(growable: false);
   }
 
   int _pauseCount(List<double> intervals) {

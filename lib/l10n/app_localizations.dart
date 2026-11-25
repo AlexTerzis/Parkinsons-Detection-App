@@ -3643,6 +3643,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This document has not been published yet.\n\nUntil it is, here is what the app actually does with your data: your test results, questionnaire answers and voice recordings are stored in your account and are visible to you and to any doctor you choose to share them with. Nothing is shared with anyone else.\n\nPlease contact the app\'s provider if you need the full document before it is available here.'**
   String get legalDocumentPlaceholder;
+
+  /// No description provided for @cameraSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the camera'**
+  String get cameraSetupTitle;
+
+  /// No description provided for @cameraSetupStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn your phone on its side (landscape).'**
+  String get cameraSetupStep1;
+
+  /// No description provided for @cameraSetupStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Prop it up on a table against something steady, screen facing you, tilted so the camera points at your hands.'**
+  String get cameraSetupStep2;
+
+  /// No description provided for @cameraSetupStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Sit about 50–70 cm away — roughly an arm\'s length — with your elbows on the table.'**
+  String get cameraSetupStep3;
+
+  /// No description provided for @cameraSetupStep4.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a well-lit room, with the light in front of you rather than behind you.'**
+  String get cameraSetupStep4;
+
+  /// No description provided for @cameraSetupStep5.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise both hands. When the check below says ready, tap Start. You won\'t need to touch the phone again — just follow the voice.'**
+  String get cameraSetupStep5;
+
+  /// No description provided for @cameraSetupHintNoHands.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise both hands in front of the camera'**
+  String get cameraSetupHintNoHands;
+
+  /// No description provided for @cameraSetupHintOneHand.
+  ///
+  /// In en, this message translates to:
+  /// **'Only one hand is visible — show both'**
+  String get cameraSetupHintOneHand;
+
+  /// No description provided for @cameraSetupHintTooFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hands look small — move a little closer'**
+  String get cameraSetupHintTooFar;
+
+  /// No description provided for @cameraSetupHintTooClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hands are cut off — move back a little'**
+  String get cameraSetupHintTooClose;
+
+  /// No description provided for @cameraSetupHintReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Both hands visible — ready to start'**
+  String get cameraSetupHintReady;
+
+  /// No description provided for @cameraSetupWaitingCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting the camera…'**
+  String get cameraSetupWaitingCamera;
+
+  /// No description provided for @cameraSetupFps.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera speed: {fps} frames per second'**
+  String cameraSetupFps(Object fps);
+
+  /// No description provided for @cameraSetupSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is running slowly. More light usually helps, and closing other apps.'**
+  String get cameraSetupSlow;
+
+  /// No description provided for @cameraSetupDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About {minutes} minutes: {steps} steps of 10 seconds each.'**
+  String cameraSetupDuration(Object minutes, Object steps);
+
+  /// No description provided for @cameraTaskPosture.
+  ///
+  /// In en, this message translates to:
+  /// **'Arms held out'**
+  String get cameraTaskPosture;
+
+  /// No description provided for @cameraInstructionRestBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest both forearms on the table with your hands relaxed and still, in view of the camera.'**
+  String get cameraInstructionRestBoth;
+
+  /// No description provided for @cameraInstructionPosture.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold both arms out in front of you, palms down, fingers spread. Keep them as still as you can.'**
+  String get cameraInstructionPosture;
+
+  /// No description provided for @cameraShowHandsToBegin.
+  ///
+  /// In en, this message translates to:
+  /// **'Show both hands to the camera'**
+  String get cameraShowHandsToBegin;
+
+  /// No description provided for @cameraSwitchHands.
+  ///
+  /// In en, this message translates to:
+  /// **'Now use your {hand}. Put the other hand down on the table.'**
+  String cameraSwitchHands(Object hand);
+
+  /// No description provided for @cameraRetryNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s do this step once more.'**
+  String get cameraRetryNotice;
+
+  /// No description provided for @cameraRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording'**
+  String get cameraRecording;
+
+  /// No description provided for @cameraSayGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go.'**
+  String get cameraSayGo;
+
+  /// No description provided for @cameraSayStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop. Relax.'**
+  String get cameraSayStop;
+
+  /// No description provided for @cameraSayFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Well done. The test is finished.'**
+  String get cameraSayFinished;
+
+  /// No description provided for @cameraSayRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s do that once more.'**
+  String get cameraSayRetry;
+
+  /// No description provided for @cameraResultsScoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your result'**
+  String get cameraResultsScoreTitle;
+
+  /// No description provided for @cameraResultsScoreValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{score} / 100'**
+  String cameraResultsScoreValue(Object score);
+
+  /// No description provided for @cameraResultsScoreNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This score is worked out automatically from the video, using rules modelled on how doctors rate these movements (0 = normal, 4 = severe). It has not yet been checked against doctors\' ratings and it is not a diagnosis. Share it with your doctor.'**
+  String get cameraResultsScoreNote;
+
+  /// No description provided for @cameraResultsRatingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating per movement'**
+  String get cameraResultsRatingsTitle;
+
+  /// No description provided for @cameraResultsRatingsScale.
+  ///
+  /// In en, this message translates to:
+  /// **'0 normal · 1 slight · 2 mild · 3 moderate · 4 severe'**
+  String get cameraResultsRatingsScale;
+
+  /// No description provided for @cameraResultsBradykinesia.
+  ///
+  /// In en, this message translates to:
+  /// **'Slowness of movement'**
+  String get cameraResultsBradykinesia;
+
+  /// No description provided for @cameraResultsTremor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tremor'**
+  String get cameraResultsTremor;
+
+  /// No description provided for @cameraResultsAsymmetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Difference between hands'**
+  String get cameraResultsAsymmetry;
+
+  /// No description provided for @cameraResultsWorseHand.
+  ///
+  /// In en, this message translates to:
+  /// **'The {hand} moved less well.'**
+  String cameraResultsWorseHand(Object hand);
+
+  /// No description provided for @cameraResultsNotRated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not rated'**
+  String get cameraResultsNotRated;
+
+  /// No description provided for @cameraResultsNoScore.
+  ///
+  /// In en, this message translates to:
+  /// **'No movement step could be rated from this recording, so no score was saved.'**
+  String get cameraResultsNoScore;
+
+  /// No description provided for @cameraGrade0.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get cameraGrade0;
+
+  /// No description provided for @cameraGrade1.
+  ///
+  /// In en, this message translates to:
+  /// **'Slight'**
+  String get cameraGrade1;
+
+  /// No description provided for @cameraGrade2.
+  ///
+  /// In en, this message translates to:
+  /// **'Mild'**
+  String get cameraGrade2;
+
+  /// No description provided for @cameraGrade3.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get cameraGrade3;
+
+  /// No description provided for @cameraGrade4.
+  ///
+  /// In en, this message translates to:
+  /// **'Severe'**
+  String get cameraGrade4;
+
+  /// No description provided for @cameraRatingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{rating} · {grade}'**
+  String cameraRatingValue(Object grade, Object rating);
 }
 
 class _AppLocalizationsDelegate

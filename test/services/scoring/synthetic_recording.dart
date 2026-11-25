@@ -150,6 +150,7 @@ abstract final class Synthetic {
           z: -r * math.sin(theta) * scale,
         );
       case CameraTaskType.rest:
+      case CameraTaskType.posture:
         // Whole-hand translation, so palm size is unchanged and the tremor
         // shows up as position residual on every landmark — which is what
         // TremorAnalysisService measures.
@@ -193,16 +194,21 @@ abstract final class Synthetic {
           isLeft && leftAmplitude > 0 ? leftAmplitude : amplitude;
 
       if (includeRest) {
-        tasks.add(task(
-          type: CameraTaskType.rest,
-          hand: hand,
-          seconds: 3,
-          fps: fps,
-          rateHz: 0,
-          amplitude: 0,
-          tremorAmplitude: tremorAmplitude,
-          tremorHz: tremorHz,
-        ));
+        for (final still in <CameraTaskType>[
+          CameraTaskType.rest,
+          CameraTaskType.posture,
+        ]) {
+          tasks.add(task(
+            type: still,
+            hand: hand,
+            seconds: 10,
+            fps: fps,
+            rateHz: 0,
+            amplitude: 0,
+            tremorAmplitude: tremorAmplitude,
+            tremorHz: tremorHz,
+          ));
+        }
       }
 
       for (final type in <CameraTaskType>[
@@ -229,7 +235,7 @@ abstract final class Synthetic {
       }
     }
 
-    return CameraRecording(tasks: tasks, mode: CameraTestMode.full);
+    return CameraRecording(tasks: tasks);
   }
 
   /// Fast, regular, full-amplitude, no tremor — what a healthy adult produces.

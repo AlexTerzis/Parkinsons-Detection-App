@@ -7,7 +7,6 @@ import 'package:parkinsondetetion/services/test_service.dart';
 import 'package:parkinsondetetion/services/reports_service.dart';
 import 'package:parkinsondetetion/services/storage_service.dart';
 import 'package:parkinsondetetion/services/hand_metrics.dart';
-import 'package:parkinsondetetion/services/scoring/camera_scoring_service.dart';
 import 'test_helpers.mocks.dart';
 // @stacked-import
 
@@ -45,8 +44,6 @@ void registerAnalysisServices() {
   _removeRegistrationIfExists<HandMetrics>();
   locator.registerSingleton<HandMetrics>(const HandMetrics());
 
-  _removeRegistrationIfExists<CameraScoringService>();
-  locator.registerSingleton<CameraScoringService>(const CameraScoringService());
 }
 
 MockNavigationService getAndRegisterNavigationService() {

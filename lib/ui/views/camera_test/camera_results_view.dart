@@ -2,22 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:parkinsondetetion/l10n/app_localizations.dart';
 
 import '../../../models/camera_task_protocol.dart';
+import '../../../models/test_score_interpretation.dart';
+import '../../../models/test_type.dart';
 import '../../../services/scoring/camera_test_report.dart';
+import '../../../services/scoring/motor_rating.dart';
 import '../../common/widgets/widgets.dart';
+import 'camera_test_view.dart';
 import 'camera_test_viewmodel.dart';
 
 /// What the patient sees after the camera assessment.
 ///
-/// Built around two things: what was measured, and how well it was recorded.
-/// The combined heuristic score is deliberately absent — it is an uncalibrated
-/// research output, and putting a single number at the top of this screen would
-/// give it a standing it has not earned, whatever the wording around it.
-///
-/// Every number here is a measurement of movement, stated in its own units and
-/// left uninterpreted. There is no reference range, no colour coding against a
-/// threshold, and no statement that any value is normal or abnormal — this app
-/// has no validated basis for any of those, and inventing one would be the
-/// diagnosis-shaped claim this whole screen exists to avoid.
+/// The score comes first, as it does for every other test, with the band it
+/// falls in and a plain statement of what it is and is not. Beneath it, the
+/// 0-4 rating of each movement for each hand, so the score can be read back to
+/// the movements it came from. The raw measurements and recording quality
+/// follow for anyone who wants the detail.
 class CameraResultsView extends StatelessWidget {
   const CameraResultsView({super.key, required this.viewModel});
 
@@ -37,7 +36,7 @@ class CameraResultsView extends StatelessWidget {
         icon: Icons.arrow_forward,
         onPressed: viewModel.finishFromResults,
       ),
-      body: report == null || !report.hasAnyMeasurement
+      body: report == null || report.score == null
           ? _nothingMeasured(context, l10n, theme)
           : _results(context, l10n, theme, report),
     );
@@ -58,7 +57,11 @@ class CameraResultsView extends StatelessWidget {
               Icon(Icons.videocam_off_outlined,
                   color: theme.colorScheme.onSurfaceVariant),
               const AppGap.wide(AppSpacing.sm),
-              Expanded(child: Text(l10n.cameraResultsNothing)),
+              Expanded(
+                child: Text(viewModel.report == null
+                    ? l10n.cameraResultsNothing
+                    : l10n.cameraResultsNoScore),
+              ),
             ],
           ),
         ),
@@ -81,37 +84,12 @@ class CameraResultsView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.cameraResultsIntro,
-                  style: theme.textTheme.bodyMedium),
-              const AppGap.sm(),
-              Row(
-                children: [
-                  Icon(
-                    viewModel.resultSaved
-                        ? Icons.cloud_done_outlined
-                        : Icons.cloud_off_outlined,
-                    size: 20,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const AppGap.wide(AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      viewModel.resultSaved
-                          ? l10n.cameraResultsSaved
-                          : l10n.cameraResultsNotSaved,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        _scoreSection(context, l10n, theme, report),
         const AppGap.md(),
+        if (report.rating != null) ...[
+          _ratingsSection(context, l10n, theme, report.rating!),
+          const AppGap.md(),
+        ],
         _qualitySection(context, l10n, theme, report),
         const AppGap.md(),
         for (final type in const <CameraTaskType>[
@@ -119,13 +97,12 @@ class CameraResultsView extends StatelessWidget {
           CameraTaskType.openClose,
           CameraTaskType.pronationSupination,
           CameraTaskType.rest,
+          CameraTaskType.posture,
         ]) ...[
           _taskSection(context, l10n, theme, report, type),
           const AppGap.md(),
         ],
         _comparisonSection(context, l10n, theme, report),
-        const AppGap.md(),
-        _overallMovementSection(context, l10n, theme),
         const AppGap.md(),
         _diagnosticsSection(context, l10n, theme, report),
         const AppGap.md(),
@@ -138,69 +115,191 @@ class CameraResultsView extends StatelessWidget {
     );
   }
 
-  // --- Always-available measurements ---
+  // --- Score ---
 
-  /// The whole-recording measures, per hand.
-  ///
-  /// These come from `HandMetrics` over the raw positions and cannot fail: they
-  /// are variances of frame-to-frame displacement, so they exist whenever any
-  /// frames were captured. They are cruder than the per-task features above —
-  /// they do not know about elapsed time or task boundaries — but they are the
-  /// numbers this test produced before the per-task analysis was added, and
-  /// they should never have stopped being shown when it cannot report.
-  Widget _overallMovementSection(
+  Widget _scoreSection(
     BuildContext context,
     AppLocalizations l10n,
     ThemeData theme,
+    CameraTestReport report,
   ) {
-    final data = viewModel.lastMetrics;
-    if (data.isEmpty) return const SizedBox.shrink();
-
-    double? read(String key) => (data[key] as num?)?.toDouble();
-
-    Widget row(String label, String leftKey, String rightKey) {
-      final left = read(leftKey);
-      final right = read(rightKey);
-      if (left == null && right == null) return const SizedBox.shrink();
-      return _metric(
-        context,
-        label,
-        '${left?.toStringAsFixed(3) ?? '—'} · '
-        '${right?.toStringAsFixed(3) ?? '—'}',
-      );
-    }
+    final double score = report.score!;
+    final band =
+        TestScoreInterpretation.bandOfConcern(TestType.cameraDetection, score);
+    final semantic = AppSemanticColors.of(context);
+    final Color colour = switch (band) {
+      ScoreBand.reassuring => semantic.success,
+      ScoreBand.borderline => semantic.warning,
+      ScoreBand.notable => theme.colorScheme.error,
+    };
+    final String bandLabel = switch (band) {
+      ScoreBand.reassuring => l10n.bandLabelReassuring,
+      ScoreBand.borderline => l10n.bandLabelBorderline,
+      ScoreBand.notable => l10n.bandLabelNotable,
+    };
+    final worse = report.rating?.worseHand;
+    final asymmetry = report.rating?.asymmetry;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.cameraOverallMovement, style: theme.textTheme.titleMedium),
-          const AppGap.xs(),
-          Text(
-            '${l10n.cameraHandLeft} · ${l10n.cameraHandRight}',
-            style: theme.textTheme.labelMedium,
+          Text(l10n.cameraResultsScoreTitle,
+              style: theme.textTheme.titleMedium),
+          const AppGap.sm(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                l10n.cameraResultsScoreValue('${(score * 100).round()}'),
+                style: theme.textTheme.headlineMedium
+                    ?.copyWith(color: colour, fontWeight: FontWeight.bold),
+              ),
+              const AppGap.wide(AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+                child: Text(bandLabel,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: colour)),
+              ),
+            ],
           ),
+          if (worse != null && asymmetry != null && asymmetry >= 0.5) ...[
+            const AppGap.xs(),
+            Text(
+              l10n.cameraResultsWorseHand(_handName(l10n, worse.hand)
+                  .toLowerCase()),
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
           const AppGap.sm(),
-          row(l10n.cameraMetricSpeedVariation, 'speed_variance_left',
-              'speed_variance_right'),
-          row(l10n.cameraMetricAccelVariation, 'accel_variance_left',
-              'accel_variance_right'),
-          row(l10n.cameraMetricJerkVariation, 'jerk_variance_left',
-              'jerk_variance_right'),
-          row(l10n.cameraMetricFingerSpread, 'finger_spread_left',
-              'finger_spread_right'),
-          row(l10n.cameraMetricTremorLevel, 'rest_tremor_left',
-              'rest_tremor_right'),
-          if (read('asymmetry') != null)
-            _metric(context, l10n.cameraMetricHandDifference,
-                read('asymmetry')!.toStringAsFixed(3)),
+          Text(l10n.cameraResultsScoreNote, style: theme.textTheme.bodySmall),
           const AppGap.sm(),
-          Text(l10n.cameraOverallMovementNote,
-              style: theme.textTheme.bodySmall),
+          Row(
+            children: [
+              Icon(
+                viewModel.resultSaved
+                    ? Icons.cloud_done_outlined
+                    : Icons.cloud_off_outlined,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const AppGap.wide(AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  viewModel.resultSaved
+                      ? l10n.cameraResultsSaved
+                      : l10n.cameraResultsNotSaved,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+
+  // --- Ratings ---
+
+  Widget _ratingsSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+    MotorRating rating,
+  ) {
+    String value(double? r) => r == null
+        ? l10n.cameraResultsNotRated
+        : l10n.cameraRatingValue(r.toStringAsFixed(1), _gradeName(l10n, r));
+
+    final right = rating.handRating('Right');
+    final left = rating.handRating('Left');
+
+    Widget row(String label, double? r, double? l) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 4, child: Text(label)),
+              Expanded(
+                  flex: 3,
+                  child: Text(value(r), style: theme.textTheme.titleSmall)),
+              Expanded(
+                  flex: 3,
+                  child: Text(value(l), style: theme.textTheme.titleSmall)),
+            ],
+          ),
+        );
+
+    double? item(HandRating? h, CameraTaskType type) => h?.itemOf(type)?.rating;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.cameraResultsRatingsTitle,
+              style: theme.textTheme.titleMedium),
+          Text(l10n.cameraResultsRatingsScale, style: theme.textTheme.bodySmall),
+          const AppGap.sm(),
+          Row(
+            children: [
+              const Expanded(flex: 4, child: SizedBox.shrink()),
+              Expanded(
+                  flex: 3,
+                  child: Text(l10n.cameraHandRight,
+                      style: theme.textTheme.labelLarge)),
+              Expanded(
+                  flex: 3,
+                  child: Text(l10n.cameraHandLeft,
+                      style: theme.textTheme.labelLarge)),
+            ],
+          ),
+          const AppGap.xs(),
+          for (final type in const <CameraTaskType>[
+            CameraTaskType.fingerTap,
+            CameraTaskType.openClose,
+            CameraTaskType.pronationSupination,
+            CameraTaskType.rest,
+            CameraTaskType.posture,
+          ])
+            row(type.displayName(l10n), item(right, type), item(left, type)),
+          const Divider(),
+          row(l10n.cameraResultsBradykinesia, right?.bradykinesia,
+              left?.bradykinesia),
+          row(l10n.cameraResultsTremor, right?.tremor, left?.tremor),
+          if (rating.asymmetry != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Row(
+                children: [
+                  Expanded(child: Text(l10n.cameraResultsAsymmetry)),
+                  Text(rating.asymmetry!.toStringAsFixed(1),
+                      style: theme.textTheme.titleSmall),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _gradeName(AppLocalizations l10n, double rating) {
+    switch (rating.round().clamp(0, 4)) {
+      case 0:
+        return l10n.cameraGrade0;
+      case 1:
+        return l10n.cameraGrade1;
+      case 2:
+        return l10n.cameraGrade2;
+      case 3:
+        return l10n.cameraGrade3;
+      default:
+        return l10n.cameraGrade4;
+    }
+  }
+
+  String _handName(AppLocalizations l10n, String hand) =>
+      hand == 'Left' ? l10n.cameraHandLeft : l10n.cameraHandRight;
 
   /// The numbers needed to work out why a measurement is missing.
   ///
@@ -382,7 +481,7 @@ class CameraResultsView extends StatelessWidget {
       ];
     }
 
-    if (type == CameraTaskType.rest) {
+    if (type.isTremor) {
       final tremor = task.tremor;
       if (tremor == null) {
         return <Widget>[
@@ -535,18 +634,8 @@ class CameraResultsView extends StatelessWidget {
 
   // --- Labels and units ---
 
-  String _taskName(AppLocalizations l10n, CameraTaskType type) {
-    switch (type) {
-      case CameraTaskType.rest:
-        return l10n.cameraTaskRest;
-      case CameraTaskType.openClose:
-        return l10n.cameraTaskOpenClose;
-      case CameraTaskType.fingerTap:
-        return l10n.cameraTaskFingerTap;
-      case CameraTaskType.pronationSupination:
-        return l10n.cameraTaskPronation;
-    }
-  }
+  String _taskName(AppLocalizations l10n, CameraTaskType type) =>
+      type.displayName(l10n);
 
   String _rateLabel(AppLocalizations l10n, CameraTaskType type) {
     switch (type) {
@@ -557,6 +646,7 @@ class CameraResultsView extends StatelessWidget {
       case CameraTaskType.pronationSupination:
         return l10n.cameraMetricTurnsPerSecond;
       case CameraTaskType.rest:
+      case CameraTaskType.posture:
         return l10n.cameraMetricSpeed;
     }
   }
@@ -579,6 +669,8 @@ class CameraResultsView extends StatelessWidget {
         return l10n.cameraMetricAmplitudeDecrement;
       case 'tremor_amplitude':
         return l10n.cameraMetricTremorAmplitude;
+      case 'postural_tremor_amplitude':
+        return '${l10n.cameraMetricTremorAmplitude} (${l10n.cameraTaskPosture})';
       default:
         return name;
     }

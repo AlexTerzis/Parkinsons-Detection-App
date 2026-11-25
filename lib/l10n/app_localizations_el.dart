@@ -2067,4 +2067,159 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get legalDocumentPlaceholder =>
       'Το κείμενο αυτό δεν έχει δημοσιευτεί ακόμη.\n\nΜέχρι τότε, να τι κάνει στην πράξη η εφαρμογή με τα δεδομένα σας: τα αποτελέσματα των δοκιμασιών, οι απαντήσεις στα ερωτηματολόγια και οι ηχογραφήσεις φωνής αποθηκεύονται στον λογαριασμό σας και είναι ορατά σε εσάς και σε όποιον γιατρό επιλέξετε να τα μοιραστείτε. Τίποτα δεν κοινοποιείται σε κανέναν άλλον.\n\nΕπικοινωνήστε με τον πάροχο της εφαρμογής αν χρειάζεστε το πλήρες κείμενο πριν γίνει διαθέσιμο εδώ.';
+
+  @override
+  String get cameraSetupTitle => 'Ρύθμιση κάμερας';
+
+  @override
+  String get cameraSetupStep1 => 'Γυρίστε το κινητό οριζόντια (στο πλάι).';
+
+  @override
+  String get cameraSetupStep2 =>
+      'Στηρίξτε το σε ένα τραπέζι, πάνω σε κάτι σταθερό, με την οθόνη προς εσάς και γερμένο ώστε η κάμερα να βλέπει τα χέρια σας.';
+
+  @override
+  String get cameraSetupStep3 =>
+      'Καθίστε περίπου 50–70 εκ. μακριά — περίπου όσο το μήκος του χεριού σας — με τους αγκώνες στο τραπέζι.';
+
+  @override
+  String get cameraSetupStep4 =>
+      'Χρησιμοποιήστε ένα καλά φωτισμένο δωμάτιο, με το φως μπροστά σας και όχι πίσω σας.';
+
+  @override
+  String get cameraSetupStep5 =>
+      'Σηκώστε και τα δύο χέρια. Όταν ο έλεγχος παρακάτω δείξει «έτοιμο», πατήστε Έναρξη. Δεν θα χρειαστεί να αγγίξετε ξανά το κινητό — απλώς ακολουθήστε τη φωνή.';
+
+  @override
+  String get cameraSetupHintNoHands =>
+      'Σηκώστε και τα δύο χέρια μπροστά στην κάμερα';
+
+  @override
+  String get cameraSetupHintOneHand =>
+      'Φαίνεται μόνο ένα χέρι — δείξτε και τα δύο';
+
+  @override
+  String get cameraSetupHintTooFar =>
+      'Τα χέρια σας φαίνονται μικρά — πλησιάστε λίγο';
+
+  @override
+  String get cameraSetupHintTooClose =>
+      'Τα χέρια σας κόβονται — απομακρυνθείτε λίγο';
+
+  @override
+  String get cameraSetupHintReady => 'Φαίνονται και τα δύο χέρια — έτοιμο';
+
+  @override
+  String get cameraSetupWaitingCamera => 'Η κάμερα ξεκινά…';
+
+  @override
+  String cameraSetupFps(Object fps) {
+    return 'Ταχύτητα κάμερας: $fps καρέ ανά δευτερόλεπτο';
+  }
+
+  @override
+  String get cameraSetupSlow =>
+      'Η κάμερα λειτουργεί αργά. Συνήθως βοηθά περισσότερο φως και το κλείσιμο άλλων εφαρμογών.';
+
+  @override
+  String cameraSetupDuration(Object minutes, Object steps) {
+    return 'Περίπου $minutes λεπτά: $steps βήματα των 10 δευτερολέπτων.';
+  }
+
+  @override
+  String get cameraTaskPosture => 'Τεντωμένα χέρια';
+
+  @override
+  String get cameraInstructionRestBoth =>
+      'Ακουμπήστε και τους δύο πήχεις στο τραπέζι, με τα χέρια χαλαρά και ακίνητα, μπροστά στην κάμερα.';
+
+  @override
+  String get cameraInstructionPosture =>
+      'Τεντώστε και τα δύο χέρια μπροστά σας, με τις παλάμες προς τα κάτω και τα δάχτυλα ανοιχτά. Κρατήστε τα όσο πιο ακίνητα μπορείτε.';
+
+  @override
+  String get cameraShowHandsToBegin => 'Δείξτε και τα δύο χέρια στην κάμερα';
+
+  @override
+  String cameraSwitchHands(Object hand) {
+    return 'Τώρα χρησιμοποιήστε το $hand. Αφήστε το άλλο χέρι κάτω στο τραπέζι.';
+  }
+
+  @override
+  String get cameraRetryNotice => 'Ας κάνουμε αυτό το βήμα άλλη μία φορά.';
+
+  @override
+  String get cameraRecording => 'Καταγραφή';
+
+  @override
+  String get cameraSayGo => 'Πάμε.';
+
+  @override
+  String get cameraSayStop => 'Σταματήστε. Χαλαρώστε.';
+
+  @override
+  String get cameraSayFinished => 'Μπράβο. Η δοκιμασία τελείωσε.';
+
+  @override
+  String get cameraSayRetry => 'Ας το κάνουμε άλλη μία φορά.';
+
+  @override
+  String get cameraResultsScoreTitle => 'Το αποτέλεσμά σας';
+
+  @override
+  String cameraResultsScoreValue(Object score) {
+    return '$score / 100';
+  }
+
+  @override
+  String get cameraResultsScoreNote =>
+      'Η βαθμολογία υπολογίζεται αυτόματα από το βίντεο, με κανόνες που βασίζονται στον τρόπο που οι γιατροί βαθμολογούν αυτές τις κινήσεις (0 = φυσιολογικό, 4 = σοβαρό). Δεν έχει ακόμη ελεγχθεί σε σύγκριση με βαθμολογίες γιατρών και δεν αποτελεί διάγνωση. Μοιραστείτε τη με τον γιατρό σας.';
+
+  @override
+  String get cameraResultsRatingsTitle => 'Βαθμολογία ανά κίνηση';
+
+  @override
+  String get cameraResultsRatingsScale =>
+      '0 φυσιολογικό · 1 ελαφρύ · 2 ήπιο · 3 μέτριο · 4 σοβαρό';
+
+  @override
+  String get cameraResultsBradykinesia => 'Βραδύτητα κίνησης';
+
+  @override
+  String get cameraResultsTremor => 'Τρόμος';
+
+  @override
+  String get cameraResultsAsymmetry => 'Διαφορά μεταξύ χεριών';
+
+  @override
+  String cameraResultsWorseHand(Object hand) {
+    return 'Το $hand κινήθηκε λιγότερο καλά.';
+  }
+
+  @override
+  String get cameraResultsNotRated => 'Δεν βαθμολογήθηκε';
+
+  @override
+  String get cameraResultsNoScore =>
+      'Καμία κίνηση δεν μπόρεσε να βαθμολογηθεί από αυτή την καταγραφή, οπότε δεν αποθηκεύτηκε βαθμολογία.';
+
+  @override
+  String get cameraGrade0 => 'Φυσιολογικό';
+
+  @override
+  String get cameraGrade1 => 'Ελαφρύ';
+
+  @override
+  String get cameraGrade2 => 'Ήπιο';
+
+  @override
+  String get cameraGrade3 => 'Μέτριο';
+
+  @override
+  String get cameraGrade4 => 'Σοβαρό';
+
+  @override
+  String cameraRatingValue(Object grade, Object rating) {
+    return '$rating · $grade';
+  }
 }

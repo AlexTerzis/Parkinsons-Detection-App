@@ -16,6 +16,9 @@ enum TrackingState {
 
   /// The examined hand, but the detector's Left/Right call was marginal.
   ///
+  /// No longer produced since hands are assigned by position (protocol
+  /// version 4); kept so older stored recordings still parse.
+  ///
   /// Landmarks are kept: discarding them would open gaps in the signal that
   /// the cycle analyzer reads as hesitations. They are counted separately so
   /// quality validation can weigh them.
@@ -31,6 +34,9 @@ enum TrackingState {
   incompleteLandmarks,
 
   /// Hands were visible, but none of them was the hand under examination.
+  ///
+  /// No longer produced since hands are assigned by position; kept for older
+  /// stored recordings.
   wrongHand,
 
   /// The detector found no hand at all in this frame.

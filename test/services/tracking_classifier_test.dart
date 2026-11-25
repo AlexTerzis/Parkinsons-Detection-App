@@ -4,8 +4,8 @@ import 'package:parkinsondetetion/models/landmark_point.dart';
 import 'package:parkinsondetetion/models/tracking_event.dart';
 import 'package:parkinsondetetion/services/tracking_classifier.dart';
 
-/// 21 landmarks comfortably inside the frame.
-List<LandmarkPoint> _hand({
+/// 21 landmarks centred on ([x], [y]), comfortably inside the frame.
+List<LandmarkPoint> _points({
   int count = 21,
   double x = 0.5,
   double y = 0.5,
@@ -15,15 +15,14 @@ List<LandmarkPoint> _hand({
       (i) => LandmarkPoint(x: x, y: y + i * 0.001, z: 0),
     );
 
-LandmarkData _right({
+LandmarkData _hand({
+  double x = 0.5,
+  String label = 'Right',
   List<LandmarkPoint>? landmarks,
-  double? confidence,
-  String handedness = 'Right',
 }) =>
     LandmarkData(
-      handedness: handedness,
-      landmarks: landmarks ?? _hand(),
-      handednessConfidence: confidence,
+      handedness: label,
+      landmarks: landmarks ?? _points(x: x),
     );
 
 FrameData _frame(List<LandmarkData> hands, {int t = 1000}) =>
@@ -32,142 +31,125 @@ FrameData _frame(List<LandmarkData> hands, {int t = 1000}) =>
 void main() {
   const classifier = TrackingClassifier();
 
-  TrackingEvent classify(FrameData frame, {String hand = 'Right'}) =>
-      classifier.classify(frame: frame, targetHand: hand);
+  group('HandAssignment', () {
+    test('with two hands, the rightmost in the picture is the right hand', () {
+      final left = _hand(x: 0.25, label: 'Right');
+      final right = _hand(x: 0.75, label: 'Right');
+      final assigned =
+          HandAssignment.assign(_frame([right, left]), ['Right', 'Left']);
+
+      expect(assigned['Right'], same(right));
+      expect(assigned['Left'], same(left));
+    });
+
+    test('labels are ignored — even when both say the same side', () {
+      final a = _hand(x: 0.2, label: 'Left');
+      final b = _hand(x: 0.8, label: 'Left');
+      final assigned = HandAssignment.assign(_frame([a, b]), ['Right', 'Left']);
+
+      expect(assigned['Right'], same(b));
+      expect(assigned['Left'], same(a));
+    });
+
+    test('a one-hand step picks the hand on its own side when two are seen',
+        () {
+      final resting = _hand(x: 0.3);
+      final moving = _hand(x: 0.7);
+      final frame = _frame([resting, moving]);
+
+      expect(HandAssignment.assign(frame, ['Right'])['Right'], same(moving));
+      expect(HandAssignment.assign(frame, ['Left'])['Left'], same(resting));
+    });
+
+    test('a one-hand step takes a lone hand wherever it is', () {
+      final only = _hand(x: 0.2, label: 'Left');
+      expect(HandAssignment.assign(_frame([only]), ['Right'])['Right'],
+          same(only));
+    });
+
+    test('a lone hand in a both-hands step goes to the side it is on', () {
+      final only = _hand(x: 0.8);
+      final assigned =
+          HandAssignment.assign(_frame([only]), ['Right', 'Left']);
+
+      expect(assigned['Right'], same(only));
+      expect(assigned['Left'], isNull);
+    });
+  });
 
   group('TrackingClassifier', () {
-    group('every frame lands in exactly one state', () {
-      test('a clean detection of the examined hand is tracked', () {
-        final event = classify(_frame([_right(confidence: 0.99)]));
+    TrackingEvent classify(FrameData frame, {String hand = 'Right'}) =>
+        classifier.classify(frame: frame, targetHand: hand);
 
-        expect(event.state, TrackingState.tracked);
-        expect(event.landmarks, isNotNull);
-        expect(event.state.isFullQuality, isTrue);
-      });
+    test('a clean detection is tracked', () {
+      final event = classify(_frame([_hand()]));
 
-      test('an empty frame is recorded as noHand, not discarded', () {
-        final event = classify(_frame(const []));
-
-        expect(event.state, TrackingState.noHand);
-        expect(event.landmarks, isNull);
-        expect(event.timestamp, 1000);
-      });
-
-      test('a hand of the wrong label, alongside another, is wrongHand', () {
-        // Two hands in the frame are never ambiguous about which is which, so
-        // the labels are taken at their word.
-        final event = classify(_frame([
-          _right(handedness: 'Left'),
-          _right(handedness: 'Unknown'),
-        ]));
-
-        expect(event.state, TrackingState.wrongHand);
-        expect(event.handCount, 2);
-        expect(event.landmarks, isNull);
-      });
-
-      test('a lone hand is accepted as the target despite its label', () {
-        // The front camera mirrors its frames before the detector sees them, so
-        // a right hand is reported as "Left". Rejecting it meant no step of the
-        // guided protocol could pass. The instruction the patient was given is
-        // better evidence than a label that inverts wholesale.
-        final event = classify(_frame([_right(handedness: 'Left')]));
-
-        expect(event.state, TrackingState.lowConfidence,
-            reason: 'accepted, but never as a clean detection');
-        expect(event.landmarks, isNotNull);
-      });
-
-      test('the fallback can be turned off', () {
-        const strict = TrackingClassifier(acceptLoneHandAsTarget: false);
-        final event = strict.classify(
-          frame: _frame([_right(handedness: 'Left')]),
-          targetHand: 'Right',
-        );
-
-        expect(event.state, TrackingState.wrongHand);
-        expect(event.landmarks, isNull);
-      });
-
-      test('a short landmark list is incompleteLandmarks', () {
-        final event = classify(_frame([_right(landmarks: _hand(count: 12))]));
-
-        expect(event.state, TrackingState.incompleteLandmarks);
-        expect(event.landmarks, isNull);
-      });
-
-      test('a landmark past the frame edge is partiallyOutOfFrame', () {
-        final clipped = _hand()..[8] = const LandmarkPoint(x: 1.4, y: 0.5, z: 0);
-        final event = classify(_frame([_right(landmarks: clipped)]));
-
-        expect(event.state, TrackingState.partiallyOutOfFrame);
-        // Still carries landmarks: dropping them would open a gap in the
-        // signal that reads as a hesitation.
-        expect(event.landmarks, isNotNull);
-        expect(event.state.contributesLandmarks, isTrue);
-      });
-
-      test('a marginal handedness score is lowConfidence', () {
-        final event = classify(_frame([_right(confidence: 0.55)]));
-
-        expect(event.state, TrackingState.lowConfidence);
-        expect(event.landmarks, isNotNull);
-      });
+      expect(event.state, TrackingState.tracked);
+      expect(event.landmarks, isNotNull);
     });
 
-    group('degrading safely', () {
-      test('an absent handedness score is not treated as low confidence', () {
-        // A build whose native layer predates the score reports null. Treating
-        // that as zero would mark every frame of every run as marginal.
-        final event = classify(_frame([_right(confidence: null)]));
+    test('an empty frame is recorded as noHand, not discarded', () {
+      final event = classify(_frame(const []));
 
-        expect(event.state, TrackingState.tracked);
-        expect(event.handednessConfidence, isNull);
-      });
-
-      test('clipping is reported ahead of low confidence', () {
-        // The patient can act on "keep the hand in view"; they can do nothing
-        // about the classifier being unsure.
-        final clipped = _hand()..[0] = const LandmarkPoint(x: -0.3, y: 0.5, z: 0);
-        final event = classify(
-          _frame([_right(landmarks: clipped, confidence: 0.4)]),
-        );
-
-        expect(event.state, TrackingState.partiallyOutOfFrame);
-      });
-
-      test('a landmark on the boundary is still fully tracked', () {
-        final edge = _hand()..[4] = const LandmarkPoint(x: 1.0, y: 0.5, z: 0);
-        final event = classify(_frame([_right(landmarks: edge)]));
-
-        expect(event.state, TrackingState.tracked);
-      });
+      expect(event.state, TrackingState.noHand);
+      expect(event.landmarks, isNull);
+      expect(event.timestamp, 1000);
     });
 
-    group('state semantics', () {
-      test('only the three hand-present states contribute landmarks', () {
-        expect(
-          TrackingState.values.where((s) => s.contributesLandmarks),
-          unorderedEquals(<TrackingState>[
-            TrackingState.tracked,
-            TrackingState.lowConfidence,
-            TrackingState.partiallyOutOfFrame,
-          ]),
-        );
-      });
+    test('a short landmark list is incompleteLandmarks', () {
+      final event = classify(_frame([_hand(landmarks: _points(count: 5))]));
+      expect(event.state, TrackingState.incompleteLandmarks);
+      expect(event.landmarks, isNull);
+    });
 
-      test('only a clean detection counts as full quality', () {
-        expect(
-          TrackingState.values.where((s) => s.isFullQuality),
-          equals(<TrackingState>[TrackingState.tracked]),
-        );
-      });
+    test('a landmark past the frame edge is partiallyOutOfFrame', () {
+      final points = _points()
+        ..[8] = const LandmarkPoint(x: 1.2, y: 0.5, z: 0);
+      final event = classify(_frame([_hand(landmarks: points)]));
 
-      test('wrongHand and noHand did not see the examined hand', () {
-        expect(TrackingState.wrongHand.sawTargetHand, isFalse);
-        expect(TrackingState.noHand.sawTargetHand, isFalse);
-        expect(TrackingState.incompleteLandmarks.sawTargetHand, isTrue);
-      });
+      expect(event.state, TrackingState.partiallyOutOfFrame);
+      expect(event.landmarks, isNotNull,
+          reason: 'clipped frames still carry signal');
+    });
+
+    test('a landmark just over the boundary is still tracked', () {
+      final points = _points()
+        ..[8] = const LandmarkPoint(x: 1.05, y: 0.5, z: 0);
+      expect(classify(_frame([_hand(landmarks: points)])).state,
+          TrackingState.tracked);
+    });
+
+    test('both hands of a two-hand step get their own event', () {
+      final events = classifier.classifyAll(
+        frame: _frame([_hand(x: 0.3), _hand(x: 0.7)]),
+        targetHands: ['Right', 'Left'],
+      );
+
+      expect(events['Right']!.state, TrackingState.tracked);
+      expect(events['Left']!.state, TrackingState.tracked);
+      expect(events['Right']!.landmarks!.first.x, 0.7);
+      expect(events['Left']!.landmarks!.first.x, 0.3);
+    });
+
+    test('a missing hand of a two-hand step is noHand', () {
+      final events = classifier.classifyAll(
+        frame: _frame([_hand(x: 0.7)]),
+        targetHands: ['Right', 'Left'],
+      );
+
+      expect(events['Right']!.state, TrackingState.tracked);
+      expect(events['Left']!.state, TrackingState.noHand);
+    });
+  });
+
+  group('TrackingState', () {
+    test('only the three hand-present states contribute landmarks', () {
+      expect(TrackingState.tracked.contributesLandmarks, isTrue);
+      expect(TrackingState.lowConfidence.contributesLandmarks, isTrue);
+      expect(TrackingState.partiallyOutOfFrame.contributesLandmarks, isTrue);
+      expect(TrackingState.incompleteLandmarks.contributesLandmarks, isFalse);
+      expect(TrackingState.wrongHand.contributesLandmarks, isFalse);
+      expect(TrackingState.noHand.contributesLandmarks, isFalse);
     });
   });
 }

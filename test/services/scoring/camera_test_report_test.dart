@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parkinsondetetion/models/camera_task_protocol.dart';
 import 'package:parkinsondetetion/services/scoring/camera_recording.dart';
 import 'package:parkinsondetetion/services/scoring/camera_test_report.dart';
-import 'package:parkinsondetetion/services/scoring/heuristic_scorer.dart';
+import 'package:parkinsondetetion/services/scoring/motor_rating.dart';
 
 import 'synthetic_recording.dart';
 
@@ -22,6 +22,7 @@ void main() {
             hand.tasks.map((t) => t.type),
             containsAll(<CameraTaskType>[
               CameraTaskType.rest,
+              CameraTaskType.posture,
               CameraTaskType.openClose,
               CameraTaskType.fingerTap,
               CameraTaskType.pronationSupination,
@@ -41,7 +42,7 @@ void main() {
         expect(tap.quality.taskId, tap.taskId);
       });
 
-      test('tremor is measured on rest only', () {
+      test('tremor is measured on the still tasks only', () {
         // The separation of tremor from voluntary movement assumes voluntary
         // movement stays below 4 Hz. Tapping at 5 a second breaks that, so a
         // fast healthy tapper would otherwise measure as a severe tremor.
@@ -49,6 +50,7 @@ void main() {
         final hand = report.handReport('Right')!;
 
         expect(hand.taskOf(CameraTaskType.rest)!.tremor, isNotNull);
+        expect(hand.taskOf(CameraTaskType.posture)!.tremor, isNotNull);
         expect(hand.taskOf(CameraTaskType.fingerTap)!.tremor, isNull);
         expect(hand.taskOf(CameraTaskType.openClose)!.tremor, isNull);
       });
@@ -68,7 +70,6 @@ void main() {
         // "there were too few movements to tell". Collapsing the second into
         // the first turns missing evidence into a reassuring result.
         final recording = CameraRecording(
-          mode: CameraTestMode.full,
           tasks: <RecordedTask>[
             Synthetic.task(
               type: CameraTaskType.fingerTap,
@@ -91,7 +92,6 @@ void main() {
 
       test('a hand that produced nothing reports no valid tasks', () {
         final recording = CameraRecording(
-          mode: CameraTestMode.full,
           tasks: <RecordedTask>[
             Synthetic.task(
               type: CameraTaskType.fingerTap,
@@ -143,10 +143,7 @@ void main() {
       });
 
       test('an empty recording has zero confidence and no measurements', () {
-        const empty = CameraRecording(
-          tasks: <RecordedTask>[],
-          mode: CameraTestMode.full,
-        );
+        const empty = CameraRecording(tasks: <RecordedTask>[]);
         final report = builder.build(empty);
 
         expect(report.confidence, 0);
@@ -180,7 +177,6 @@ void main() {
 
       test('one hand alone yields no comparison rather than a fake one', () {
         final recording = CameraRecording(
-          mode: CameraTestMode.full,
           tasks: <RecordedTask>[
             Synthetic.task(
               type: CameraTaskType.fingerTap,
@@ -200,13 +196,13 @@ void main() {
     });
 
     group('serialization', () {
-      test('names the combined score as experimental', () {
-        final score = const HeuristicScorer().score(Synthetic.parkinsonian());
-        final json = builder
-            .build(Synthetic.parkinsonian(), experimentalScore: score)
-            .toJson();
+      test('stores the score and the ratings it came from', () {
+        final recording = Synthetic.parkinsonian();
+        final rating = const MotorRatingScorer().rate(recording);
+        final json = builder.build(recording, rating: rating).toJson();
 
-        expect(json['experimentalMovementRiskScore'], isNotNull);
+        expect(json['score'], rating.score);
+        expect(json['motor_rating'], isA<Map<String, dynamic>>());
         // The names this must never be stored under.
         expect(json.containsKey('parkinsonProbability'), isFalse);
         expect(json.containsKey('diagnosis'), isFalse);
@@ -228,12 +224,11 @@ void main() {
         expect(hands.keys, containsAll(<String>['Left', 'Right']));
         final right = hands['Right'] as Map<String, dynamic>;
         expect(right['confidence'], isNotNull);
-        expect(right['tasks'], hasLength(4));
+        expect(right['tasks'], hasLength(5));
       });
 
       test('an unmeasurable value serializes as null, never as zero', () {
         final recording = CameraRecording(
-          mode: CameraTestMode.full,
           tasks: <RecordedTask>[
             Synthetic.task(
               type: CameraTaskType.fingerTap,
@@ -262,7 +257,6 @@ void main() {
       // analyzer can always produce were being discarded the moment cycle
       // detection failed.
       CameraRecording barelyMoving() => CameraRecording(
-            mode: CameraTestMode.full,
             tasks: <RecordedTask>[
               Synthetic.task(
                 type: CameraTaskType.fingerTap,
@@ -296,52 +290,9 @@ void main() {
       });
 
       test('a genuinely empty recording still reports nothing', () {
-        const empty = CameraRecording(
-          tasks: <RecordedTask>[],
-          mode: CameraTestMode.full,
-        );
+        const empty = CameraRecording(tasks: <RecordedTask>[]);
 
         expect(builder.build(empty).hasAnyMeasurement, isFalse);
-      });
-    });
-
-    group('short mode', () {
-      test('is recorded so a reader knows the run was shortened', () {
-        final recording = CameraRecording(
-          mode: CameraTestMode.short,
-          tasks: <RecordedTask>[
-            Synthetic.task(
-              type: CameraTaskType.fingerTap,
-              hand: 'Right',
-              seconds: 5,
-            ),
-          ],
-        );
-
-        expect(builder.build(recording).toJson()['mode'], 'short');
-      });
-
-      test('short runs leave decrement unavailable rather than guessed', () {
-        // Half the duration at a slow rate is too few cycles for a decrement
-        // estimate. It must come back null, not zero.
-        final recording = CameraRecording(
-          mode: CameraTestMode.short,
-          tasks: <RecordedTask>[
-            Synthetic.task(
-              type: CameraTaskType.fingerTap,
-              hand: 'Right',
-              seconds: 5,
-              rateHz: 0.6,
-            ),
-          ],
-        );
-
-        final cycles = builder
-            .build(recording)
-            .handReport('Right')!
-            .cyclesOf(CameraTaskType.fingerTap)!;
-
-        expect(cycles.amplitudeDecrement, isNull);
       });
     });
   });

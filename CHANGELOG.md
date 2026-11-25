@@ -1,5 +1,46 @@
 # Changelog
 
+## Unreleased — camera test rebuilt (protocol version 4)
+
+The camera test could not be finished on a device. It is now a hands-free,
+landscape test with a new score.
+
+**Why it failed before**
+
+- The native layer flipped MediaPipe's Left/Right label even though MediaPipe
+  already expects a mirrored selfie image, so labels were inverted. With both
+  hands in view, the test recorded the *resting* hand and every step failed
+  its check, repeatedly.
+- `LandmarkParser` dropped the second hand whenever both hands got the same
+  label, which MediaPipe does often.
+- The default self-paced mode needed a tap before every step, impossible with
+  the phone propped up out of reach.
+- Frame rate was limited by the CPU-only detector, auto-exposure dropping to
+  15 fps indoors, and timestamps taken on arrival in Dart rather than at
+  capture.
+
+**What changed**
+
+- Landscape, hands-free flow: setup instructions (phone on its side, propped,
+  tilted towards the hands, 50-70 cm away, good light) with live checks for
+  hands in view, distance and frames per second. One tap on Start; every step
+  counts down, records and continues on its own, with spoken cues (English and
+  Greek). A failed step is repeated once automatically, then kept.
+- New protocol: rest and arms-out with both hands, then finger tapping,
+  open/close and palm turning for the right hand, then the left. The short
+  mode and self-paced mode were removed.
+- Hands are identified by position in the picture, not by label. The posture
+  test keeps its previous label behaviour.
+- Native: GPU delegate with CPU fallback, highest supported camera fps range,
+  capture timestamps sent to Flutter, rotation tracking for landscape, and
+  correct handling of padded camera rows.
+- Scoring: `HeuristicScorer`, `LegacyWeightedScorer` and
+  `CameraScoringService` are replaced by `MotorRatingScorer`, which rates each
+  step 0-4 per hand on the MDS-UPDRS pattern and derives a 0-1 score from the
+  worse hand's slowness, the worst tremor and the left/right difference. The
+  score is shown to the patient and stored and charted like the other tests.
+  All thresholds are provisional until calibrated against clinician ratings.
+
 ## 2.0.0 — 2026-08-01
 
 Everything below is the difference between this release and the previous

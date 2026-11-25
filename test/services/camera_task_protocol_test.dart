@@ -5,91 +5,73 @@ import 'package:parkinsondetetion/models/camera_task_protocol.dart';
 
 void main() {
   group('CameraTaskProtocol -', () {
-    test('examines both hands, one full block at a time', () {
-      final tasks = CameraTaskProtocol.build(CameraTestMode.full);
+    final tasks = CameraTaskProtocol.build();
 
+    test('opens with both hands still, then each hand on its own', () {
       expect(tasks.length, 8);
-      expect(tasks.take(4).every((t) => t.hands.single == 'Right'), isTrue);
-      expect(tasks.skip(4).every((t) => t.hands.single == 'Left'), isTrue);
-    });
-
-    test('each hand opens with rest, then the three MDS-UPDRS items', () {
-      final right = CameraTaskProtocol.build(CameraTestMode.full)
-          .where((t) => t.hands.single == 'Right')
-          .toList();
-
-      expect(right.map((t) => t.type), [
-        CameraTaskType.rest,
-        CameraTaskType.openClose,
-        CameraTaskType.fingerTap,
-        CameraTaskType.pronationSupination,
+      expect(tasks.map((t) => t.id), <String>[
+        'both_rest',
+        'both_posture',
+        'right_fingerTap',
+        'right_openClose',
+        'right_pronationSupination',
+        'left_fingerTap',
+        'left_openClose',
+        'left_pronationSupination',
       ]);
-      expect(right.map((t) => t.mdsUpdrsItem), [null, '3.5', '3.4', '3.6']);
+      expect(tasks.take(2).every((t) => t.isBothHands), isTrue);
+      expect(tasks.skip(2).take(3).every((t) => t.hands.single == 'Right'),
+          isTrue);
+      expect(tasks.skip(5).every((t) => t.hands.single == 'Left'), isTrue);
     });
 
-    test('full mode records 6s of rest and 12s of each movement', () {
-      for (final task in CameraTaskProtocol.build(CameraTestMode.full)) {
-        expect(
-          task.duration,
-          task.type == CameraTaskType.rest
-              ? CameraTaskProtocol.restDuration
-              : CameraTaskProtocol.movementDuration,
-        );
-        expect(task.leadIn, greaterThan(Duration.zero),
-            reason: 'every step gets a pause to read and settle first');
+    test('every step maps to an MDS-UPDRS item', () {
+      expect(tasks.map((t) => t.mdsUpdrsItem),
+          <String>['3.17', '3.15', '3.4', '3.5', '3.6', '3.4', '3.5', '3.6']);
+    });
+
+    test('each step records 10 seconds after a countdown', () {
+      for (final task in tasks) {
+        expect(task.duration, const Duration(seconds: 10));
+        expect(task.leadIn, greaterThan(Duration.zero));
       }
     });
 
-    test('short mode records both hands together in half the steps', () {
-      final short = CameraTaskProtocol.build(CameraTestMode.short);
-
-      expect(short.length, 4);
-      for (final task in short) {
-        expect(task.isBothHands, isTrue);
-        expect(task.hands, <String>['Right', 'Left']);
-      }
-
-      expect(
-        CameraTaskProtocol.totalDuration(CameraTestMode.short),
-        lessThan(CameraTaskProtocol.totalDuration(CameraTestMode.full)),
-      );
-    });
-
-    test('both modes produce the same per-hand storage keys', () {
-      // A short run examines two hands per step, but each hand is still stored
-      // under its own key, so nothing downstream has to know which mode ran.
-      Set<String> keysOf(CameraTestMode mode) => <String>{
-            for (final task in CameraTaskProtocol.build(mode))
-              for (final hand in task.hands) task.segmentId(hand),
-          };
-
-      expect(keysOf(CameraTestMode.short), keysOf(CameraTestMode.full));
-      expect(keysOf(CameraTestMode.full), contains('right_rest'));
-      expect(keysOf(CameraTestMode.full), hasLength(8));
-    });
-
-    test('step ids are unique within a mode', () {
-      for (final mode in CameraTestMode.values) {
-        final ids = CameraTaskProtocol.build(mode).map((t) => t.id).toList();
-        expect(ids.toSet().length, ids.length, reason: 'ids must be unique');
+    test('the first step of each hand announces the change of hand', () {
+      final switches = tasks.where((t) => t.switchesHand).map((t) => t.id);
+      expect(switches, <String>['right_fingerTap', 'left_fingerTap']);
+      for (final task in tasks.where((t) => t.switchesHand)) {
+        expect(task.leadIn, CameraTaskProtocol.longLeadIn);
       }
     });
 
-    test('total duration counts the pauses, recorded duration does not', () {
-      expect(
-        CameraTaskProtocol.totalDuration(CameraTestMode.full),
-        greaterThan(CameraTaskProtocol.recordedDuration(CameraTestMode.full)),
-      );
+    test('per-hand storage keys cover every hand and step', () {
+      final keys = <String>{
+        for (final task in tasks)
+          for (final hand in task.hands) task.segmentId(hand),
+      };
+      expect(keys, hasLength(10));
+      expect(keys, containsAll(<String>['right_rest', 'left_posture']));
     });
 
-    test('rest is excluded from scoring, movements are not', () {
-      final tasks = CameraTaskProtocol.build(CameraTestMode.full);
+    test('step ids are unique', () {
+      final ids = tasks.map((t) => t.id).toList();
+      expect(ids.toSet().length, ids.length);
+    });
+
+    test('total duration counts the countdowns, recorded duration does not',
+        () {
+      expect(CameraTaskProtocol.recordedDuration(),
+          const Duration(seconds: 80));
+      expect(CameraTaskProtocol.totalDuration(),
+          greaterThan(CameraTaskProtocol.recordedDuration()));
+    });
+
+    test('the still steps are tremor tasks, the rest are movements', () {
       expect(tasks.where((t) => t.isScored).length, 6);
       expect(
-        tasks.where((t) => !t.isScored).every(
-              (t) => t.type == CameraTaskType.rest,
-            ),
-        isTrue,
+        tasks.where((t) => !t.isScored).map((t) => t.type),
+        <CameraTaskType>[CameraTaskType.rest, CameraTaskType.posture],
       );
     });
   });
@@ -97,7 +79,7 @@ void main() {
   group('CameraTaskSegment -', () {
     CameraTaskSegment segmentWith(List<int> timestamps) {
       final segment = CameraTaskSegment(
-        task: CameraTaskProtocol.build(CameraTestMode.full).first,
+        task: CameraTaskProtocol.build().first,
         hand: 'Right',
       );
       for (final t in timestamps) {

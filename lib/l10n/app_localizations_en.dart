@@ -2053,4 +2053,158 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get legalDocumentPlaceholder =>
       'This document has not been published yet.\n\nUntil it is, here is what the app actually does with your data: your test results, questionnaire answers and voice recordings are stored in your account and are visible to you and to any doctor you choose to share them with. Nothing is shared with anyone else.\n\nPlease contact the app\'s provider if you need the full document before it is available here.';
+
+  @override
+  String get cameraSetupTitle => 'Set up the camera';
+
+  @override
+  String get cameraSetupStep1 => 'Turn your phone on its side (landscape).';
+
+  @override
+  String get cameraSetupStep2 =>
+      'Prop it up on a table against something steady, screen facing you, tilted so the camera points at your hands.';
+
+  @override
+  String get cameraSetupStep3 =>
+      'Sit about 50–70 cm away — roughly an arm\'s length — with your elbows on the table.';
+
+  @override
+  String get cameraSetupStep4 =>
+      'Use a well-lit room, with the light in front of you rather than behind you.';
+
+  @override
+  String get cameraSetupStep5 =>
+      'Raise both hands. When the check below says ready, tap Start. You won\'t need to touch the phone again — just follow the voice.';
+
+  @override
+  String get cameraSetupHintNoHands =>
+      'Raise both hands in front of the camera';
+
+  @override
+  String get cameraSetupHintOneHand => 'Only one hand is visible — show both';
+
+  @override
+  String get cameraSetupHintTooFar =>
+      'Your hands look small — move a little closer';
+
+  @override
+  String get cameraSetupHintTooClose =>
+      'Your hands are cut off — move back a little';
+
+  @override
+  String get cameraSetupHintReady => 'Both hands visible — ready to start';
+
+  @override
+  String get cameraSetupWaitingCamera => 'Starting the camera…';
+
+  @override
+  String cameraSetupFps(Object fps) {
+    return 'Camera speed: $fps frames per second';
+  }
+
+  @override
+  String get cameraSetupSlow =>
+      'The camera is running slowly. More light usually helps, and closing other apps.';
+
+  @override
+  String cameraSetupDuration(Object minutes, Object steps) {
+    return 'About $minutes minutes: $steps steps of 10 seconds each.';
+  }
+
+  @override
+  String get cameraTaskPosture => 'Arms held out';
+
+  @override
+  String get cameraInstructionRestBoth =>
+      'Rest both forearms on the table with your hands relaxed and still, in view of the camera.';
+
+  @override
+  String get cameraInstructionPosture =>
+      'Hold both arms out in front of you, palms down, fingers spread. Keep them as still as you can.';
+
+  @override
+  String get cameraShowHandsToBegin => 'Show both hands to the camera';
+
+  @override
+  String cameraSwitchHands(Object hand) {
+    return 'Now use your $hand. Put the other hand down on the table.';
+  }
+
+  @override
+  String get cameraRetryNotice => 'Let\'s do this step once more.';
+
+  @override
+  String get cameraRecording => 'Recording';
+
+  @override
+  String get cameraSayGo => 'Go.';
+
+  @override
+  String get cameraSayStop => 'Stop. Relax.';
+
+  @override
+  String get cameraSayFinished => 'Well done. The test is finished.';
+
+  @override
+  String get cameraSayRetry => 'Let\'s do that once more.';
+
+  @override
+  String get cameraResultsScoreTitle => 'Your result';
+
+  @override
+  String cameraResultsScoreValue(Object score) {
+    return '$score / 100';
+  }
+
+  @override
+  String get cameraResultsScoreNote =>
+      'This score is worked out automatically from the video, using rules modelled on how doctors rate these movements (0 = normal, 4 = severe). It has not yet been checked against doctors\' ratings and it is not a diagnosis. Share it with your doctor.';
+
+  @override
+  String get cameraResultsRatingsTitle => 'Rating per movement';
+
+  @override
+  String get cameraResultsRatingsScale =>
+      '0 normal · 1 slight · 2 mild · 3 moderate · 4 severe';
+
+  @override
+  String get cameraResultsBradykinesia => 'Slowness of movement';
+
+  @override
+  String get cameraResultsTremor => 'Tremor';
+
+  @override
+  String get cameraResultsAsymmetry => 'Difference between hands';
+
+  @override
+  String cameraResultsWorseHand(Object hand) {
+    return 'The $hand moved less well.';
+  }
+
+  @override
+  String get cameraResultsNotRated => 'Not rated';
+
+  @override
+  String get cameraResultsNoScore =>
+      'No movement step could be rated from this recording, so no score was saved.';
+
+  @override
+  String get cameraGrade0 => 'Normal';
+
+  @override
+  String get cameraGrade1 => 'Slight';
+
+  @override
+  String get cameraGrade2 => 'Mild';
+
+  @override
+  String get cameraGrade3 => 'Moderate';
+
+  @override
+  String get cameraGrade4 => 'Severe';
+
+  @override
+  String cameraRatingValue(Object grade, Object rating) {
+    return '$rating · $grade';
+  }
 }

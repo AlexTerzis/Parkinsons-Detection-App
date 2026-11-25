@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../../models/camera_task_protocol.dart';
 import '../tremor_analysis_service.dart';
 import 'camera_recording.dart';
-import 'camera_scorer.dart';
+import 'motor_rating.dart';
 import 'movement_cycle_analyzer.dart';
 import 'task_quality.dart';
 
@@ -84,6 +84,9 @@ class HandReport {
 
   TremorAnalysis? get restTremor => taskOf(CameraTaskType.rest)?.tremor;
 
+  TremorAnalysis? get posturalTremor =>
+      taskOf(CameraTaskType.posture)?.tremor;
+
   /// Tasks that could not be measured and would be worth repeating.
   List<TaskMeasurements> get invalidTasks =>
       tasks.where((t) => !t.valid).toList(growable: false);
@@ -148,11 +151,10 @@ class HandComparison {
 /// are what the screen is built around.
 class CameraTestReport {
   const CameraTestReport({
-    required this.mode,
     required this.hands,
     required this.comparisons,
     required this.confidence,
-    required this.experimentalScore,
+    required this.rating,
     this.retryCount = 0,
     this.performedAt,
   });
@@ -161,12 +163,13 @@ class CameraTestReport {
   /// documents written before the guided protocol; 2 was the guided protocol
   /// with the legacy score; 3 adds per-frame accounting, task validation and
   /// the enhanced scorer.
-  static const int protocolVersion = 3;
+  /// 4: landscape, hands-free, both-hands tremor steps, position-based hand
+  /// assignment and the 0-4 item ratings.
+  static const int protocolVersion = 4;
 
   /// Which feature extractor produced the measurements.
   static const String featureExtractorVersion = 'cycle_analyzer_v1';
 
-  final CameraTestMode mode;
   final List<HandReport> hands;
   final List<HandComparison> comparisons;
 
@@ -174,13 +177,11 @@ class CameraTestReport {
   /// of anything about the patient.
   final double confidence;
 
-  /// The combined heuristic, kept for research and comparison.
-  ///
-  /// Explicitly **not** a validated probability of Parkinson's disease. Its
-  /// normalization ranges have not been fitted to any labelled recording. It is
-  /// stored under an experimental name and is not presented to the patient as a
-  /// likelihood.
-  final CameraScore? experimentalScore;
+  /// The per-task 0-4 ratings and the score derived from them.
+  final MotorRating? rating;
+
+  /// The test's score, 0-1, or `null` when nothing could be rated.
+  double? get score => rating?.score;
 
   final int retryCount;
   final DateTime? performedAt;
@@ -242,14 +243,10 @@ class CameraTestReport {
 
   /// The Firestore `data` payload for this report.
   ///
-  /// Additive: the legacy keys written elsewhere are untouched, so existing
-  /// documents and readers are unaffected. The experimental score is stored
-  /// under a name that says what it is.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'protocol_version': protocolVersion,
         'feature_extractor_version': featureExtractorVersion,
         'quality_rules_version': const QualityRules().version,
-        'mode': mode.name,
         'overall_confidence': confidence,
         'retry_count': retryCount,
         'completed_tasks': completedTaskCount,
@@ -264,8 +261,8 @@ class CameraTestReport {
         // Named so that no reader can mistake it for a validated probability.
         // The old `parkinson_probability` key is still written alongside, by
         // the legacy path, and is documented as deprecated.
-        'experimentalMovementRiskScore': experimentalScore?.likelihood,
-        'experimental_score_detail': experimentalScore?.toJson(),
+        'score': score,
+        'motor_rating': rating?.toJson(),
       };
 }
 
@@ -297,7 +294,7 @@ class CameraReportBuilder {
   CameraTestReport build(
     CameraRecording recording, {
     Map<String, TaskQuality> qualities = const <String, TaskQuality>{},
-    CameraScore? experimentalScore,
+    MotorRating? rating,
     int retryCount = 0,
     DateTime? performedAt,
   }) {
@@ -331,11 +328,10 @@ class CameraReportBuilder {
     }
 
     return CameraTestReport(
-      mode: recording.mode,
       hands: hands,
       comparisons: _compare(hands),
       confidence: _overallConfidence(hands),
-      experimentalScore: experimentalScore,
+      rating: rating,
       retryCount: retryCount,
       performedAt: performedAt,
     );
@@ -414,6 +410,7 @@ class CameraReportBuilder {
       of('rhythm_variability', (h) => meanOf(h, (m) => m.rhythmVariability)),
       of('amplitude_decrement', (h) => meanOf(h, (m) => m.amplitudeDecrement)),
       of('tremor_amplitude', (h) => h.restTremor?.amplitude),
+      of('postural_tremor_amplitude', (h) => h.posturalTremor?.amplitude),
     ];
   }
 }
