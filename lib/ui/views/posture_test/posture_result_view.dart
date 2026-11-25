@@ -143,7 +143,10 @@ class PostureResultView extends StatelessWidget {
     ThemeData theme,
     PostureItemResult item,
   ) {
-    final posture = HandPostures.all.firstWhere(
+    final posture = <HandPosture>[
+      ...HandPostures.all,
+      HandPostures.threeFingers,
+    ].firstWhere(
       (p) => p.id == item.postureId,
       orElse: () => HandPostures.point,
     );

@@ -230,7 +230,11 @@ abstract final class HandPostures {
     fingers: <Finger>{Finger.indexFinger, Finger.middle, Finger.ring},
   );
 
-  /// The protocol order. Ten postures, two trials each, twenty points.
+  /// The protocol order. Nine postures, two trials each, eighteen points.
+  ///
+  /// [threeFingers] was dropped from the run: holding the ring finger up
+  /// with the pinky folded is too hard for most patients to copy. It stays
+  /// defined so results saved before the change still show its emoji.
   static const List<HandPosture> all = <HandPosture>[
     point,
     openPalm,
@@ -241,7 +245,6 @@ abstract final class HandPostures {
     shaka,
     okRing,
     iLoveYou,
-    threeFingers,
   ];
 
   /// Trials allowed per posture, matching the two rows the paper form gives

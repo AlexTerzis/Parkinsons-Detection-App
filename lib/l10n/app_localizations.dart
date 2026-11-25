@@ -1943,7 +1943,7 @@ abstract class AppLocalizations {
   /// No description provided for @postureIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'You will be shown ten hand shapes, one at a time. Copy each one with either hand and hold it in front of the camera until it is recognised.'**
+  /// **'You will be shown nine hand shapes, one at a time. Copy each one with either hand and hold it in front of the camera until it is recognised.'**
   String get postureIntroBody;
 
   /// No description provided for @postureIntroNote.

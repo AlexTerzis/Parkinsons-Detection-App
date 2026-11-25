@@ -162,8 +162,8 @@ void main() {
       }
 
       test('the catalogue has ten postures worth twenty points', () {
-        expect(HandPostures.all, hasLength(10));
-        expect(HandPostures.maximumScore, 20);
+        expect(HandPostures.all, hasLength(9));
+        expect(HandPostures.maximumScore, 18);
         expect(
           HandPostures.all.map((p) => p.id).toSet().length,
           HandPostures.all.length,

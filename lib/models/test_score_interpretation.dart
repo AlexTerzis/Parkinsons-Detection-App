@@ -71,8 +71,9 @@ abstract final class TestScoreInterpretation {
   static const double fabConcernReassuringAtOrBelow = 0.2;
   static const double fabConcernNotableAbove = 0.4;
 
-  /// Posture imitation, against its /20. Copying 17 or more is reassuring;
-  /// fewer than 12 is the notable end. PROVISIONAL — see [bandOfConcern].
+  /// Posture imitation, as a fraction of its maximum (now /18; the bands
+  /// were set against the old /20 and kept as the same fractions).
+  /// PROVISIONAL — see [bandOfConcern].
   static const double postureConcernReassuringAtOrBelow = 3 / 20;
   static const double postureConcernNotableAbove = 8 / 20;
 
