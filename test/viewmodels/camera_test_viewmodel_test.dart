@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parkinsondetetion/app/app.locator.dart';
 import 'package:parkinsondetetion/models/camera_task_protocol.dart';
@@ -119,6 +121,51 @@ void main() {
 
         _feed(model, count: 1, xs: <double>[0.3, 0.7]);
         expect(model.awaitingHand, isFalse);
+      });
+
+      test('the countdown waits until the instruction has been spoken',
+          () async {
+        // The regression: cues were queued and the countdown ran regardless,
+        // so the voice fell behind at every step and was still talking after
+        // the test had ended.
+        final spoken = Completer<void>();
+        final model = CameraTestViewModel()..onCue = (_) => spoken.future;
+        model.start();
+        final int full = model.currentTask!.leadIn.inSeconds;
+
+        _feed(model, count: 1, xs: <double>[0.3, 0.7]);
+        expect(model.isSpeaking, isTrue);
+        expect(model.awaitingHand, isFalse,
+            reason: 'while speaking, the screen says listen, not show hands');
+
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        expect(model.leadInCountdown, full,
+            reason: 'no time may run off while the voice is still talking');
+
+        spoken.complete();
+        await Future<void>.delayed(Duration.zero);
+        expect(model.isSpeaking, isFalse);
+
+        // Hands kept in view, as they would be, while the countdown runs.
+        for (int i = 0; i < 12; i++) {
+          _feed(model, count: 1, xs: <double>[0.3, 0.7]);
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+        expect(model.leadInCountdown, lessThan(full));
+        model.dispose();
+      });
+
+      test('a voice that never finishes cannot hold the test', () {
+        final model = CameraTestViewModel()
+          ..onCue = (_) => Future<void>.value();
+        model.start();
+        expect(model.isSpeaking, isTrue);
+        // Completes on the next microtask; the timeout covers a voice that
+        // never answers at all.
+        return Future<void>.delayed(Duration.zero).then((_) {
+          expect(model.isSpeaking, isFalse);
+          model.dispose();
+        });
       });
 
       test('a clean step moves on by itself, with go and stop cues', () {

@@ -34,7 +34,9 @@ class CameraTestView extends StackedView<CameraTestViewModel> {
     _CameraVoice.instance.setLocale(Localizations.localeOf(context));
     viewModel.onCue = (cue) {
       final text = _cueText(l10n, cue);
-      if (text.isNotEmpty) _CameraVoice.instance.say(text);
+      return text.isEmpty
+          ? Future<void>.value()
+          : _CameraVoice.instance.say(text);
     };
 
     return Scaffold(
@@ -70,6 +72,14 @@ class CameraTestView extends StackedView<CameraTestViewModel> {
 }
 
 /// Speaks the cues, so the patient never has to look at or reach the phone.
+///
+/// One sentence at a time, each one finished before the next starts, and
+/// [say] completes only when its sentence has been spoken. The test waits on
+/// that before counting down, which is what keeps voice and screen in step.
+/// The earlier version handed every cue to the speech engine's own queue and
+/// moved on; instructions take longer to say than the countdown lasts, so the
+/// voice fell further behind at every step and was still talking after the
+/// test had finished.
 class _CameraVoice {
   _CameraVoice._();
 
@@ -78,6 +88,12 @@ class _CameraVoice {
   final FlutterTts _tts = FlutterTts();
   String? _language;
   bool _configured = false;
+
+  /// The tail of the chain of sentences waiting to be spoken.
+  Future<void> _chain = Future<void>.value();
+
+  /// Bumped by [stop]; sentences queued before it are dropped.
+  int _generation = 0;
 
   Future<void> setLocale(Locale locale) async {
     final language = locale.languageCode == 'el' ? 'el-GR' : 'en-US';
@@ -88,23 +104,37 @@ class _CameraVoice {
       if (!_configured) {
         _configured = true;
         await _tts.setSpeechRate(0.45);
-        // Queue rather than interrupt: "Stop" and the next instruction are
-        // issued back to back and both need to be heard.
-        await _tts.setQueueMode(1);
+        // speak() resolves when the sentence has been spoken, not when it was
+        // accepted — the whole synchronisation rests on this.
+        await _tts.awaitSpeakCompletion(true);
       }
     } catch (e) {
       debugPrint('Camera test voice unavailable: $e');
     }
   }
 
-  void say(String text) {
-    _tts.speak(text).catchError((Object e) {
-      debugPrint('Camera test voice failed: $e');
-      return null;
+  /// Speaks [text] after anything already queued; completes when it has been
+  /// spoken (or dropped by [stop]).
+  Future<void> say(String text) {
+    final int generation = _generation;
+    final next = _chain.then((_) async {
+      if (generation != _generation) return;
+      try {
+        // Bounded, so a speech engine that never reports back cannot hold
+        // the test forever.
+        await _tts.speak(text).timeout(const Duration(seconds: 25));
+      } catch (e) {
+        debugPrint('Camera test voice failed: $e');
+      }
     });
+    _chain = next;
+    return next;
   }
 
+  /// Silences the voice and drops everything still waiting.
   void stop() {
+    _generation++;
+    _chain = Future<void>.value();
     _tts.stop().catchError((Object _) => null);
   }
 }
@@ -418,33 +448,47 @@ class _PreparingOverlay extends StatelessWidget {
         _StepHeader(viewModel: viewModel, task: task),
         Expanded(
           child: Center(
-            child: viewModel.awaitingHand
+            child: viewModel.isSpeaking
                 ? _OverlayPanel(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.front_hand_outlined,
+                        const Icon(Icons.volume_up_outlined,
                             color: AppTokens.onOverlay),
                         const SizedBox(width: AppSpacing.xs),
-                        Text(waiting, style: _on(theme.textTheme.titleMedium)),
+                        Text(l10n.cameraListen,
+                            style: _on(theme.textTheme.titleMedium)),
                       ],
                     ),
                   )
-                // Scales down rather than overflowing when the panels above
-                // and below leave little height (large system font sizes).
-                : FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${viewModel.leadInCountdown ?? 0}',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        color: AppTokens.onOverlay,
-                        fontWeight: FontWeight.bold,
-                        shadows: const [
-                          Shadow(blurRadius: 12, color: Colors.black54),
-                        ],
+                : viewModel.awaitingHand
+                    ? _OverlayPanel(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.front_hand_outlined,
+                                color: AppTokens.onOverlay),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(waiting,
+                                style: _on(theme.textTheme.titleMedium)),
+                          ],
+                        ),
+                      )
+                    // Scales down rather than overflowing when the panels above
+                    // and below leave little height (large system font sizes).
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${viewModel.leadInCountdown ?? 0}',
+                          style: theme.textTheme.displayLarge?.copyWith(
+                            color: AppTokens.onOverlay,
+                            fontWeight: FontWeight.bold,
+                            shadows: const [
+                              Shadow(blurRadius: 12, color: Colors.black54),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
           ),
         ),
         _OverlayPanel(

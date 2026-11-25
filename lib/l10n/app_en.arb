@@ -652,5 +652,6 @@
   "cameraGrade2": "Mild",
   "cameraGrade3": "Moderate",
   "cameraGrade4": "Severe",
-  "cameraRatingValue": "{rating} · {grade}"
+  "cameraRatingValue": "{rating} · {grade}",
+  "cameraListen": "Listen…"
 }

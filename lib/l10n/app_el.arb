@@ -642,5 +642,6 @@
   "cameraGrade2": "Ήπιο",
   "cameraGrade3": "Μέτριο",
   "cameraGrade4": "Σοβαρό",
-  "cameraRatingValue": "{rating} · {grade}"
+  "cameraRatingValue": "{rating} · {grade}",
+  "cameraListen": "Ακούστε…"
 }

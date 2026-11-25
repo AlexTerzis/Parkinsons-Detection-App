@@ -171,7 +171,10 @@ class CameraTestViewModel extends BaseViewModel {
   bool _disposed = false;
 
   /// Receives spoken cues; set by the view.
-  void Function(CameraCue cue)? onCue;
+  ///
+  /// Returns when the cue has been spoken. Instructions are waited on: the
+  /// countdown does not start until the patient has heard what to do.
+  FutureOr<void> Function(CameraCue cue)? onCue;
 
   CameraTestViewModel() {
     // Keeps the setup screen's checks current even when frames stop arriving
@@ -184,8 +187,37 @@ class CameraTestViewModel extends BaseViewModel {
 
   Timer? _setupTimer;
 
-  void _cue(CameraCueKind kind, [CameraTask? task]) =>
-      onCue?.call(CameraCue(kind, task));
+  /// Fire-and-forget cue: "go", "stop", "finished".
+  void _cue(CameraCueKind kind, [CameraTask? task]) {
+    final result = onCue?.call(CameraCue(kind, task));
+    if (result is Future<void>) unawaited(result.catchError((Object _) {}));
+  }
+
+  /// Whether the current step's instruction is still being spoken.
+  bool get isSpeaking => _speaking;
+  bool _speaking = false;
+  int _speechToken = 0;
+
+  /// Speaks a step's instruction and holds the countdown until it is done.
+  void _announce(CameraCueKind kind, CameraTask task) {
+    final int token = ++_speechToken;
+    final result = onCue?.call(CameraCue(kind, task));
+    if (result is! Future<void>) {
+      _speaking = false;
+      return;
+    }
+    _speaking = true;
+    result
+        // Never wait indefinitely on the voice: the test must still run if
+        // speech is unavailable or stalls.
+        .timeout(const Duration(seconds: 30))
+        .catchError((Object _) {})
+        .whenComplete(() {
+      if (token != _speechToken || _disposed) return;
+      _speaking = false;
+      notifyListeners();
+    });
+  }
 
   // --- Live camera state, in every phase ---
 
@@ -238,7 +270,9 @@ class CameraTestViewModel extends BaseViewModel {
 
   /// True while a step's countdown is held because its hands are not in view.
   bool get awaitingHand =>
-      _phase == CameraTestPhase.preparing && !requiredHandsVisible;
+      _phase == CameraTestPhase.preparing &&
+      !_speaking &&
+      !requiredHandsVisible;
 
   // --- View state ---
 
@@ -372,6 +406,7 @@ class CameraTestViewModel extends BaseViewModel {
   /// Abandons the run without saving.
   void cancel() {
     _stopTimer();
+    _speechToken++;
     locator<NavigationService>().back();
   }
 
@@ -383,11 +418,11 @@ class CameraTestViewModel extends BaseViewModel {
 
     if (task != null) {
       if (_retryReason != null) {
-        _cue(CameraCueKind.retry, task);
+        _announce(CameraCueKind.retry, task);
       } else if (task.switchesHand) {
-        _cue(CameraCueKind.switchHands, task);
+        _announce(CameraCueKind.switchHands, task);
       } else {
-        _cue(CameraCueKind.instruction, task);
+        _announce(CameraCueKind.instruction, task);
       }
     }
 
@@ -399,9 +434,10 @@ class CameraTestViewModel extends BaseViewModel {
     final task = currentTask;
     if (task == null) return;
 
-    // The countdown holds while the hands are out of view, rather than running
-    // down and recording an empty picture.
-    if (!requiredHandsVisible) {
+    // The countdown holds while the instruction is still being spoken, and
+    // while the hands are out of view rather than running down and recording
+    // an empty picture.
+    if (_speaking || !requiredHandsVisible) {
       _leadInWatch.stop();
       notifyListeners();
       return;

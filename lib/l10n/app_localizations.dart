@@ -3901,6 +3901,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{rating} · {grade}'**
   String cameraRatingValue(Object grade, Object rating);
+
+  /// No description provided for @cameraListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen…'**
+  String get cameraListen;
 }
 
 class _AppLocalizationsDelegate

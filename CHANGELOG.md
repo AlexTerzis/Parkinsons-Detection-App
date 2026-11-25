@@ -10,6 +10,13 @@
   hands raised, palms to the camera. The old wording led people to point the
   forearm or fingers at the lens, where the roll and the hand size cannot be
   measured.
+- The voice and the test are now in step. Each instruction is spoken in full
+  before that step's countdown starts ("Listen…" shows meanwhile), sentences
+  are spoken one at a time, and nothing is left queued when the test ends.
+  Previously every cue went straight to the speech engine's queue while the
+  countdown ran on, so the voice fell behind and kept talking after the end.
+  Countdowns are shorter (3 s, 5 s on a change of hand) as they no longer
+  have to cover listening time.
 - Tremor centimetres use the larger of two rulers on the hand (palm length and
   knuckle width), so a hand tilted away from the camera no longer makes a
   tremor look bigger.

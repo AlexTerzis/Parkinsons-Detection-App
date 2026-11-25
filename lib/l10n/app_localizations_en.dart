@@ -2207,4 +2207,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String cameraRatingValue(Object grade, Object rating) {
     return '$rating · $grade';
   }
+
+  @override
+  String get cameraListen => 'Listen…';
 }

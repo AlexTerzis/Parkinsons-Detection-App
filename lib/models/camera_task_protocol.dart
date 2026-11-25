@@ -140,11 +140,14 @@ class CameraTaskProtocol {
   static const Duration movementDuration = Duration(seconds: 10);
 
   /// Countdown before an ordinary step.
-  static const Duration leadIn = Duration(seconds: 5);
+  ///
+  /// It starts only once the spoken instruction has finished, so it is just
+  /// the "get into position" pause, not reading time.
+  static const Duration leadIn = Duration(seconds: 3);
 
   /// Countdown before the first step, and before each change of hand: the
   /// patient may have to sit back from the phone or put the other hand down.
-  static const Duration longLeadIn = Duration(seconds: 8);
+  static const Duration longLeadIn = Duration(seconds: 5);
 
   /// The right hand is examined first, then the left.
   static const List<String> hands = <String>['Right', 'Left'];
