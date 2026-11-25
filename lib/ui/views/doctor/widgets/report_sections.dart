@@ -9,10 +9,12 @@ import '../../../../models/test_score_interpretation.dart';
 import '../../../../models/test_type.dart';
 import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
+import '../../../../services/raison_plus_text.dart';
 import '../../../../services/report_analysis.dart';
 import '../../../../services/test_series_analysis.dart';
 import '../../../common/questionnaire_display.dart';
 import '../../../common/test_type_labels.dart';
+import '../../../common/widgets/diagnosis_indications_card.dart';
 import '../../../common/widgets/test_result_summary.dart';
 import '../../../common/widgets/widgets.dart';
 import '../../patience_view/widgets/score_charts.dart';
@@ -592,11 +594,14 @@ class _ReasoningCardState extends State<ReasoningCard> {
                 );
               }
 
+              final greek =
+                  Localizations.localeOf(context).languageCode == 'el';
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (final solution in solutions) ...[
-                    Text(solution.label, style: theme.textTheme.titleSmall),
+                    Text(RaisonPlusText.label(solution.label, greek: greek),
+                        style: theme.textTheme.titleSmall),
                     const AppGap.xxs(),
                     for (final line in solution.explanation)
                       Padding(
@@ -604,8 +609,10 @@ class _ReasoningCardState extends State<ReasoningCard> {
                           left: AppSpacing.md,
                           bottom: AppSpacing.xxs,
                         ),
-                        child:
-                            Text('• $line', style: theme.textTheme.bodyMedium),
+                        child: Text(
+                          '• ${RaisonPlusText.line(line, greek: greek)}',
+                          style: theme.textTheme.bodyMedium,
+                        ),
                       ),
                     const AppGap.sm(),
                   ],
@@ -616,6 +623,47 @@ class _ReasoningCardState extends State<ReasoningCard> {
         ],
       ),
     );
+  }
+}
+
+/// Diagnostic indications from the rAIson+ diagnosis agent, for the doctor.
+///
+/// The patient sees the same indications, framed for them, in the Insights
+/// tab (see [DiagnosisIndicationsCard]). Left out entirely when the diagnosis
+/// agent is not configured.
+class DiagnosisCard extends StatefulWidget {
+  const DiagnosisCard({super.key, required this.report});
+
+  final PatientReport report;
+
+  @override
+  State<DiagnosisCard> createState() => _DiagnosisCardState();
+}
+
+class _DiagnosisCardState extends State<DiagnosisCard> {
+  /// Started once and held. The service also keeps each answer, so the same
+  /// questionnaire never uses a second query.
+  Future<RaisonReasoning>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    final raison = locator<RaisonApiService>();
+    if (!raison.diagnosisConfigured) return;
+    final questionnaire = widget.report.results
+        .where((r) => r.type == TestType.questionnaire)
+        .firstOrNull;
+    if (questionnaire == null || questionnaire.data.isEmpty) return;
+    _future = raison.diagnose(
+      CognitiveFacts.merge(questionnaire.data, widget.report.results),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final future = _future;
+    if (future == null) return const SizedBox.shrink();
+    return DiagnosisIndicationsCard(future: future);
   }
 }
 

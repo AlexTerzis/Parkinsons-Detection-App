@@ -186,6 +186,8 @@ class _PatientDetailViewState extends State<PatientDetailView> {
         const AppGap.xs(),
         ReasoningCard(report: report),
         const AppGap.xs(),
+        DiagnosisCard(report: report),
+        const AppGap.xs(),
         RepeatedMeasures(report: report),
         const AppGap.xs(),
         AssessmentGaps(report: report),

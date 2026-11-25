@@ -1,161 +1,224 @@
-import 'package:flutter/foundation.dart';
+import 'dart:collection';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/raison_result.dart';
+import 'raison_plus_inputs.dart';
 
-/// Handles communication with the Raison reasoning API.
+/// The key's query quota is used up (HTTP 429 with `quota_exhausted`).
+class RaisonQuotaExhausted implements Exception {
+  const RaisonQuotaExhausted();
+  @override
+  String toString() => 'rAIson+ query quota exhausted';
+}
+
+/// Handles communication with the rAIson+ reasoning agent.
+///
+/// The agent is `AI_diagnosis_of_PD_visit_rules_rAIson_no_dilemma`. Its inputs
+/// have readable names (`tremor`, `datscan`, ...); [RaisonPlusInputs] builds
+/// them from the questionnaire answers. Every caller — the questionnaire, the
+/// Insights tab and the doctor's report — goes through [submit].
 class RaisonApiService {
-  /// Base URL of the API.
-  static const String _baseUrl = 'https://api.ai-raison.com';
+  /// Base URL of the rAIson+ agents API.
+  static const String baseUrl = 'https://api-agents.raison-ai.com/v1';
+
+  /// The agent this app reasons with.
+  static const String agentId = '1cf91fc368ae';
 
   /// API key, supplied at build time and never committed:
   ///
   ///     flutter run   --dart-define-from-file=raison.local.json
   ///     flutter build --dart-define-from-file=raison.local.json
   ///
-  /// `raison.local.json` is gitignored. The key used to be a literal here,
+  /// `raison.local.json` is gitignored. An earlier key was a literal here,
   /// which published it the moment the repo went public — and git history
   /// survives in clones and forks, so that one had to be revoked rather than
   /// merely replaced.
   ///
   /// This keeps the key out of the *repository*, not out of the built app: a
   /// value compiled into a mobile binary can still be extracted from it. Only
-  /// proxying rAIson through a server of our own would fix that.
-  static const String _key = String.fromEnvironment('RAISON_API_KEY');
+  /// proxying rAIson+ through a server of our own would fix that.
+  static const String _buildKey = String.fromEnvironment('RAISON_API_KEY');
 
-  /// App and version identifiers used by the API.
-  static const String _app = 'PRJ27475';
-  static const String _ver = 'latest';
+  /// The diagnosis agent, built from the sheet «Διαγνώσεις» on a separate
+  /// rAIson+ account with its own key. The key comes from raison.local.json
+  /// too; without it [diagnosisConfigured] is false and the report leaves the
+  /// section out. RAISON_DIAGNOSIS_AGENT_ID may point to another agent.
+  static const String defaultDiagnosisAgentId = '43141074d002';
+  static const String _buildDiagnosisAgent = String.fromEnvironment(
+    'RAISON_DIAGNOSIS_AGENT_ID',
+    defaultValue: defaultDiagnosisAgentId,
+  );
+  static const String _buildDiagnosisKey =
+      String.fromEnvironment('RAISON_DIAGNOSIS_API_KEY');
 
   final http.Client _client;
+  final String _key;
+  final String _diagnosisAgent;
+  final String _diagnosisKey;
 
-  /// When created we immediately kick off a schema fetch so later calls
-  /// to [submit] don't block on this network request.
-  RaisonApiService({http.Client? client}) : _client = client ?? http.Client() {
-    // `ignore()` because nothing is awaiting this yet: at launch there may be
-    // no network, and a failure here must not surface as an unhandled async
-    // error. [_schema] retries on first real use.
-    _schemaFuture = _fetchSchema()..ignore();
-  }
+  RaisonApiService({
+    http.Client? client,
+    String? apiKey,
+    String? diagnosisAgentId,
+    String? diagnosisApiKey,
+  })  : _client = client ?? http.Client(),
+        _key = apiKey ?? _buildKey,
+        _diagnosisAgent = diagnosisAgentId ?? _buildDiagnosisAgent,
+        _diagnosisKey = diagnosisApiKey ?? _buildDiagnosisKey;
 
-  /// Holds the ongoing or successful schema request so it can be reused.
-  /// Cleared on failure — see [_schema].
-  Future<Map<String, dynamic>>? _schemaFuture;
+  /// Whether the diagnosis agent's key was supplied at build time.
+  bool get diagnosisConfigured =>
+      _diagnosisAgent.isNotEmpty && _diagnosisKey.isNotEmpty;
 
-  /// The schema, reusing an in-flight or successful fetch and retrying after a
-  /// failure.
-  ///
-  /// [submit] used to do `_schemaFuture ??= _fetchSchema()`, and `??=` only
-  /// fills a *null* slot. A fetch that failed stayed cached as a permanently
-  /// rejected future, so every later submission re-awaited the same failure:
-  /// one bad connection — most likely the one started in the constructor at
-  /// launch — disabled reasoning until the app was restarted.
-  Future<Map<String, dynamic>> _schema() async {
-    final cached = _schemaFuture;
-    if (cached != null) {
-      try {
-        return await cached;
-      } catch (_) {
-        // A cached failure is not a permanent answer. Drop it and try once
-        // more below, so the retry happens on this call rather than the next.
-        if (_schemaFuture == cached) _schemaFuture = null;
-      }
-    }
-
-    final attempt = _fetchSchema();
-    _schemaFuture = attempt;
-    try {
-      return await attempt;
-    } catch (_) {
-      if (_schemaFuture == attempt) _schemaFuture = null;
-      rethrow;
-    }
-  }
-
-  /// Retrieves the element/option mapping from the Raison API.
-  Future<Map<String, dynamic>> _fetchSchema() async {
+  /// Sends the questionnaire [responses] to the visit agent and returns its
+  /// decisions. Throws [RaisonQuotaExhausted] when the key's quota is used up.
+  Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
     // Say which build flag is missing, rather than letting the request come
-    // back as an opaque 403 that looks like an outage.
+    // back as an opaque 401/403 that looks like an outage.
     if (_key.isEmpty) {
       throw StateError(
         'RAISON_API_KEY was not set at build time. Pass '
         '--dart-define-from-file=raison.local.json (see README).',
       );
     }
-
-    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
-    final res = await _client.get(
-      uri,
-      headers: {
-        'x-api-key': _key,
-        'Content-Type': 'application/json',
-      },
+    final data = RaisonPlusInputs.forAgent(
+      RaisonPlusInputs.dataFrom(responses),
+      RaisonPlusInputs.visitInputs,
     );
-    debugPrint('🔍 [Raison API] SCHEMA GET → ${res.statusCode}\n'
-          'Response: ${res.body}');
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load schema: ${res.statusCode}');
+    final results =
+        RaisonResult.listFromReason(await _reasonOnce(agentId, _key, data));
+    // The visit theory's default is "Do not visit": when none of its visit
+    // patterns fits the answers, the agent answers "No matching rule" and
+    // decides nothing. Show that default instead of "no clear result".
+    final nothingDecided = results.length == 1 &&
+        !results.single.isSolution &&
+        results.single.explanation.isEmpty;
+    if (nothingDecided) {
+      return const [
+        RaisonResult(
+          label: 'Do not visit',
+          explanation: [visitDefaultLine],
+          isSolution: true,
+        ),
+      ];
     }
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    return results;
   }
 
-  /// Sends [responses] to the API and returns the list of results.
-  Future<List<RaisonResult>> submit(Map<String, dynamic> responses) async {
-    // 1️⃣ Use the cached schema; fetch or re-fetch as needed.
-    final schema = await _schema();
+  /// The explanation of the visit agent's default (see [submit]).
+  static const String visitDefaultLine =
+      "No visit pattern fits these answers, so the agent's default holds.";
 
-    final elementsRaw = schema['elements'] as List<dynamic>? ?? [];
-    final optionsRaw  = schema['options']  as List<dynamic>? ?? [];
-
-    // 2️⃣ Build the element payload
-    final List<Map<String, dynamic>> elementPayload = [];
-    for (final e in elementsRaw) {
-      final label = e['label'] as String?;
-      if (label != null && responses[label] == true) {
-        elementPayload.add({
-          'id': e['id'],
-          'parameters': (e['parameters'] as List<dynamic>?)?.cast<String>() ?? [],
-
-        });
-      }
+  /// Sends the questionnaire [responses] to the diagnosis agent and returns
+  /// the diagnoses it indicates, for the doctor's report and the patient's
+  /// Insights tab.
+  Future<RaisonReasoning> diagnose(Map<String, dynamic> responses) async {
+    if (!diagnosisConfigured) {
+      throw StateError(
+        'RAISON_DIAGNOSIS_API_KEY was not set at build time (see README).',
+      );
     }
+    final data = RaisonPlusInputs.forAgent(
+      RaisonPlusInputs.dataFrom(responses),
+      RaisonPlusInputs.diagnosisInputs,
+    );
+    return RaisonReasoning.fromJson(
+      await _reasonOnce(_diagnosisAgent, _diagnosisKey, data),
+    );
+  }
 
-    // 3️⃣ Build the option payload
-    final List<Map<String, String>> optionPayload = [
-      for (final o in optionsRaw) {'id': o['id'] as String}
-    ];
+  /// Asks [agent] about [data] once. The answer depends only on the agent and
+  /// the inputs, and every query counts against the key's quota, so the same
+  /// inputs are sent once: within a run the answer comes from memory, across
+  /// runs from the device. Errors are not kept.
+  Future<Map<String, dynamic>> _reasonOnce(
+    String agent,
+    String key,
+    Map<String, String> data,
+  ) async {
+    final cacheKey =
+        '$agent ${jsonEncode(SplayTreeMap<String, String>.from(data))}';
+    final cached = _answers[cacheKey] ?? await _readCache(cacheKey);
+    if (cached != null) {
+      debugPrint('🔍 [rAIson+ $agent] same inputs as before, '
+          'answer reused (no query used)');
+      _answers[cacheKey] = cached;
+      return cached;
+    }
+    final json = await _reason(agent, key, data);
+    _answers[cacheKey] = json;
+    await _writeCache(cacheKey, json);
+    return json;
+  }
 
-    // 4️⃣ Prepare & send the POST
-    final uri = Uri.parse('$_baseUrl/executions/$_app/$_ver');
+  /// Answers received in this run, by agent and inputs.
+  final Map<String, Map<String, dynamic>> _answers = {};
+
+  /// Prefix of the stored answers of both agents (the name predates the
+  /// visit agent's use of it; the agent id is part of every key).
+  static const String _cachePrefix = 'raison_diagnosis_v1 ';
+
+  /// A stored answer, or null. The cache is an optimisation: when the
+  /// device's preferences cannot be read (as in unit tests), it is skipped.
+  static Future<Map<String, dynamic>?> _readCache(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_cachePrefix$key');
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _writeCache(
+    String key,
+    Map<String, dynamic> json,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_cachePrefix$key', jsonEncode(json));
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>> _reason(
+    String agent,
+    String key,
+    Map<String, String> data,
+  ) async {
     final requestBody = jsonEncode({
-      'elements': elementPayload,
-      'options' : optionPayload,
+      'facts': <String>[],
+      'assumptions': <String>[],
+      'data': data,
     });
 
     final response = await _client.post(
-      uri,
+      Uri.parse('$baseUrl/agents/$agent/reason'),
       headers: {
-        'x-api-key'     : _key,
-        'Content-Type'  : 'application/json',
+        'x-api-key': key,
+        'Content-Type': 'application/json',
       },
       body: requestBody,
     );
 
-    // ▶️ Log the real request + the response
-    debugPrint('🔍 [Raison API] EXECUTE POST → ${response.statusCode}\n'
-          'Request:  $requestBody\n'
-          'Response: ${response.body}');
+    debugPrint('🔍 [rAIson+ $agent] REASON POST → ${response.statusCode}\n'
+        'Request:  $requestBody\n'
+        'Response: ${response.body}');
 
+    if (response.statusCode == 429) throw const RaisonQuotaExhausted();
     if (response.statusCode != 200) {
-      throw Exception('Execution failed: ${response.statusCode}');
+      throw Exception('rAIson+ request failed: ${response.statusCode}');
     }
 
-    // 5️⃣ Parse into your model
-    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data
-        .map((e) => RaisonResult.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('rAIson+ response is not a JSON object');
+    }
+    return decoded;
   }
-
 }

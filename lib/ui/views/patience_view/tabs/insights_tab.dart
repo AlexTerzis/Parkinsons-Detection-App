@@ -8,10 +8,17 @@ import '../../../../models/test_type.dart';
 import '../../../../services/authentication_service.dart';
 import '../../../../services/cognitive_facts.dart';
 import '../../../../services/raison_api_service.dart';
+import '../../../../services/raison_plus_text.dart';
 import '../../../../services/test_service.dart';
+import '../../../common/widgets/diagnosis_indications_card.dart';
+import '../../../common/widgets/reasoning_details.dart';
 import '../../../common/widgets/widgets.dart';
 
 /// Reasoning output and analytics summaries.
+///
+/// Two rAIson+ agents: the visit agent ("Argumentation") and, when its key is
+/// configured, the diagnosis agent ("Possible indications"), which always
+/// reasons from the stored questionnaire.
 ///
 /// When [resultsFuture] is given (straight after the questionnaire is
 /// submitted) it is shown as it is. Otherwise the tab runs the reasoning
@@ -43,16 +50,28 @@ class _InsightsTabState extends State<InsightsTab> {
   late final Future<_ReasoningInputs> _inputs;
   late final Future<List<RaisonResult>> _results;
 
+  /// Null when the diagnosis agent is not configured; resolves to null when
+  /// no questionnaire has been submitted.
+  Future<RaisonReasoning?>? _diagnosis;
+
   @override
   void initState() {
     super.initState();
+    final raison = locator<RaisonApiService>();
     _inputs = _loadInputs();
     _results = widget.resultsFuture ??
         _inputs.then<List<RaisonResult>>((inputs) {
           final answers = inputs.answers;
           if (answers == null) return const <RaisonResult>[];
-          return locator<RaisonApiService>().submit(answers);
+          return raison.submit(answers);
         });
+    if (raison.diagnosisConfigured) {
+      _diagnosis = _inputs.then<RaisonReasoning?>((inputs) {
+        final answers = inputs.answers;
+        if (answers == null) return null;
+        return raison.diagnose(answers);
+      });
+    }
   }
 
   Future<_ReasoningInputs> _loadInputs() async {
@@ -77,38 +96,18 @@ class _InsightsTabState extends State<InsightsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
+    // The AI summary, test breakdown, risk alerts and test suggestion cards
+    // were fixed placeholder text that did not follow the results, so the tab
+    // shows only what the reasoning actually produced.
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        _summaryCard(
-          context,
-          leading: const Text('🧠', style: TextStyle(fontSize: 28)),
-          title: l10n.aiSummaryTitle,
-          body: l10n.aiSummarySubtitle,
-        ),
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.testBreakdownTitle,
-          body: l10n.testBreakdownSubtitle,
-        ),
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.riskAlertsTitle,
-          body: l10n.noAlertsSubtitle,
-        ),
-        const AppGap.sm(),
         _argumentation(context),
         _inputsNote(context),
-        const AppGap.sm(),
-        _summaryCard(
-          context,
-          title: l10n.aiSuggestionsTitle,
-          body: l10n.retakeTremorSuggestion,
-        ),
+        if (_diagnosis != null) ...[
+          const AppGap.sm(),
+          DiagnosisIndicationsCard(future: _diagnosis!, forPatient: true),
+        ],
       ],
     );
   }
@@ -117,7 +116,6 @@ class _InsightsTabState extends State<InsightsTab> {
     BuildContext context, {
     required String title,
     required String body,
-    Widget? leading,
   }) {
     final theme = Theme.of(context);
 
@@ -125,10 +123,6 @@ class _InsightsTabState extends State<InsightsTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (leading != null) ...[
-            leading,
-            const AppGap.wide(AppSpacing.sm),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,11 +197,30 @@ class _InsightsTabState extends State<InsightsTab> {
       future: _results,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _summaryCard(
-            context,
-            title: l10n.argumentation,
-            body: l10n.noArgumentationYet,
-          );
+          // Say what went wrong: a missing key, a used-up quota and an outage
+          // need different fixes, and all used to read "no clear result".
+          final greek = Localizations.localeOf(context).languageCode == 'el';
+          final error = snapshot.error;
+          final String body;
+          if (error is RaisonQuotaExhausted) {
+            body = greek
+                ? 'Οι ερωτήσεις του rAIson+ για τη σύσταση επίσκεψης '
+                    'εξαντλήθηκαν.'
+                : 'The rAIson+ queries for the visit recommendation are used '
+                    'up.';
+          } else if (error is StateError) {
+            body = greek
+                ? 'Η σύνδεση με το rAIson+ δεν έχει ρυθμιστεί σε αυτή την '
+                    'έκδοση της εφαρμογής.'
+                : 'The connection to rAIson+ is not set up in this build of '
+                    'the app.';
+          } else {
+            body = greek
+                ? 'Η υπηρεσία rAIson+ δεν απάντησε. Δοκιμάστε ξανά αργότερα.'
+                : 'The rAIson+ service did not answer. Try again later.';
+          }
+          debugPrint('🔍 [rAIson+] visit recommendation failed: $error');
+          return _summaryCard(context, title: l10n.argumentation, body: body);
         }
         if (!snapshot.hasData) {
           return _summaryCard(
@@ -242,23 +255,48 @@ class _InsightsTabState extends State<InsightsTab> {
             children: [
               Text(l10n.argumentation, style: theme.textTheme.titleMedium),
               const AppGap.xs(),
-              for (final r in solutions) ...[
-                Text(r.label, style: theme.textTheme.titleSmall),
-                const AppGap.xxs(),
-                for (final e in r.explanation)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: AppSpacing.md,
-                      bottom: AppSpacing.xxs,
-                    ),
-                    child: Text('• $e', style: theme.textTheme.bodyMedium),
-                  ),
-                const AppGap.sm(),
-              ],
+              for (final r in solutions) _recommendation(context, r),
             ],
           ),
         );
       },
+    );
+  }
+
+  /// One recommendation for the patient: the decision, a sentence they can
+  /// act on and the main reasons, with every rule folded under "How this
+  /// was reached".
+  Widget _recommendation(BuildContext context, RaisonResult r) {
+    final theme = Theme.of(context);
+    final greek = Localizations.localeOf(context).languageCode == 'el';
+    final reasons =
+        RaisonPlusText.mainReasons(r.label, r.explanation, greek: greek);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(RaisonPlusText.label(r.label, greek: greek),
+            style: theme.textTheme.titleSmall),
+        const AppGap.xxs(),
+        Text(RaisonPlusText.advice(r.label, greek: greek),
+            style: theme.textTheme.bodyMedium),
+        if (reasons.isNotEmpty) ...[
+          const AppGap.xxs(),
+          Text(
+            '${greek ? 'Κυρίως λόγω' : 'Mainly because of'}: '
+            '${reasons.join(', ')}.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        ReasoningDetails(
+          lines: [
+            for (final e in r.explanation)
+              RaisonPlusText.line(e, greek: greek),
+          ],
+        ),
+      ],
     );
   }
 }

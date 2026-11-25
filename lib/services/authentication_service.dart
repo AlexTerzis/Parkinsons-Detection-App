@@ -126,40 +126,117 @@ class AuthenticationService {
   // Creates a new account for either a doctor or a patient.
   // Additionally, the user document is stored inside the `users` collection
   // so that role information can be retrieved without custom Firebase claims.
+  //
+  // The Auth account and the profile document are two separate writes. If the
+  // profile write failed (offline, or refused by the rules), the Auth account
+  // used to stay behind with no profile: the email then reported "already in
+  // use" on every retry while the account had no role to sign in with.
   Future<UserCredential> signUp({
     required String email,
     required String password,
     required UserRole userRole,
     String? name,
   }) async {
-    final UserCredential credential =
-        await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    final UserCredential credential;
+    try {
+      credential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'email-already-in-use') rethrow;
+      // Maybe an earlier sign-up that never got its profile. Finish it, but
+      // only for someone who knows that account's password.
+      final resumed = await _resumeInterruptedSignUp(
+        email: email,
+        password: password,
+        userRole: userRole,
+        name: name,
+      );
+      if (resumed == null) rethrow;
+      return resumed;
+    }
 
     final User? user = credential.user;
     if (user != null) {
-      // Merged rather than a whole-document overwrite: a plain set() here
-      // would discard anything already on the profile, such as date of birth,
-      // medication or a chosen doctor.
-      await _firestore.collection('users').doc(user.uid).set(
-        <String, Object?>{
-          'email': user.email,
-          'role': userRole.value,
-          'isGuest': false,
-          if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-          'created_at': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
-
-      if (name != null && name.trim().isNotEmpty) {
-        await user.updateDisplayName(name.trim());
+      try {
+        await _writeProfile(user, userRole: userRole, name: name);
+      } catch (_) {
+        // Undo the Auth account so the email is free to try again.
+        try {
+          await user.delete();
+        } catch (_) {
+          await _firebaseAuth.signOut();
+        }
+        rethrow;
       }
     }
 
     return credential;
+  }
+
+  /// Signs in to an existing account that has no profile document and creates
+  /// one. Returns null, signed out, when the account is a complete one or the
+  /// password does not match, so the caller reports "email already in use".
+  Future<UserCredential?> _resumeInterruptedSignUp({
+    required String email,
+    required String password,
+    required UserRole userRole,
+    String? name,
+  }) async {
+    final UserCredential credential;
+    try {
+      credential = await _firebaseAuth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException {
+      return null;
+    }
+
+    final user = credential.user;
+    if (user == null) return null;
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (doc.exists && doc.data()?['role'] != null) {
+      // A real, finished account. Signing up again is not a way into it.
+      await _firebaseAuth.signOut();
+      return null;
+    }
+
+    try {
+      await _writeProfile(user, userRole: userRole, name: name);
+    } catch (_) {
+      await _firebaseAuth.signOut();
+      rethrow;
+    }
+    return credential;
+  }
+
+  Future<void> _writeProfile(
+    User user, {
+    required UserRole userRole,
+    String? name,
+  }) async {
+    // Merged rather than a whole-document overwrite: a plain set() here
+    // would discard anything already on the profile, such as date of birth,
+    // medication or a chosen doctor.
+    await _firestore.collection('users').doc(user.uid).set(
+      <String, Object?>{
+        'email': user.email,
+        'role': userRole.value,
+        'isGuest': false,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+        'created_at': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+
+    if (name != null && name.trim().isNotEmpty) {
+      try {
+        await user.updateDisplayName(name.trim());
+      } catch (_) {}
+    }
   }
 
   // Sends a password-reset email to the specified address.

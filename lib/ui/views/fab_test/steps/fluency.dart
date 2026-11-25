@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../services/continuous_word_listener.dart';
 import '../../../common/widgets/widgets.dart';
 
 /// FAB lexical fluency: name as many words starting with Κ as possible in one
@@ -26,14 +25,21 @@ class FluencyStep extends StatefulWidget {
 }
 
 class _FluencyStepState extends State<FluencyStep> {
-  final SpeechToText _speech = SpeechToText();
+  late final ContinuousWordListener _listener = ContinuousWordListener(
+    localeId: 'el_GR',
+    stopWord: 'τέλος',
+    onStopWord: _finish,
+    onChanged: () {
+      if (mounted) setState(() {});
+    },
+    onFailure: () {
+      if (mounted) setState(() => _micFailed = true);
+    },
+  );
   bool _available = false;
-  bool _listening = false;
-  String _transcript = '';
-  final List<String> _allWords = [];
   Timer? _timer;
   int _secondsLeft = 60;
-  bool _micUnexpectedlyClosed = false;
+  bool _micFailed = false;
   bool _finished = false;
   int _phase = 0; // 0 = instructions, 1 = test, 2 = results
 
@@ -44,97 +50,47 @@ class _FluencyStepState extends State<FluencyStep> {
   }
 
   Future<void> _initSpeech() async {
-    _available = await _speech.initialize(
-      onStatus: _onSpeechStatus,
-      onError: _onSpeechError,
-    );
+    _available = await _listener.initialize();
     if (mounted) setState(() {});
   }
 
-  void _onSpeechStatus(String status) {
-    if (_listening &&
-        (status == "notListening" ||
-            status == "done" ||
-            status == "done_no_result")) {
-      if (_secondsLeft > 0) {
-        setState(() {
-          _micUnexpectedlyClosed = true;
-          _listening = false;
-        });
-        _speech.stop();
-      }
-    }
-  }
-
-  void _onSpeechError(SpeechRecognitionError error) {
-    if (!mounted) return;
-    setState(() {
-      _micUnexpectedlyClosed = true;
-      _listening = false;
-    });
-  }
-
   /// Words that count: start with Κ and are more than one letter.
-  Set<String> get _validWords => _allWords
+  Set<String> get _validWords => _listener.words
       .map((w) => w.trim().toLowerCase())
       .where((w) => w.startsWith('κ') && w.length > 1)
       .toSet();
 
-  bool _isValid(String w) => w.length > 1 && w.toLowerCase().startsWith('κ');
+  static bool _isValid(String w) =>
+      w.length > 1 && w.toLowerCase().startsWith('κ');
 
-  void _toggleListening() async {
-    if (!_available || _secondsLeft == 0) return;
+  Future<void> _toggleListening() async {
+    if (!_available || _secondsLeft == 0 || _finished) return;
 
-    if (_listening) {
-      await _speech.stop();
+    // Pauses the mic; the countdown keeps running.
+    if (_listener.isListening) {
+      await _listener.stop();
       return;
     }
 
-    setState(() {
-      _micUnexpectedlyClosed = false;
-      _listening = true;
-    });
+    setState(() => _micFailed = false);
 
     // One countdown for the whole attempt: restarting the mic after a dropout
     // must not hand back time.
-    if (_timer == null && _secondsLeft > 0) {
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_secondsLeft > 0) {
-          setState(() => _secondsLeft--);
-        }
-        if (_secondsLeft <= 0) _finish();
-      });
-    }
+    _timer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_secondsLeft > 0) setState(() => _secondsLeft--);
+      if (_secondsLeft <= 0) _finish();
+    });
 
-    await _speech.listen(
-      onResult: (r) {
-        setState(() {
-          _transcript = r.recognizedWords;
-          for (final w in _transcript
-              .split(RegExp(r'[,\s\.]+'))
-              .where((w) => w.isNotEmpty)) {
-            if (!_allWords.contains(w)) _allWords.add(w);
-          }
-        });
-        if (r.finalResult &&
-            r.recognizedWords.toLowerCase().contains('τέλος')) {
-          _finish();
-        }
-      },
-      listenOptions: SpeechListenOptions(
-        partialResults: true,
-        listenMode: ListenMode.confirmation,
-      ),
-      localeId: 'el_GR',
-    );
+    await _listener.start();
   }
 
-  void _finish() async {
-    if (!_listening && !_micUnexpectedlyClosed && _secondsLeft > 0) return;
+  Future<void> _finish() async {
     if (_finished) return;
     _finished = true;
     _timer?.cancel();
-    _speech.stop();
+    // Awaited so a word being said as time runs out is still counted.
+    await _listener.stop();
 
     final count = _validWords.length;
     final int score;
@@ -148,10 +104,7 @@ class _FluencyStepState extends State<FluencyStep> {
       score = 0;
     }
 
-    setState(() {
-      _listening = false;
-      _phase = 2;
-    });
+    if (mounted) setState(() => _phase = 2);
 
     widget.onScored(score);
   }
@@ -159,7 +112,7 @@ class _FluencyStepState extends State<FluencyStep> {
   @override
   void dispose() {
     _timer?.cancel();
-    _speech.stop();
+    _listener.dispose();
     super.dispose();
   }
 
@@ -241,26 +194,15 @@ class _FluencyStepState extends State<FluencyStep> {
             child: Scrollbar(
               thumbVisibility: true,
               child: SingleChildScrollView(
-                child: Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xxs,
-                  children: _allWords.map((w) {
-                    // Icon as well as tint: the cue is never colour alone.
-                    final valid = _isValid(w);
-                    return Chip(
-                      label: Text(w),
-                      avatar: valid
-                          ? Icon(Icons.check, color: semantic.success)
-                          : null,
-                      backgroundColor:
-                          valid ? semantic.successContainer : null,
-                    );
-                  }).toList(),
+                child: FluencyWordChips(
+                  words: _listener.words,
+                  pending: _listener.pendingWords,
+                  isValid: _isValid,
                 ),
               ),
             ),
           ),
-          if (_micUnexpectedlyClosed && !_listening && _secondsLeft > 0) ...[
+          if (_micFailed && !_listener.isListening && _secondsLeft > 0) ...[
             const AppGap.xs(),
             Text(
               l10n.stepMicClosed,
@@ -273,8 +215,9 @@ class _FluencyStepState extends State<FluencyStep> {
           Align(
             child: FilledButton.tonalIcon(
               onPressed: _secondsLeft == 0 ? null : _toggleListening,
-              icon: Icon(_listening ? Icons.stop : Icons.mic),
-              label: Text(_listening ? l10n.stepFinish : l10n.stepStartMic),
+              icon: Icon(_listener.isListening ? Icons.stop : Icons.mic),
+              label: Text(
+                  _listener.isListening ? l10n.stepFinish : l10n.stepStartMic),
             ),
           ),
         ],

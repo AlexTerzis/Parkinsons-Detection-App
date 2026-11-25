@@ -7,6 +7,9 @@ import 'package:parkinsondetetion/ui/common/app_tokens.dart';
 import 'package:parkinsondetetion/ui/common/widgets/app_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../app/app.locator.dart';
+import '../../../services/authentication_service.dart';
+
 import 'questionnaire_schema.dart';
 import 'questionnaire_english.dart';
 
@@ -35,8 +38,16 @@ class _QuestionPage {
 }
 
 class _QuestionnaireFormState extends State<QuestionnaireForm> {
-  static const _draftKey = 'questionnaire_draft_v2';
+  /// The old device-wide key. Every account on the phone shared it, so a new
+  /// user opened the questionnaire pre-filled with someone else's answers.
+  static const _legacyDraftKey = 'questionnaire_draft_v2';
   static const _pageSize = 6;
+
+  /// The draft key for the signed-in user, so drafts never cross accounts.
+  String get _draftKey {
+    final uid = locator<AuthenticationService>().currentUser?.uid ?? 'anonymous';
+    return 'questionnaire_draft_v3_$uid';
+  }
 
   final Map<String, dynamic> _responses = {};
   final ScrollController _scrollController = ScrollController();
@@ -140,6 +151,8 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
 
   Future<void> _restoreDraft() async {
     final prefs = await SharedPreferences.getInstance();
+    // There is no way to tell whose answers the legacy draft holds.
+    await prefs.remove(_legacyDraftKey);
     final raw = prefs.getString(_draftKey);
     if (raw != null) {
       try {
@@ -648,11 +661,17 @@ class _QuestionnaireFormState extends State<QuestionnaireForm> {
         for (final entry in _responses.entries)
           if (allowedIds.contains(entry.key)) entry.key: entry.value,
       };
-      await widget.onSubmit(filtered);
+      // Cleared before submitting: onSubmit navigates away and only returns
+      // when that screen is popped, so a removal after it never ran in
+      // practice and the answers stayed on the device. A failed submit saves
+      // the draft again below.
+      _saveDebounce?.cancel();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_draftKey);
+      await widget.onSubmit(filtered);
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
+      await _saveDraft();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_t('Could not submit. Your answers are still saved.',
