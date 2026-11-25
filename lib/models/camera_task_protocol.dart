@@ -9,7 +9,7 @@
 /// examination, the standard clinical rating scale for Parkinson's disease:
 ///
 /// * Item 3.17 — Rest tremor (both hands resting, still)
-/// * Item 3.15 — Postural tremor (both arms held out, fingers spread)
+/// * Item 3.15 — Postural tremor (both hands raised, palms to the camera)
 /// * Item 3.4  — Finger tapping (thumb to index finger, big and fast)
 /// * Item 3.5  — Hand movements (open and close the fist)
 /// * Item 3.6  — Pronation/supination (turn the palm up and down)
@@ -19,6 +19,14 @@
 /// length. The three movement items are examined one hand at a time, as the
 /// scale requires — the right hand's three, then the left hand's three, with
 /// the resting hand kept down on the table out of the way.
+///
+/// Two poses differ from the clinical examination because the camera is in
+/// front of the patient rather than beside them. Postural tremor is held with
+/// the hands raised and palms to the camera, not arms stretched forward: with
+/// the fingers pointing at the lens the hand is foreshortened and detected
+/// poorly. Pronation/supination is done with the elbow on the table and the
+/// hand upright, turning palm to camera and back: the roll is measured about
+/// the forearm, which cannot be done when the forearm points at the lens.
 ///
 /// Reference: Goetz CG et al., "Movement Disorder Society-Sponsored Revision of
 /// the Unified Parkinson's Disease Rating Scale (MDS-UPDRS)", Mov Disord 2008.
@@ -33,7 +41,8 @@ enum CameraTaskType {
   /// Both hands resting and relaxed. Rest-tremor baseline, no movement.
   rest,
 
-  /// Both arms held out, fingers spread. Postural tremor, no movement.
+  /// Both hands raised, palms to the camera, fingers spread. Postural
+  /// tremor, no movement.
   posture,
 
   /// MDS-UPDRS item 3.4 — tap thumb against index finger repeatedly.

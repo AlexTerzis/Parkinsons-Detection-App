@@ -98,6 +98,11 @@ abstract final class MotorRatingRules {
   /// to turn the picture's units into centimetres.
   static const double palmLengthCm = 9.5;
 
+  /// Typical distance between the index and little-finger knuckles. A second
+  /// ruler, at right angles to the first: see
+  /// [MotorRatingScorer.pictureUnitsPerCm].
+  static const double knuckleWidthCm = 6.0;
+
   /// Parkinsonian tremor band. A tremor outside it is discounted.
   static const double tremorBandMinHz = 3.5;
   static const double tremorBandMaxHz = 7.5;
@@ -408,14 +413,13 @@ class MotorRatingScorer {
   /// Rates one still task (rest or arms held out) for tremor.
   ItemRating? rateTremor(RecordedTask task) {
     if (task.frames.length < 8) return null;
-    final double? palm = palmLength(task);
-    if (palm == null || palm <= 0) return null;
+    final double? perCm = pictureUnitsPerCm(task);
+    if (perCm == null || perCm <= 0) return null;
 
     final TremorAnalysis analysis = _tremor.analyzeHand(task.allTrajectories());
     // Amplitude is half the peak-to-peak span, in picture units; the scale's
     // bands are peak-to-peak in centimetres.
-    final double cm =
-        2 * analysis.amplitude / palm * MotorRatingRules.palmLengthCm;
+    final double cm = 2 * analysis.amplitude / perCm;
 
     double rating = MotorRatingRules.tremorCm.rate(cm);
     final double? f = analysis.dominantFrequencyHz;
@@ -455,20 +459,41 @@ class MotorRatingScorer {
     }
   }
 
-  /// Median wrist-to-middle-knuckle length in picture units, the ruler that
-  /// turns tremor amplitude into centimetres.
-  static double? palmLength(RecordedTask task) {
+  /// How many picture units make a centimetre at the hand, or `null` when the
+  /// hand was never measured.
+  ///
+  /// Two rulers on the hand, at right angles to each other: palm length (wrist
+  /// to middle knuckle, about 9.5 cm) and knuckle width (index to little
+  /// finger, about 6 cm). A hand tilted away from the camera looks shorter
+  /// along one of them — a hand lying flat on the table is shortened top to
+  /// bottom, not side to side — and a shortened ruler would make a tremor look
+  /// larger than it is. Tilting only ever shrinks a ruler, so the larger of the
+  /// two readings is the one closer to the truth.
+  static double? pictureUnitsPerCm(RecordedTask task) {
+    final double? length = _median(task, 0, 9);
+    final double? width = _median(task, 5, 17);
+    final candidates = <double>[
+      if (length != null) length / MotorRatingRules.palmLengthCm,
+      if (width != null) width / MotorRatingRules.knuckleWidthCm,
+    ];
+    if (candidates.isEmpty) return null;
+    return candidates.reduce(math.max);
+  }
+
+  /// Median on-screen distance between landmarks [a] and [b].
+  static double? _median(RecordedTask task, int a, int b) {
     final lengths = <double>[];
     for (final frame in task.frames) {
-      if (frame.landmarks.length < 10) continue;
-      final wrist = frame.landmarks[0];
-      final knuckle = frame.landmarks[9];
-      final dx = wrist.x - knuckle.x;
-      final dy = wrist.y - knuckle.y;
+      if (frame.landmarks.length <= math.max(a, b)) continue;
+      final p = frame.landmarks[a];
+      final q = frame.landmarks[b];
+      final dx = p.x - q.x;
+      final dy = p.y - q.y;
       lengths.add(math.sqrt(dx * dx + dy * dy));
     }
     if (lengths.isEmpty) return null;
     lengths.sort();
-    return lengths[lengths.length ~/ 2];
+    final m = lengths[lengths.length ~/ 2];
+    return m > 0 ? m : null;
   }
 }

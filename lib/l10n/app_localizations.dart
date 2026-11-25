@@ -1841,19 +1841,19 @@ abstract class AppLocalizations {
   /// No description provided for @cameraInstructionOpenClose.
   ///
   /// In en, this message translates to:
-  /// **'Open your hand wide, then close it into a fist. Repeat as fully and as quickly as you can.'**
+  /// **'Elbow on the table, hand up, palm facing the camera. Open your hand wide, then make a tight fist, as fully and as fast as you can.'**
   String get cameraInstructionOpenClose;
 
   /// No description provided for @cameraInstructionFingerTap.
   ///
   /// In en, this message translates to:
-  /// **'Tap your thumb against your index finger. Make each tap as big and as fast as you can.'**
+  /// **'Elbow on the table, hand up, palm facing the camera. Tap your thumb and index finger together, as big and as fast as you can.'**
   String get cameraInstructionFingerTap;
 
   /// No description provided for @cameraInstructionPronation.
   ///
   /// In en, this message translates to:
-  /// **'Turn your palm up, then down, over and over. Make each turn as big and as fast as you can.'**
+  /// **'Elbow on the table, hand up, fingers to the ceiling. Turn your hand so the palm faces the camera, then the back of the hand, over and over, as fully and as fast as you can.'**
   String get cameraInstructionPronation;
 
   /// No description provided for @cameraStepOf.
@@ -3743,13 +3743,13 @@ abstract class AppLocalizations {
   /// No description provided for @cameraInstructionRestBoth.
   ///
   /// In en, this message translates to:
-  /// **'Rest both forearms on the table with your hands relaxed and still, in view of the camera.'**
+  /// **'Rest both forearms on the table, palms down, hands relaxed and still, in view of the camera.'**
   String get cameraInstructionRestBoth;
 
   /// No description provided for @cameraInstructionPosture.
   ///
   /// In en, this message translates to:
-  /// **'Hold both arms out in front of you, palms down, fingers spread. Keep them as still as you can.'**
+  /// **'Lift both hands up in front of you, palms facing the camera, fingers spread, elbows off the table. Hold them as still as you can.'**
   String get cameraInstructionPosture;
 
   /// No description provided for @cameraShowHandsToBegin.

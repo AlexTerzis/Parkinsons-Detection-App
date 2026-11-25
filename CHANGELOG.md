@@ -1,6 +1,20 @@
 # Changelog
 
-## Unreleased — camera test rebuilt (protocol version 4)
+## Unreleased — camera test step pictures and camera-friendly poses
+
+- Every camera step now shows an animated picture of the pose (drawn in code,
+  mirrored for the left hand, still when the system asks for reduced motion).
+- Instructions changed to poses the front camera can measure: movement steps
+  with the elbow on the table and the hand upright, palm to the camera;
+  palm turning as palm-to-camera and back-to-camera; postural tremor with both
+  hands raised, palms to the camera. The old wording led people to point the
+  forearm or fingers at the lens, where the roll and the hand size cannot be
+  measured.
+- Tremor centimetres use the larger of two rulers on the hand (palm length and
+  knuckle width), so a hand tilted away from the camera no longer makes a
+  tremor look bigger.
+
+## Camera test rebuilt (protocol version 4)
 
 The camera test could not be finished on a device. It is now a hands-free,
 landscape test with a new score.

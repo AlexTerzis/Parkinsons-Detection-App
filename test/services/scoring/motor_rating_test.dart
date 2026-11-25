@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parkinsondetetion/models/camera_task_protocol.dart';
+import 'package:parkinsondetetion/models/camera_task_segment.dart';
+import 'package:parkinsondetetion/models/landmark_point.dart';
 import 'package:parkinsondetetion/services/scoring/camera_recording.dart';
 import 'package:parkinsondetetion/services/scoring/motor_rating.dart';
 
@@ -128,6 +130,43 @@ void main() {
       expect(rating.tremor, isNotNull);
       expect(rating.score, isNull,
           reason: 'the score follows the movement items');
+    });
+
+    test('a hand shortened by the viewing angle does not inflate tremor', () {
+      // Same physical hand: 9.5 cm long, 6 cm across the knuckles. Seen
+      // squarely, both rulers agree; lying flat, the length looks halved but
+      // the width does not, so the scale must follow the width.
+      RecordedTask still(double lengthFactor) {
+        final frames = <TaggedFrame>[
+          for (int i = 0; i < 20; i++)
+            TaggedFrame(
+              taskId: 'right_rest',
+              hand: 'Right',
+              timestamp: i * 33,
+              landmarks: List<LandmarkPoint>.generate(21, (j) {
+                if (j == 0) return const LandmarkPoint(x: 0.5, y: 0.5, z: 0);
+                if (j == 9) {
+                  return LandmarkPoint(x: 0.5, y: 0.5 - 0.095 * lengthFactor, z: 0);
+                }
+                if (j == 5) return const LandmarkPoint(x: 0.53, y: 0.45, z: 0);
+                if (j == 17) return const LandmarkPoint(x: 0.47, y: 0.45, z: 0);
+                return const LandmarkPoint(x: 0.5, y: 0.45, z: 0);
+              }),
+            ),
+        ];
+        return RecordedTask(
+          taskId: 'right_rest',
+          type: CameraTaskType.rest,
+          hand: 'Right',
+          plannedDuration: const Duration(seconds: 1),
+          frames: frames,
+        );
+      }
+
+      final square = MotorRatingScorer.pictureUnitsPerCm(still(1))!;
+      final flat = MotorRatingScorer.pictureUnitsPerCm(still(0.5))!;
+      expect(square, closeTo(0.01, 1e-9));
+      expect(flat, closeTo(square, 1e-9));
     });
 
     test('serializes the ratings and the score', () {

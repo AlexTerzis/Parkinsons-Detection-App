@@ -369,6 +369,13 @@ posture test re-applies the old flip locally so its tuned geometry is unchanged.
 | `openClose` | right, then left | 3.5 | cycles |
 | `pronationSupination` | right, then left | 3.6 | cycles |
 
+Movement steps are done with the elbow on the table and the hand upright,
+palm towards the camera; postural tremor with both hands raised, palms to the
+camera. Both differ from the clinical poses because the camera is in front of
+the patient: a forearm or fingers pointing at the lens cannot be measured. An
+animated `StepIllustration` (drawn in code, mirrored for the left hand) shows
+each pose on the countdown and recording screens.
+
 Each step has a spoken countdown (8 s for the first step and each change of
 hand, 5 s otherwise) that holds while the needed hands are out of view. A step
 that fails `TaskQualityValidator` is repeated once automatically, then kept.
@@ -401,8 +408,9 @@ that passed the quality check, per hand, on the MDS-UPDRS 0-4 scale
   between them) and amplitude decrement are each mapped to 0-4; the item rating
   is the mean of the worst sign and the average sign. Fewer than 3 movements
   while the hand was in view rates 4.
-- **Tremor items** — peak-to-peak amplitude converted to centimetres with the
-  palm as a ruler, against the scale's 1 / 3 / 10 cm bands, discounted when the
+- **Tremor items** — peak-to-peak amplitude converted to centimetres using the
+  larger of two rulers on the hand (palm length, knuckle width), since tilting
+  only shortens one, against the scale's 1 / 3 / 10 cm bands, discounted when the
   frequency is outside 3.5-7.5 Hz or unknown.
 
 Per hand: bradykinesia = mean of the three movement items, tremor = worse of

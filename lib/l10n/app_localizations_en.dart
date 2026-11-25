@@ -985,15 +985,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cameraInstructionOpenClose =>
-      'Open your hand wide, then close it into a fist. Repeat as fully and as quickly as you can.';
+      'Elbow on the table, hand up, palm facing the camera. Open your hand wide, then make a tight fist, as fully and as fast as you can.';
 
   @override
   String get cameraInstructionFingerTap =>
-      'Tap your thumb against your index finger. Make each tap as big and as fast as you can.';
+      'Elbow on the table, hand up, palm facing the camera. Tap your thumb and index finger together, as big and as fast as you can.';
 
   @override
   String get cameraInstructionPronation =>
-      'Turn your palm up, then down, over and over. Make each turn as big and as fast as you can.';
+      'Elbow on the table, hand up, fingers to the ceiling. Turn your hand so the palm faces the camera, then the back of the hand, over and over, as fully and as fast as you can.';
 
   @override
   String cameraStepOf(Object current, Object total) {
@@ -2116,11 +2116,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cameraInstructionRestBoth =>
-      'Rest both forearms on the table with your hands relaxed and still, in view of the camera.';
+      'Rest both forearms on the table, palms down, hands relaxed and still, in view of the camera.';
 
   @override
   String get cameraInstructionPosture =>
-      'Hold both arms out in front of you, palms down, fingers spread. Keep them as still as you can.';
+      'Lift both hands up in front of you, palms facing the camera, fingers spread, elbows off the table. Hold them as still as you can.';
 
   @override
   String get cameraShowHandsToBegin => 'Show both hands to the camera';

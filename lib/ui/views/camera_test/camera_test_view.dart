@@ -9,6 +9,7 @@ import '../../../models/camera_task_protocol.dart';
 import '../../../services/scoring/task_quality.dart';
 import 'camera_results_view.dart';
 import 'camera_test_viewmodel.dart';
+import 'step_illustration.dart';
 
 /// Guided, hands-free camera assessment, in landscape.
 ///
@@ -121,7 +122,9 @@ String _cueText(AppLocalizations l10n, CameraCue cue) {
       return '${l10n.cameraSwitchHands(task.handLabel(l10n).toLowerCase())} '
           '${task.name(l10n)}. ${task.instruction(l10n)}';
     case CameraCueKind.retry:
-      return task == null ? l10n.cameraSayRetry : '${l10n.cameraSayRetry} ${describe(task)}';
+      return task == null
+          ? l10n.cameraSayRetry
+          : '${l10n.cameraSayRetry} ${describe(task)}';
     case CameraCueKind.go:
       return l10n.cameraSayGo;
     case CameraCueKind.stop:
@@ -249,8 +252,8 @@ class _SetupOverlay extends StatelessWidget {
                       ),
                     ),
                   Text(
-                    l10n.cameraSetupDuration(
-                        '${viewModel.estimatedMinutes}', '${viewModel.taskCount}'),
+                    l10n.cameraSetupDuration('${viewModel.estimatedMinutes}',
+                        '${viewModel.taskCount}'),
                     style: _on(theme.textTheme.bodySmall),
                   ),
                 ],
@@ -325,8 +328,7 @@ class _SetupStatus extends StatelessWidget {
             Icon(ok ? Icons.check_circle : Icons.front_hand_outlined,
                 color: ok ? AppTokens.success : AppTokens.onOverlay),
             const SizedBox(width: AppSpacing.xs),
-            Expanded(
-                child: Text(text, style: _on(theme.textTheme.titleSmall))),
+            Expanded(child: Text(text, style: _on(theme.textTheme.titleSmall))),
           ],
         ),
         const SizedBox(height: AppSpacing.xxs),
@@ -348,7 +350,8 @@ class _SetupStatus extends StatelessWidget {
 
 /// Top strip: which step, which hand, how far through the test.
 class _StepHeader extends StatelessWidget {
-  const _StepHeader({required this.viewModel, required this.task, this.trailing});
+  const _StepHeader(
+      {required this.viewModel, required this.task, this.trailing});
 
   final CameraTestViewModel viewModel;
   final CameraTask task;
@@ -427,36 +430,56 @@ class _PreparingOverlay extends StatelessWidget {
                       ],
                     ),
                   )
-                : Text(
-                    '${viewModel.leadInCountdown ?? 0}',
-                    style: theme.textTheme.displayLarge?.copyWith(
-                      color: AppTokens.onOverlay,
-                      fontWeight: FontWeight.bold,
-                      shadows: const [
-                        Shadow(blurRadius: 12, color: Colors.black54),
-                      ],
+                // Scales down rather than overflowing when the panels above
+                // and below leave little height (large system font sizes).
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '${viewModel.leadInCountdown ?? 0}',
+                      style: theme.textTheme.displayLarge?.copyWith(
+                        color: AppTokens.onOverlay,
+                        fontWeight: FontWeight.bold,
+                        shadows: const [
+                          Shadow(blurRadius: 12, color: Colors.black54),
+                        ],
+                      ),
                     ),
                   ),
           ),
         ),
         _OverlayPanel(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (task.switchesHand && retry == null)
-                Text(
-                  l10n.cameraSwitchHands(task.handLabel(l10n).toLowerCase()),
-                  style: _on(theme.textTheme.titleMedium),
-                ),
-              if (retry != null) ...[
-                Text(l10n.cameraRetryNotice,
-                    style: _on(theme.textTheme.titleMedium)),
-                for (final failure in retry.failures.take(2))
-                  Text(_qualityMessage(l10n, failure),
-                      style: _on(theme.textTheme.bodySmall)),
-              ],
-              Text(task.instruction(l10n), style: _on(theme.textTheme.bodyLarge)),
+              StepIllustration(
+                key: ValueKey(task.id),
+                type: task.type,
+                hand: task.isBothHands ? null : task.hands.single,
+                size: const Size(150, 120),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                  child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (task.switchesHand && retry == null)
+                    Text(
+                      l10n.cameraSwitchHands(
+                          task.handLabel(l10n).toLowerCase()),
+                      style: _on(theme.textTheme.titleMedium),
+                    ),
+                  if (retry != null) ...[
+                    Text(l10n.cameraRetryNotice,
+                        style: _on(theme.textTheme.titleMedium)),
+                    for (final failure in retry.failures.take(2))
+                      Text(_qualityMessage(l10n, failure),
+                          style: _on(theme.textTheme.bodySmall)),
+                  ],
+                  Text(task.instruction(l10n),
+                      style: _on(theme.textTheme.bodyLarge)),
+                ],
+              )),
             ],
           ),
         ),
@@ -511,6 +534,13 @@ class _RunningOverlay extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Row(
                 children: [
+                  StepIllustration(
+                    key: ValueKey(task.id),
+                    type: task.type,
+                    hand: task.isBothHands ? null : task.hands.single,
+                    size: const Size(70, 56),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       viewModel.targetHandVisible
